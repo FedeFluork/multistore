@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  For the `debug` variant only, and only for the emulator host.
+
+  Since API 28 cleartext traffic is forbidden by default, and rightly so: everything MultiStore
+  downloads — indexes, pages, APKs — travels over HTTPS. This opens a single door, towards
+  `10.0.2.2`, which is the address the emulator reaches its host machine on and which exists on no
+  real device.
+
+  It is there to test the remote-configuration channel against a locally served document (see
+  `tools/README.md`). It is in neither `release` nor `minified`: the latter must differ from the
+  release only in what is needed to install it, otherwise testing it would say nothing about the
+  real release.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

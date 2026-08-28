@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The MultiStore icon: three overlapping squares — several sources, one catalogue.
+
+  The geometry is constrained by two different masks, both of which must be respected:
+  - adaptive icon: the content must fit within the central 66dp of 108dp;
+  - splash screen: the system crops a centred **circle** 72dp across, so what counts is the
+    half-diagonal, not the side.
+
+  The drawing occupies 46dp centred on (54,54): a half-diagonal of 32.5dp against the radius of
+  36dp. With the previous version, 60dp wide, the bottom-right corner landed 45dp from the centre
+  and was clipped.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45"
+        android:pathData="M36,31 L60,31 A5,5 0 0 1 65,36 L65,60 A5,5 0 0 1 60,65 L36,65 A5,5 0 0 1 31,60 L31,36 A5,5 0 0 1 36,31 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.70"
+        android:pathData="M42,37 L66,37 A5,5 0 0 1 71,42 L71,66 A5,5 0 0 1 66,71 L42,71 A5,5 0 0 1 37,66 L37,42 A5,5 0 0 1 42,37 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,43 L72,43 A5,5 0 0 1 77,48 L77,72 A5,5 0 0 1 72,77 L48,77 A5,5 0 0 1 43,72 L43,48 A5,5 0 0 1 48,43 Z" />
+</vector>

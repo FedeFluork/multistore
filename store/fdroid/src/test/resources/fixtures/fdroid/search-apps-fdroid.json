@@ -1,0 +1,64 @@
+{
+ "apps": [
+  {
+   "name": "F-Droid Classic",
+   "summary": "F-Droid client with the classic UI",
+   "icon": "https://f-droid.org/assets/ic_repo_app_default.png",
+   "url": "https://f-droid.org/en/packages/eu.bubu1.fdroidclassic"
+  },
+  {
+   "name": "F-Droid Privileged Extension",
+   "summary": "Services to allow F-Droid to securely install and update apps",
+   "icon": "https://ftp.fau.de/fdroid/repo/icons/org.fdroid.fdroid.privileged.2130.png",
+   "url": "https://f-droid.org/en/packages/org.fdroid.fdroid.privileged"
+  },
+  {
+   "name": "F-Droid Build Status",
+   "summary": "Shows and monitors build status from F-Droid",
+   "icon": "https://ftp.fau.de/fdroid/repo/de.storchp.fdroidbuildstatus/en-US/icon_BjZc__1cdhl83pzysGZYTqUiQ5uk_EH5feOHTxps1d8=.png",
+   "url": "https://f-droid.org/en/packages/de.storchp.fdroidbuildstatus"
+  },
+  {
+   "name": "F-Droid Privileged Extension OTA",
+   "summary": "Services to allow F-Droid to securely install and update apps",
+   "icon": "https://f-droid.org/assets/ic_repo_app_default.png",
+   "url": "https://f-droid.org/en/packages/org.fdroid.fdroid.privileged.ota"
+  },
+  {
+   "name": "F-Droid",
+   "summary": "The app store that respects freedom and privacy",
+   "icon": "https://ftp.fau.de/fdroid/repo/org.fdroid.fdroid/en-US/icon_0slNR8J9edqDZDoyWABFZrqQONU9EyiNVwM6B3Jui_Q=.png",
+   "url": "https://f-droid.org/en/packages/org.fdroid.fdroid"
+  },
+  {
+   "name": "F-Droid Basic",
+   "summary": "The minimal client app for the app store that respects freedom and privacy",
+   "icon": "https://ftp.fau.de/fdroid/repo/org.fdroid.basic/en-US/icon_CPdcoTY7kZ3ERIZkij9504KbM1eEY05XaLvVQwHkqHI=.png",
+   "url": "https://f-droid.org/en/packages/org.fdroid.basic"
+  },
+  {
+   "name": "PrepApp (F-Droid)",
+   "summary": "Preparedness toolkit, survival guide, emergency info, weather and more.",
+   "icon": "https://ftp.fau.de/fdroid/repo/com.bunqr.prepapp.fdroid/en-US/icon_bMRilb-tRA_q66l517qh5KN1E0xMcxcH9zwLYGIaFGg=.png",
+   "url": "https://f-droid.org/en/packages/com.bunqr.prepapp.fdroid"
+  },
+  {
+   "name": "Aurora Droid",
+   "summary": "An alternative to the default F-Droid app",
+   "icon": "https://ftp.fau.de/fdroid/repo/icons/com.aurora.adroid.201.png",
+   "url": "https://f-droid.org/en/packages/com.aurora.adroid"
+  },
+  {
+   "name": "Sumire Japanese Keyboard Lite F-Droid",
+   "summary": "Private offline Japanese keyboard with user dictionary and snippets",
+   "icon": "https://ftp.fau.de/fdroid/repo/com.kazumaproject.markdownhelperkeyboard.lite.fdroid/en-US/icon_CcE_UThTlFVGwoGUESyTz2PYFOtWdL_kgLqDQjo_qdo=.png",
+   "url": "https://f-droid.org/en/packages/com.kazumaproject.markdownhelperkeyboard.lite.fdroid"
+  },
+  {
+   "name": "SmartTube F-Droid",
+   "summary": "Browse media content with your own rules on Android TV",
+   "icon": "https://ftp.fau.de/fdroid/repo/app.smarttube.fdroid/en-US/icon_KnwIO7D77ElCWoxdIRGY0Z7FNkWDZWDXc_gIIgIBVGA=.png",
+   "url": "https://f-droid.org/en/packages/app.smarttube.fdroid"
+  }
+ ]
+}

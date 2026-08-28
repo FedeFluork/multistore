@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Search screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="search_title">Search</string>
+    <string name="search_field_label">Search apps</string>
+    <string name="search_field_clear">Clear the query</string>
+
+    <string name="search_idle_title">Search every store at once</string>
+    <string name="search_idle_message">One query, results from every connected store, merged and compared side by side.</string>
+
+    <string name="search_no_results_title">No results for “%1$s”</string>
+    <string name="search_no_results_message">Try a different term, or check the spelling.</string>
+
+    <string name="search_load_more">Load more</string>
+
+    <!-- Sources that did not report back. -->
+    <string name="search_shortfall_title">Some stores did not answer</string>
+    <string name="search_shortfall_entry">%1$s — %2$s</string>
+    <string name="search_shortfall_paused">Paused after repeated failures. We did not even try.</string>
+    <string name="search_shortfall_partial">Partial results.</string>
+    <string name="search_shortfall_unknown">No answer.</string>
+    <string name="search_shortfall_retry">Search again</string>
+
+    <string name="search_bootstrap_notice">Partial results: the catalogue is still downloading, so this store can only answer with a handful of matches.</string>
+
+    <string name="search_progress_stores">%1$d of %2$d stores have answered</string>
+    <string name="search_progress_still_arriving">%1$d of %2$d stores have answered. The list is still filling in, so results can move.</string>
+    <plurals name="search_available_on_stores">
+        <item quantity="one">On %1$d store</item>
+        <item quantity="other">On %1$d stores</item>
+    </plurals>
+    <plurals name="search_shortfall_paused_retry">
+        <item quantity="one">Paused after repeated failures. Trying again in about %1$d minute.</item>
+        <item quantity="other">Paused after repeated failures. Trying again in about %1$d minutes.</item>
+    </plurals>
+
+    <!-- The filter panel. -->
+    <string name="search_filters_open">Filters</string>
+    <string name="search_filters_title">Filters</string>
+    <string name="search_filters_reset">Reset</string>
+    <string name="search_filters_close">Done</string>
+    <string name="search_filters_kind_label">Type</string>
+    <string name="search_filters_kind_all">Everything</string>
+    <string name="search_filters_kind_apps">Apps</string>
+    <string name="search_filters_kind_games">Games</string>
+    <string name="search_filters_rating_label">Minimum rating</string>
+    <string name="search_filters_rating_any">Any</string>
+    <string name="search_filters_rating_value">%1$s and up</string>
+    <string name="search_filters_sort_label">Sort by</string>
+    <string name="search_filters_sort_relevance">Relevance</string>
+    <string name="search_filters_sort_name">Name</string>
+    <string name="search_filters_sort_rating">Rating</string>
+    <string name="search_filters_stores_label">Stores</string>
+    <string name="search_filters_stores_hint">For this search only. To switch a store off for good, use Settings.</string>
+    <string name="search_filtered_out_title">Some stores cannot answer this question</string>
+    <string name="search_filter_name_content_kind">the type (app or game)</string>
+    <string name="search_filter_name_min_rating">a rating</string>
+    <string name="search_filter_name_category">a category</string>
+    <string name="search_rating">★ %1$s</string>
+    <plurals name="search_filters_active">
+        <item quantity="one">%1$d filter</item>
+        <item quantity="other">%1$d filters</item>
+    </plurals>
+    <plurals name="search_filtered_out_entry">
+        <item quantity="one">%1$s does not publish %2$s in its results, so it was not queried.</item>
+        <item quantity="other">%1$s do not publish %2$s in their results, so they were not queried.</item>
+    </plurals>
+</resources>

@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Settings screen. Rule 2: every settings.proto field has an entry here.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="settings_title">Impostazioni</string>
+    <string name="settings_section_appearance">Aspetto</string>
+    <string name="settings_theme_label">Tema</string>
+    <string name="settings_theme_description">Segui l\'impostazione di sistema, oppure forza chiaro o scuro.</string>
+    <string name="settings_theme_option_system">Segui il sistema</string>
+    <string name="settings_theme_option_light">Chiaro</string>
+    <string name="settings_theme_option_dark">Scuro</string>
+    <string name="settings_theme_dialog_title">Scegli un tema</string>
+    <string name="settings_dynamic_color_label">Colori dinamici</string>
+    <string name="settings_dynamic_color_description">Ricava la palette dallo sfondo invece di usare quella di MultiStore.</string>
+    <string name="settings_dynamic_color_unavailable">Richiede Android 12 o successivo.</string>
+    <string name="settings_language_label">Lingua</string>
+    <string name="settings_language_description">La lingua dell\'interfaccia. Le schede degli store restano nella lingua della fonte.</string>
+    <string name="settings_language_option_system">Lingua di sistema</string>
+    <string name="settings_language_dialog_title">Scegli una lingua</string>
+    <string name="settings_dialog_dismiss">Annulla</string>
+    <string name="settings_option_selected_content_description">Selezionato</string>
+    <string name="settings_write_failed">Impossibile salvare l\'impostazione. Riprova.</string>
+    <string name="settings_section_security">Sicurezza</string>
+    <string name="settings_section_network">Rete</string>
+    <string name="settings_allow_unverified_hash_label">Installa senza verifica del codice di controllo</string>
+    <string name="settings_allow_unverified_hash_description">Installa anche quando il codice di controllo pubblicato dallo store non combacia con il file scaricato. Meglio lasciarla spenta: una discrepanza significa che il file non è quello che lo store ha descritto. Da accesa l\'app si installa, ma la scheda di verifica dice “hash non verificato”.</string>
+    <string name="settings_allow_signer_mismatch_label">Installa con firma diversa dall\'attesa</string>
+    <string name="settings_allow_signer_mismatch_description">Installa anche quando l\'APK non è firmato con la chiave dichiarata dallo store. Non copre il caso di un\'app già installata con un\'altra chiave: quell\'aggiornamento Android lo rifiuta comunque, e l\'unica via è disinstallare e reinstallare perdendone i dati — una scelta che MultiStore propone app per app, anche a interruttore spento.</string>
+    <string name="settings_metered_network_label">Usa le connessioni a consumo</string>
+    <string name="settings_metered_network_description">Scarica i cataloghi degli store e i file delle app anche sotto rete mobile. Un catalogo F‑Droid completo sono circa 18 MB. Da spenta, MultiStore chiede prima di partire.</string>
+    <string name="settings_challenge_strategy_label">Quando uno store chiede una verifica</string>
+    <string name="settings_challenge_strategy_description">Alcuni store rispondono con un controllo che un browser supera da solo, senza captcha e senza niente da toccare. MultiStore puo’ eseguirlo in una vista browser nascosta: la pagina viene eseguita davvero, mai simulata. Scegli fin dove l’app puo’ arrivare da sola.</string>
+    <string name="settings_challenge_strategy_dialog_title">Quando uno store chiede una verifica</string>
+    <string name="settings_challenge_strategy_balanced">Eseguilo in una vista nascosta</string>
+    <string name="settings_challenge_strategy_conservative">Solo rete, nessuna vista browser</string>
+    <string name="settings_challenge_strategy_aggressive">Eseguilo, e insisti piu’ a lungo</string>
+    <string name="settings_challenge_user_assisted_label">Non aprire mai una pagina da toccare</string>
+    <string name="settings_challenge_user_assisted_description">Due store consegnano il file solo dopo un tocco vero sulla loro pagina. MultiStore la apre dentro l’app, cosi’ il file passa comunque da tutti i controlli prima di essere installato. Attivando questa voce, quei download non vengono piu’ proposti.</string>
+    <string name="settings_allow_web_ads_label">Consenti la pubblicità nella pagina dello store</string>
+    <string name="settings_allow_web_ads_description">Il download assistito apre la pagina dello store, dove la pubblicità è il modo più comune in cui arriva un malware. MultiStore lascia cadere le richieste verso gli host pubblicitari e di tracciamento noti. Cloudflare e reCAPTCHA non vengono mai bloccati, quindi accendere questa voce non sblocca un download fermo su un challenge.</string>
+    <string name="settings_section_storage">Spazio</string>
+    <string name="settings_reclaim_space_label">Recupera spazio</string>
+    <string name="settings_reclaim_space_description">Compatta il database del catalogo e svuota il suo registro di scrittura. Non cancella niente di visibile: il catalogo, le app installate e le impostazioni restano. Una sincronizzazione completa di F-Droid lascia il database intorno ai 65 MB.</string>
+    <string name="settings_reclaim_space_action">Recupera ora</string>
+    <string name="settings_reclaim_space_running">Compattazione in corso…</string>
+    <string name="settings_reclaim_space_freed">Liberati %1$s.</string>
+    <string name="settings_reclaim_space_nothing">Niente da recuperare: il database è già compatto.</string>
+
+    <string name="settings_section_stores">Store</string>
+    <string name="settings_stores_description">Quali store interroga MultiStore. Spegnerne uno lo nasconde dai risultati e ferma ogni richiesta verso di lui.</string>
+    <string name="settings_stores_choose_label">Scegli gli store</string>
+    <string name="settings_stores_active_count">%1$d attivi su %2$d</string>
+    <string name="settings_stores_save">Salva</string>
+    <string name="settings_store_state_open">Temporaneamente irraggiungibile: MultiStore riprovera\u00e0 da solo.</string>
+    <string name="settings_store_state_degraded">Risponde, ma le sue pagine sono cambiate: i risultati possono essere incompleti.</string>
+    <string name="settings_store_f_droid_description">Solo app libere e open source. Pubblica un catalogo firmato, un checksum per ogni versione e la chiave di firma attesa: un download si pu\u00f2 verificare dall\'inizio alla fine.</string>
+    <string name="settings_store_apkcombo_description">Rispecchia le app di Google Play. Non pubblica checksum: MultiStore pu\u00f2 confermare che il nome del pacchetto corrisponda, non che il file sia quello descritto dalla scheda.</string>
+    <string name="settings_store_apkmirror_description">Mirror con revisione umana e politica anti-pirateria. Pubblica il checksum e il certificato di firma di ogni file: i download si verificano con lo stesso rigore di F-Droid.</string>
+    <string name="settings_store_apkmody_description">Build modificate, con le funzioni a pagamento sbloccate. Pubblica il nome del pacchetto ma nessun checksum, e una build modificata la firma chi l\'ha modificata: MultiStore pu\u00f2 confermare quale app stai installando, non che nessuno l\'abbia toccata prima.</string>
+    <string name="settings_store_uptodown_description">Mirror generalista che pubblica il checksum di ogni file: i download si verificano dall\'inizio alla fine. Il file per\u00f2 sta dietro una verifica umana: MultiStore apre la pagina dello store e sei tu a premere Scarica.</string>
+
+    <!-- Updates section. -->
+    <string name="settings_section_updates">Aggiornamenti</string>
+    <string name="settings_update_interval_label">Controlla aggiornamenti</string>
+    <string name="settings_update_interval_description">Ogni quanto MultiStore cerca versioni più recenti delle app che hai installato da qui.</string>
+    <string name="settings_update_interval_dialog_title">Controlla aggiornamenti</string>
+    <string name="settings_update_interval_manual">Solo quando lo chiedo io</string>
+    <string name="settings_update_interval_6_hours">Ogni 6 ore</string>
+    <string name="settings_update_interval_12_hours">Ogni 12 ore</string>
+    <string name="settings_update_interval_daily">Una volta al giorno</string>
+    <string name="settings_update_interval_weekly">Una volta a settimana</string>
+    <string name="settings_update_charging_label">Solo mentre è in carica</string>
+    <string name="settings_update_charging_description">Rimanda il controllo automatico a quando il dispositivo è collegato alla corrente.</string>
+    <string name="settings_update_manual_unavailable">Riguarda solo il controllo automatico, che è spento.</string>
+    <string name="settings_update_auto_download_label">Scarica gli aggiornamenti da solo</string>
+    <string name="settings_update_auto_download_description">Prende l\'APK appena trova un aggiornamento, così installarlo è un tocco solo. Su una rete a consumo il download aspetta, a meno che tu non l\'abbia permesso in Rete.</string>
+    <string name="settings_update_auto_install_label">Installa gli aggiornamenti da solo</string>
+    <string name="settings_preview_channels_label">Includi i canali di anteprima</string>
+    <string name="settings_preview_channels_description">Offri anche le versioni beta, alpha e release candidate, dove uno store le pubblica. Vale sia per una prima installazione sia per gli aggiornamenti. Per prendere una singola versione di anteprima una volta sola, apri «Versioni precedenti» sulla scheda dell’app.</string>
+    <string name="settings_update_auto_install_description">Scarica e installa senza chiedere. La verifica resta identica a quella di quando premi «Installa» tu.</string>
+    <string name="settings_update_auto_install_no_silent">Richiede Shizuku o root. Senza, è Android a doverti chiedere conferma prima di ogni installazione, e non può chiedertela mentre l\'app è in secondo piano.</string>
+    <string name="settings_update_mute_label">Silenzia gli avvisi di aggiornamento</string>
+    <string name="settings_update_mute_description">Continua a controllare, ma senza mostrare una notifica. Gli aggiornamenti disponibili restano elencati nella Home.</string>
+
+    <string name="settings_section_installation">Installazione</string>
+    <string name="settings_installer_label">Metodo di installazione</string>
+    <string name="settings_installer_description">Chi scrive il pacchetto nel sistema. La conferma di sistema funziona sempre; Shizuku e root installano senza chiedere, se ce li hai.</string>
+    <string name="settings_installer_dialog_title">Metodo di installazione</string>
+    <string name="settings_installer_option_automatic">Automatico</string>
+    <string name="settings_installer_option_session">Conferma di sistema</string>
+    <string name="settings_installer_option_shizuku">Shizuku</string>
+    <string name="settings_installer_option_root">Root</string>
+    <string name="settings_installer_option_unavailable">%1$s — non disponibile adesso</string>
+    <string name="settings_installer_permission_denied">Permesso non concesso. MultiStore continuerà a usare la conferma di sistema.</string>
+
+    <string name="settings_section_configuration">Configurazione remota</string>
+    <string name="settings_config_block_label">Rifiuta gli aggiornamenti di configurazione</string>
+    <string name="settings_config_block_description">MultiStore scarica un piccolo file firmato con i selettori e gli indirizzi con cui legge ogni store, cosi’ uno store che cambia le sue pagine si ripara senza una nuova versione dell’app. Attiva questa voce per usare solo cio’ che e’ arrivato con l’app.</string>
+    <string name="settings_config_active_defaults">In uso la configurazione arrivata con l’app.</string>
+    <plurals name="settings_config_active_stores">
+        <item quantity="one">Configurazione scaricata in uso per %1$d store.</item>
+        <item quantity="many">Configurazione scaricata in uso per %1$d store.</item>
+        <item quantity="other">Configurazione scaricata in uso per %1$d store.</item>
+    </plurals>
+    <string name="settings_config_attempt_accepted">E’ stata scaricata una configurazione piu’ recente: sara’ in uso al prossimo avvio di MultiStore.</string>
+    <string name="settings_config_attempt_bad_signature">L’ultimo file e’ stato rifiutato: non era firmato da noi. Non e’ cambiato niente.</string>
+    <string name="settings_config_attempt_malformed">L’ultimo file e’ stato rifiutato: non si e’ potuto leggere. Non e’ cambiato niente.</string>
+    <string name="settings_config_attempt_too_new">L’ultimo file e’ stato prodotto per una versione piu’ recente di MultiStore. Non e’ cambiato niente.</string>
+    <string name="settings_config_attempt_unreachable">L’ultimo controllo non ha raggiunto il file. Non e’ cambiato niente.</string>
+    <string name="settings_config_attempt_unchanged">L’ultimo controllo non ha trovato niente di nuovo.</string>
+    <plurals name="settings_config_ignored_keys">
+        <item quantity="one">%1$d impostazione del file e’ stata ignorata: questa versione non la conosce.</item>
+        <item quantity="many">%1$d impostazioni del file sono state ignorate: questa versione non le conosce.</item>
+        <item quantity="other">%1$d impostazioni del file sono state ignorate: questa versione non le conosce.</item>
+    </plurals>
+    <plurals name="settings_config_rejected_stores">
+        <item quantity="one">%1$d store ha tenuto la configurazione di fabbrica: un valore aveva il tipo sbagliato.</item>
+        <item quantity="many">%1$d store hanno tenuto la configurazione di fabbrica: un valore aveva il tipo sbagliato.</item>
+        <item quantity="other">%1$d store hanno tenuto la configurazione di fabbrica: un valore aveva il tipo sbagliato.</item>
+    </plurals>
+    <string name="settings_config_refresh_label">Cerca una nuova configurazione</string>
+    <string name="settings_config_refresh_description">Chiedi adesso invece di aspettare il controllo successivo. Cio’ che arriva si usa dal prossimo avvio.</string>
+    <string name="settings_config_refresh_action">Controlla adesso</string>
+    <string name="settings_config_refresh_blocked">Gli aggiornamenti di configurazione sono disattivati.</string>
+    <string name="settings_section_content">Contenuti</string>
+    <string name="settings_content_nsfw_label">Mostra contenuti NSFW</string>
+    <string name="settings_content_nsfw_description">Spento, i risultati escludono cio\' che uno store etichetta come adulto. Uno solo lo etichetta, e lo fa in modo incompleto: questo nasconde cio\' che lo store dichiara, non tutto cio\' che ospita.</string>
+    <string name="settings_store_modyolo_description">Build modificate, con i metadati migliori fra le fonti modded e i binari peggiori: circa un file su quattro non c\'è più e risponde con un errore del server, quindi MultiStore verifica che il file esista prima di partire. Pubblica il nome del pacchetto attraverso il link a Google Play, ma nessun checksum. È anche l\'unico store che etichetti i contenuti per adulti, ed è su quell\'etichetta che agisce l\'interruttore NSFW.</string>
+    <string name="settings_store_an1_description">Build modificate e non, una accanto all\'altra. Non pubblica il nome del pacchetto in nessuna pagina del sito, quindi MultiStore non può confermare quale app stia davvero installando: la corrispondenza si regge solo su titolo e sviluppatore. Alcuni file portano però un checksum, e dove c\'è il download si verifica dall\'inizio alla fine.</string>
+    <string name="settings_store_pdalife_description">Build modificate — «Money Mod», «Mod Menu», «Premium» — accanto a quelle originali, e un ampio catalogo di versioni vecchie. Non pubblica nessun checksum, quindi un download si può confrontare solo con il nome del pacchetto, che invece dichiara per quasi tutte le app. Il file sta dietro una pagina che apri e tocchi tu: attenzione, su quella pagina ci sono anche inserzioni fatte esattamente come il pulsante di download.</string>
+    <string name="settings_store_liteapks_description">Build modificate — «MOD», «Premium», «Paid» — e, su alcune pagine, il file originale di Google Play accanto a loro. Non pubblica nessun checksum, quindi un download si può confrontare solo con il nome del pacchetto, che invece dichiara per la maggior parte delle app. La ricerca restituisce al massimo 60 risultati, qualunque sia la richiesta. I file suoi stanno dietro una pagina che si apre da sola; quelli originali stanno su un host separato che a volte non c\'è più.</string>
+    <string name="settings_block_remote_index_label">Rifiuta l’indice che pubblichiamo</string>
+    <string name="settings_block_remote_index_description">La Home mostra «Più popolari» e «Novità» leggendo un indice che firmiamo e pubblichiamo. Attivando questa voce l’app smette di scaricarlo: la Home resta quella del catalogo locale, e nient’altro cambia.</string>
+    <string name="settings_block_self_update_label">Non controllare gli aggiornamenti di MultiStore</string>
+    <string name="settings_block_self_update_description">MultiStore non è su nessuno store, quindi una versione nuova si annuncia nello stesso indice. Un aggiornamento scaricato passa dagli stessi controlli di qualunque altra app, compreso il confronto della firma.</string>
+    <string name="settings_section_search">Ricerca</string>
+    <string name="settings_search_timeout_label">Quanto aspettare uno store</string>
+    <string name="settings_search_timeout_description">Gli store non rispondono insieme: uno legge un indice locale in millisecondi, un altro impone tre secondi di attesa prima ancora che sia educato chiedere. Uno store che finisce il tempo viene elencato fra quelli mancanti accanto ai risultati degli altri — la ricerca non lo aspetta.</string>
+    <string name="settings_search_timeout_dialog_title">Quanto aspettare uno store</string>
+    <plurals name="settings_search_timeout_seconds">
+        <item quantity="one">%1$d secondo</item>
+        <item quantity="many">%1$d secondi</item>
+        <item quantity="other">%1$d secondi</item>
+    </plurals>
+    <string name="settings_search_field_label">Cerca nelle impostazioni</string>
+    <string name="settings_search_field_clear">Cancella la ricerca</string>
+    <string name="settings_search_empty_title">Nessuna corrispondenza</string>
+    <string name="settings_search_empty_message">Nessuna impostazione contiene quelle parole. Prova con una parola sola, oppure svuota il campo per rivederle tutte.</string>
+    <string name="settings_section_notifications">Notifiche</string>
+    <string name="settings_notify_download_label">Dì quando un file scaricato da MultiStore è pronto</string>
+    <string name="settings_notify_download_description">Solo per i download che MultiStore avvia da sola. Un file che hai chiesto tu mostra l\'avanzamento sulla scheda dell\'app, quindi una notifica non aggiungerebbe niente.</string>
+    <string name="settings_notify_install_label">Dì com\'è andata un\'installazione non presidiata</string>
+    <string name="settings_notify_install_description">Solo per le installazioni che MultiStore fa da sola. Il caso che vale la pena leggere è il fallimento: un aggiornamento rifiutato perché la firma è cambiata non si ripresenta da solo.</string>
+    <string name="settings_notify_store_label">Dì quando uno store non ha risposto</string>
+    <string name="settings_notify_store_description">Solo per il controllo periodico, dove gli store interrogati sono esattamente quelli da cui si aggiornano le app installate — quindi uno store muto significa app che smettono di aggiornarsi in silenzio. Durante una ricerca lo store mancante è già scritto accanto ai risultati.</string>
+    <string name="settings_section_diagnostics">Diagnostica</string>
+    <string name="settings_diagnostics_log_label">Registra anche le richieste riuscite</string>
+    <string name="settings_diagnostics_log_description">MultiStore registra sempre ciò che va storto. Accendendo questo, registra anche ciò che va bene: l\'indirizzo completo di ogni richiesta, il codice di risposta e quanto ci ha messo. Gli indirizzi contengono i termini cercati sugli store che li mettono nel percorso. Resta su questo dispositivo ed esce solo dove lo esporti.</string>
+    <string name="settings_diagnostics_export_label">Esporta il rapporto diagnostico</string>
+    <string name="settings_diagnostics_export_description">Scrive un file di testo con la versione dell\'app, questo dispositivo, lo stato di ogni store, la configurazione in uso e gli eventi registrati. Leggilo prima di mandarlo: con l\'interruttore qui sopra acceso contiene anche gli indirizzi che MultiStore ha richiesto.</string>
+    <string name="settings_diagnostics_export_action">Esporta</string>
+    <string name="settings_diagnostics_export_done">Rapporto salvato.</string>
+    <string name="settings_diagnostics_export_failed">Non è stato possibile salvare il rapporto.</string>
+
+    <!-- Search: the two defaults of the filter panel. -->
+    <string name="settings_search_sort_label">Ordinamento predefinito</string>
+    <string name="settings_search_sort_description">Come sono ordinati i risultati finché non lo cambi per una singola ricerca. I criteri offerti sono tre: il titolo lo pubblicano tutti gli store, il voto tre, e la data nessuno su tutte le righe.</string>
+    <string name="settings_search_sort_relevance">Rilevanza</string>
+    <string name="settings_search_sort_name">Nome</string>
+    <string name="settings_search_sort_rating">Voto</string>
+    <string name="settings_search_content_kind_label">Mostra per impostazione predefinita</string>
+    <string name="settings_search_content_kind_description">Se la ricerca parte da app, giochi o tutto. Un solo store etichetta le proprie schede: con un tipo selezionato gli altri restano fuori dalla ricerca e vengono elencati sotto i risultati.</string>
+    <string name="settings_search_content_kind_all">Tutto</string>
+    <string name="settings_search_content_kind_apps">Solo app</string>
+    <string name="settings_search_content_kind_games">Solo giochi</string>
+
+    <!-- Storage: the four levels, the three settings. -->
+    <string name="settings_storage_catalog_label">Catalogo scaricato</string>
+    <string name="settings_storage_catalog_description">Schede, versioni e schermate salvate su questo dispositivo, piu\' l\'indice locale completo degli store che ne pubblicano uno. Svuotarlo libera piu\' spazio di tutto il resto ed e\' anche il piu\' caro da rifare: solo F-Droid sono circa 18 MB da riscaricare. Le app installate, i loro canali di aggiornamento e le corrispondenze che hai confermato restano.</string>
+    <string name="settings_storage_apks_label">APK scaricati</string>
+    <string name="settings_storage_apks_description">File di installazione ancora sul dispositivo: download mai installati, e cio\' che tiene l\'impostazione qui sotto. I trasferimenti in corso o in pausa non si toccano.</string>
+    <string name="settings_storage_images_label">Immagini</string>
+    <string name="settings_storage_images_description">Icone e schermate delle app. Tornano da sole alla prossima scorsa di un elenco.</string>
+    <string name="settings_storage_pages_label">Pagine degli store</string>
+    <string name="settings_storage_pages_description">Le pagine grezze conservate perche\' tornare su un risultato appena visto non richieda di nuovo allo store. Svuotarle costa una richiesta in piu\' per ogni pagina su cui torni.</string>
+    <string name="settings_storage_clear_action">Svuota</string>
+    <string name="settings_storage_clearing">Svuotamento in corso…</string>
+    <string name="settings_storage_freed">Liberati %1$s.</string>
+    <string name="settings_storage_nothing">Non c\'era niente da liberare.</string>
+    <string name="settings_storage_catalog_confirm_title">Svuotare il catalogo scaricato?</string>
+    <string name="settings_storage_catalog_confirm_message">La ricerca non trovera\' niente sugli store a indice locale finche\' non sara\' stato riscaricato — circa 18 MB per F-Droid, sulla connessione che avrai in quel momento. Le app installate e i loro canali di aggiornamento restano.</string>
+    <string name="settings_storage_confirm_cancel">Annulla</string>
+    <string name="settings_keep_apk_label">Tieni gli APK dopo l\'installazione</string>
+    <string name="settings_keep_apk_description">Spento, il file di installazione si cancella appena l\'installazione riesce. Acceso, resta e viene riusato: reinstallare quella stessa versione non costa nessun download. Vuol dire anche che lo spazio qui sopra continua a crescere, e l\'unica cosa che lo riduce e\' il pulsante che lo svuota.</string>
+    <string name="settings_catalog_retention_label">Tieni le schede scadute per</string>
+    <string name="settings_catalog_retention_description">Una scheda si riscarica quando finisce la finestra di freschezza decisa dallo store; questo e\' per quanto si tiene la copia vecchia dopo, cosi\' riaprire la ricerca di ieri mostra subito qualcosa. Non tocca gli store a indice locale: il loro e\' un catalogo che hai chiesto di scaricare, non una pagina scaduta.</string>
+    <string name="settings_catalog_retention_dialog_title">Tieni le schede scadute per</string>
+    <string name="settings_catalog_retention_7_days">7 giorni</string>
+    <string name="settings_catalog_retention_30_days">30 giorni</string>
+    <string name="settings_catalog_retention_90_days">90 giorni</string>
+    <string name="settings_catalog_retention_keep">Per sempre</string>
+    <string name="settings_image_cache_label">Dimensione cache immagini</string>
+    <string name="settings_image_cache_description">Quanto disco possono occupare icone e schermate. Vale dal prossimo avvio, perche\' la dimensione si fissa quando la cache viene aperta.</string>
+    <string name="settings_image_cache_dialog_title">Dimensione cache immagini</string>
+    <string name="settings_unknown_sources_label">Consenti l\'installazione di app</string>
+    <string name="settings_unknown_sources_description">Ad Android va detto che MultiStore può installare app. È un\'impostazione di sistema, quindi può essere revocata da fuori dall\'app — anche da un aggiornamento di sistema.</string>
+    <string name="settings_unknown_sources_action">Apri l\'impostazione</string>
+    <string name="settings_unknown_sources_granted">Consentita</string>
+    <string name="settings_unknown_sources_denied">Non consentita</string>
+    <string name="settings_unknown_sources_unreachable">Questo dispositivo non ha una schermata per quell\'impostazione: il software %1$s potrebbe averla spostata o tolta. Cerca «installa app sconosciute» nelle impostazioni di sistema.</string>
+
+    <!-- Support: two actions that open an address in the browser. -->
+    <string name="settings_section_support">Sostieni</string>
+    <string name="settings_donate_description">MultiStore è gratuita, non ha pubblicità e non manda niente da nessuna parte. Se ti è utile, un contributo aiuta a mandarla avanti. Si apre nel browser.</string>
+    <string name="settings_donate_kofi_label">Fai una donazione su Ko-fi</string>
+    <string name="settings_donate_kofi_action">Apri Ko-fi</string>
+    <string name="settings_donate_paypal_label">Fai una donazione su PayPal</string>
+    <string name="settings_donate_paypal_action">Apri PayPal</string>
+</resources>

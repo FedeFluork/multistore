@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Must stay identical to `background` in MultiStoreDarkColorScheme. -->
+<resources>
+    <color name="window_background">#131318</color>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. Same exclusions as backup_rules.xml, new format. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/" />
+        <exclude domain="file" path="staging/" />
+        <exclude domain="file" path="remoteconfig/" />
+        <exclude domain="database" path="multistore.db" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/" />
+        <exclude domain="file" path="staging/" />
+        <exclude domain="file" path="remoteconfig/" />
+        <exclude domain="database" path="multistore.db" />
+    </device-transfer>
+</data-extraction-rules>

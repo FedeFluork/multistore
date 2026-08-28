@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A permission is declared by the module that needs it, not by :app.
+
+  Here a WebView really loads the store page in order to run its challenge: without INTERNET it
+  would load nothing and tier 3 of the escalation ladder would always fail, with a message about
+  the network rather than about permissions. Declaring it here also means that anyone adding this
+  module to another project carries it along without having to know.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+</manifest>

@@ -1,0 +1,108 @@
+# MultiStore CI: build, test, lint and screenshots on every push.
+#
+# This pipeline is entirely **offline and hermetic**. It touches none of the 9 stores. Verification
+# against the real sites is a separate, non-blocking job (the canary).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.welcome=never
+
+jobs:
+  build:
+    name: Build, test e lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          # Locally the Android Studio JBR is used (there is no system JDK on that machine); here a
+          # Temurin of the same major is enough. The bytecode target is 17 in both cases, read from
+          # gradle/libs.versions.toml.
+          distribution: temurin
+          java-version: '21'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Convention plugin
+        # If build-logic does not compile, everything else would fail with indirect errors: getting
+        # it wrong first gives the right message.
+        run: ./gradlew -p build-logic :convention:build
+
+      - name: Regole di dipendenza fra moduli
+        # The dependency rules are verified, not merely written down.
+        run: ./gradlew checkDependencyRules
+
+      - name: Guardrail (traduzioni, impostazioni, screenshot)
+        # These run first and take a few seconds: if a translation is missing there is no point
+        # waiting 20 minutes of build to find out.
+        run: ./gradlew :guardrails:test
+
+      - name: Build, test, lint
+        run: ./gradlew build lint
+
+      - name: Screenshot Roborazzi (chiaro e scuro)
+        # OPEN POINT: the committed goldens were recorded on macOS/arm64 and are compared here on
+        # ubuntu/x86-64. Robolectric renders with its own `android-all` font stack, so in theory the
+        # output does not depend on the host — but "in theory" is not a verification, and this CI has
+        # never run yet (the repo has no remote).
+        #
+        # On the first run: if this step fails with widespread, tiny differences, the cause is the
+        # platform, not a regression. In that case the fix is NOT to lower the threshold, it is to
+        # choose ubuntu-latest as the single recording platform — `./gradlew recordRoborazziDebug`
+        # from a workflow_dispatch job, PNGs committed — and stop recording locally.
+        run: ./gradlew verifyRoborazziDebug
+
+      - name: Report dei test
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/**'
+          retention-days: 7
+
+      - name: Report lint
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: '**/build/reports/lint-results-*.html'
+          retention-days: 7
+
+      - name: Differenze di screenshot
+        # When verifyRoborazzi fails, the diff image is the only way to understand *what* changed:
+        # without the artifact one is left looking at an exit code.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: '**/build/outputs/roborazzi/**'
+          retention-days: 7
+
+      - name: APK di debug
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multistore-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14

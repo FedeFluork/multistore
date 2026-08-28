@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The update-check notification.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="update_notification_channel_name">Aggiornamenti</string>
+    <string name="update_notification_channel_description">Avvisa quando le app installate tramite MultiStore hanno una versione più recente.</string>
+    <plurals name="update_notification_title">
+        <item quantity="one">%1$d aggiornamento disponibile</item>
+        <item quantity="many">%1$d aggiornamenti disponibili</item>
+        <item quantity="other">%1$d aggiornamenti disponibili</item>
+    </plurals>
+    <string name="install_notification_channel_name">Installazioni</string>
+    <string name="install_notification_channel_description">Avvisa quando un aggiornamento scaricato da MultiStore è pronto, e com\'è andata a installarlo.</string>
+    <plurals name="install_ready_title">
+        <item quantity="one">%1$d app pronta da installare</item>
+        <item quantity="many">%1$d app pronte da installare</item>
+        <item quantity="other">%1$d app pronte da installare</item>
+    </plurals>
+    <plurals name="install_result_title">
+        <item quantity="one">%1$d app aggiornata</item>
+        <item quantity="many">%1$d app aggiornate</item>
+        <item quantity="other">%1$d app aggiornate</item>
+    </plurals>
+    <plurals name="install_result_failed_title">
+        <item quantity="one">%1$d app non si è potuta aggiornare</item>
+        <item quantity="many">%1$d app non si sono potute aggiornare</item>
+        <item quantity="other">%1$d app non si sono potute aggiornare</item>
+    </plurals>
+    <string name="store_alert_channel_name">Store irraggiungibili</string>
+    <string name="store_alert_channel_description">Avvisa quando uno store da cui MultiStore aggiorna le tue app non ha risposto.</string>
+    <plurals name="store_alert_title">
+        <item quantity="one">%1$d store non ha risposto</item>
+        <item quantity="many">%1$d store non hanno risposto</item>
+        <item quantity="other">%1$d store non hanno risposto</item>
+    </plurals>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_network">Aucune connexion. Vérifiez le réseau et réessayez.</string>
+    <string name="error_rate_limited">Le magasin nous demande de ralentir. Réessayez sous peu.</string>
+    <string name="error_blocked">Le magasin a bloqué la requête.</string>
+    <string name="error_parse">Le magasin a répondu dans un format inattendu.</string>
+    <string name="error_not_found">Introuvable sur ce magasin.</string>
+    <string name="error_integrity">Un contrôle d\'intégrité a échoué. Le fichier a été écarté.</string>
+    <string name="error_storage">Espace insuffisant, ou fichier non inscriptible.</string>
+    <string name="error_install_failed">Le système a refusé l\'installation.</string>
+    <string name="error_cancelled">Annulé.</string>
+    <string name="error_user_assistance_disabled">Ce téléchargement demande un appui sur la page de la boutique, et ce parcours est désactivé dans les Réglages.</string>
+    <string name="error_unexpected">Une erreur est survenue.</string>
+    <!-- Actions shared by several screens. -->
+    <string name="action_back">Retour</string>
+    <string name="install_failed_unknown">Le système a refusé l\'installation sans en donner la raison.</string>
+    <string name="install_failed_blocked">Le refus vient de quelque chose au-dessus d\'Android : une règle de l\'appareil, une application de sécurité, ou une fonction du logiciel %1$s. Ce n\'est pas dans les réglages d\'Android qu\'il faut chercher.</string>
+    <string name="install_failed_blocked_generic">Le refus vient de quelque chose au-dessus d\'Android : une règle de l\'appareil, une application de sécurité, ou une fonction du logiciel du fabricant.</string>
+    <string name="install_failed_invalid">Le fichier n\'est pas un APK valide. C\'est presque toujours un téléchargement interrompu : réessaie de le télécharger.</string>
+    <string name="install_failed_conflict">Elle entre en conflit avec la copie déjà installée : signature différente, ou version plus ancienne. Désinstaller d\'abord l\'application installée résout le problème, et en perd les données.</string>
+    <string name="install_failed_storage">Espace insuffisant sur l\'appareil.</string>
+    <string name="install_failed_incompatible">L\'application ne fonctionne pas sur cet appareil : elle demande un Android plus récent, ou une architecture de processeur que cet appareil n\'a pas.</string>
+    <string name="install_failed_timeout">Le système a mis trop de temps. Réessayer fonctionne en général.</string>
+
+    <!-- The progress card that appears above every screen. -->
+    <string name="downloads_overlay_title_one">Téléchargement de %1$s</string>
+    <string name="downloads_overlay_unknown_app">une application</string>
+    <string name="downloads_overlay_dismiss">Masquer le panneau des téléchargements</string>
+    <plurals name="downloads_overlay_title_many">
+        <item quantity="one">Téléchargement de %1$d application</item>
+        <item quantity="many">Téléchargement de %1$d applications</item>
+        <item quantity="other">Téléchargement de %1$d applications</item>
+    </plurals>
+</resources>

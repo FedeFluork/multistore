@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      A permission is declared by the module that needs it, not by :app: that way it cannot be
+      forgotten when the module is added to another application, and it is visible from here why it
+      is there.
+    -->
+
+    <!--
+      Knowing whether the active connection is metered.
+
+      It serves the decision "sync automatically on an unmetered network, with explicit confirmation
+      if metered": without it, `isActiveNetworkMetered` throws SecurityException and an 18 MB index
+      would start over mobile data without asking anybody. It is a normal permission, granted at
+      install time: no runtime request.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+</manifest>

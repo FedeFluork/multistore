@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Permissions are declared by the module that needs them, not by :app: that way they cannot be
+      forgotten when the module is added to another application, and from here it is visible why
+      they are there.
+    -->
+
+    <!-- Install a downloaded APK. Must be paired with canRequestPackageInstalls(). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!--
+      Uninstall. NOT `DELETE_PACKAGES`: that one is `signature|privileged` and is never granted to
+      a normal app. With targetSdk 36 this is the permission that is needed, and without it
+      `PackageInstaller.uninstall()` throws SecurityException.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
+    <!--
+      Know whether an arbitrary package is installed, and with which signature. Needed by the app
+      detail screen ("already installed, version X") and by step 5 of pre-install verification.
+
+      Lint suggests `<queries>` instead, and in almost any other app it would be right. Not here:
+      `<queries>` lists **statically** the packages one wants to see, and we do not know in advance
+      which apps the user will look for — they are, literally, all the apps in the nine catalogues.
+      Without this permission the signature check against the already installed package cannot be
+      done, and that is the check that prevents offering an update the operating system will
+      refuse.
+
+      The suppression is targeted and not a baseline: if lint flagged something else tomorrow, we
+      would see it. There are no store policy constraints to respect — MultiStore is not
+      distributed on Play.
+    -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!--
+      Talk to Shizuku, if the user has it. It is not a system permission: the Shizuku app defines
+      it, so on a device without it the permission simply stays ungranted and
+      `ShizukuShell.isAvailable()` answers `false`. No feature requires it — the app must work
+      fully with `SessionInstaller` alone.
+    -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+    <!--
+      How Shizuku's binder reaches this app.
+
+      It is not our provider and exposes nothing of ours: it is the hook the library requires, and
+      without it `Shizuku.pingBinder()` always answers `false` — i.e. the channel would never come
+      up, on any device, with nothing saying so.
+
+      `android:exported="true"` looks like the opposite of what one would want, and is in fact what
+      makes it safe: the provider is protected by `INTERACT_ACROSS_USERS_FULL`, a
+      `signature|privileged` permission never granted to a normal app. The only caller left is
+      Shizuku's own service.
+
+      `${applicationId}` is resolved by manifest merging, so the three variants (`com.multistore`,
+      `.debug`, `.minified`) coexist on the same device without fighting over the authority.
+    -->
+    <application>
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+    </application>
+
+</manifest>

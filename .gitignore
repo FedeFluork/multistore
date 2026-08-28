@@ -1,0 +1,48 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!build-logic/
+build-logic/**/build/
+
+# Android / local toolchain
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+release/
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+captures/
+
+# OS
+.DS_Store
+
+# Test reports and outputs
+**/build/reports/
+**/build/test-results/
+**/build/outputs/roborazzi/
+
+# Signing keys for the remote configuration.
+#
+# The PUBLIC key is pinned in the source (`ParsersKey` in :core:remoteconfig) and belongs
+# under version control: it is what the app uses to reject a document we did not sign.
+# The PRIVATE key does not, and there are no exceptions — whoever holds it can publish
+# selectors and domains that every installation will apply as its own.
+#
+# The release keystore lives here too. Without .secrets/keystore.properties the release
+# variant comes out unsigned, which is what should happen on any machine other than the
+# publisher's: a release signed with the debug key would be worse than an unsigned one,
+# because it would install.
+.secrets/
+
+# Working notes and agent configuration. These are the documents this project is developed
+# against; they are not part of what it distributes.
+.claude/
+CLAUDE.md
+DEVELOPMENT_PLAN.md
+SELF_UPDATE.md

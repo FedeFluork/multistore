@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appdetail_title">App</string>
+    <string name="appdetail_from_store">Da %1$s</string>
+    <string name="appdetail_installed_version">Installata: %1$s</string>
+    <string name="appdetail_stale_notice">Questa scheda è più vecchia della sua finestra di aggiornamento. Si sta aggiornando in sottofondo.</string>
+    <string name="appdetail_not_found_title">App non trovata</string>
+    <string name="appdetail_not_found_message">Questa app non è nel catalogo dello store selezionato.</string>
+
+    <string name="appdetail_action_install">Installa</string>
+    <string name="appdetail_action_update">Aggiorna</string>
+    <string name="appdetail_action_uninstall">Disinstalla</string>
+    <string name="appdetail_action_cancel">Annulla</string>
+    <string name="appdetail_action_dismiss">Chiudi</string>
+
+    <string name="appdetail_state_resolving">Scelta della versione…</string>
+    <string name="appdetail_state_downloading">Scaricamento</string>
+    <string name="appdetail_state_verifying">Verifica del pacchetto…</string>
+    <string name="appdetail_state_writing">Scrittura nella sessione di installazione</string>
+    <string name="appdetail_state_committing">Consegna al sistema…</string>
+    <string name="appdetail_state_awaiting_user">In attesa della tua conferma</string>
+    <string name="appdetail_state_uninstalling">Disinstallazione…</string>
+    <string name="appdetail_state_installed">Installata</string>
+    <string name="appdetail_state_uninstalled">Disinstallata</string>
+    <string name="appdetail_state_cancelled">Annullato</string>
+    <string name="appdetail_state_up_to_date">Già aggiornata</string>
+    <string name="appdetail_bytes_of">%1$s di %2$s</string>
+
+    <string name="appdetail_incompatible_title">Non compatibile con questo dispositivo</string>
+    <string name="appdetail_incompatible_message">Nessuna versione pubblicata gira su questa versione di Android o su questa CPU.</string>
+    <string name="appdetail_nothing_installable_title">Niente da installare</string>
+    <string name="appdetail_nothing_installable_message">Questo store non pubblica nessun pacchetto installabile per questa app.</string>
+    <string name="appdetail_only_other_channels_title">Solo in un canale di anteprima</string>
+    <string name="appdetail_only_other_channels_message">Quest’app è pubblicata solo in %1$s, non nel canale predefinito dello store.</string>
+    <string name="appdetail_only_other_channels_action">Mostra le versioni</string>
+    <string name="appdetail_versions_title">Versioni precedenti</string>
+    <string name="appdetail_versions_loading">Sto chiedendo allo store…</string>
+    <string name="appdetail_versions_failed">Lo store non ha risposto. Qui sotto c’è solo quello che MultiStore aveva già.</string>
+    <string name="appdetail_versions_retry">Riprova</string>
+    <string name="appdetail_versions_only_current">Questo store pubblica solo la versione corrente.</string>
+    <string name="appdetail_versions_state_installed">Installata</string>
+    <string name="appdetail_versions_state_older">Più vecchia di quella installata: Android non sostituisce un’app con una versione precedente.</string>
+    <string name="appdetail_versions_state_incompatible">Non gira su questo dispositivo.</string>
+    <string name="appdetail_versions_state_unsupported">MultiStore non sa aprire questo formato di file.</string>
+    <string name="appdetail_failed_title">Installazione fallita</string>
+
+    <string name="appdetail_signer_conflict_title">La firma non combacia</string>
+    <string name="appdetail_signer_conflict_message">L\'app installata è firmata con una chiave diversa, quindi Android rifiuterà l\'aggiornamento. L\'unica via è disinstallare — cosa che cancella i dati dell\'app — e installare di nuovo dopo.</string>
+    <string name="appdetail_signer_conflict_action">Disinstalla (perdi i dati)</string>
+
+    <string name="appdetail_user_assisted_title">Questo scaricamento richiede te</string>
+    <string name="appdetail_user_assisted_message">Lo store chiede un\'interazione reale sulla propria pagina. Aprila e completa lì lo scaricamento; verifica e installazione poi proseguono come sempre.</string>
+    <string name="appdetail_user_assisted_action">Apri la pagina dello store</string>
+
+    <string name="appdetail_unknown_sources_title">Consenti l\'installazione di app</string>
+    <string name="appdetail_unknown_sources_message">Ad Android va detto che MultiStore può installare app. È un\'impostazione di sistema da concedere una volta sola.</string>
+    <string name="appdetail_unknown_sources_action">Apri l\'impostazione</string>
+
+    <string name="appdetail_rejected_title">Il pacchetto è stato rifiutato</string>
+    <string name="appdetail_rejected_generic">La verifica non si è conclusa.</string>
+    <string name="appdetail_rejected_unreadable">Non è stato possibile leggere l\'archivio: %1$s</string>
+    <string name="appdetail_rejected_not_signed">L\'archivio non ha una firma valida: %1$s</string>
+    <string name="appdetail_rejected_size">La dimensione del file non corrisponde a quella dichiarata dallo store.</string>
+    <string name="appdetail_rejected_hash">Lo SHA-256 non corrisponde a quello pubblicato dallo store.</string>
+    <string name="appdetail_rejected_package_name">Il file dichiara il pacchetto %2$s, ma la scheda diceva %1$s. Questo controllo non è disattivabile.</string>
+    <string name="appdetail_rejected_signer_installed">La firma è diversa da quella dell\'app già installata.</string>
+    <string name="appdetail_rejected_unexpected_signer">La firma non è quella dichiarata dallo store.</string>
+    <string name="appdetail_rejected_downgrade">La versione %1$d è più vecchia della %2$d installata. Reinstallarla reintrodurrebbe difetti già corretti.</string>
+    <string name="appdetail_rejected_incompatible">Questo pacchetto richiede Android API %1$d; il dispositivo è alla %2$d.</string>
+
+    <string name="appdetail_section_description">Descrizione</string>
+    <string name="appdetail_section_antifeatures">Avvisi dello store</string>
+    <string name="appdetail_section_details">Dettagli</string>
+    <string name="appdetail_meta_rating">★ %1$.1f</string>
+    <string name="appdetail_newer_elsewhere">Su %1$s c\'è la %2$s</string>
+    <string name="appdetail_action_open_in_browser">Apri nel browser</string>
+    <string name="appdetail_version_min_sdk">Richiede Android API %1$d o successiva</string>
+    <string name="appdetail_license">Licenza: %1$s</string>
+    <!-- A file already in staging that nobody installed: assisted-path return, or cancelled confirmation. -->
+    <string name="appdetail_ready_to_install_title">Il file è già scaricato</string>
+    <string name="appdetail_ready_to_install_message">Quest\'app era stata scaricata e mai installata. Installarla adesso non riscarica niente.</string>
+    <string name="appdetail_verification_title">Cosa è stato verificato davvero</string>
+    <string name="appdetail_verification_package_ok">Il nome del pacchetto coincide con quello dichiarato dallo store</string>
+    <string name="appdetail_verification_package_unchecked">Nome del pacchetto: lo store non lo dichiara, quindi non è stato contraddetto</string>
+    <string name="appdetail_verification_hash_ok">Il checksum coincide con quello pubblicato dallo store</string>
+    <string name="appdetail_verification_hash_unchecked">Checksum: non verificato contro un valore pubblicato</string>
+    <string name="appdetail_verification_signer_ok">La firma coincide con la chiave attesa</string>
+    <string name="appdetail_verification_signer_unchecked">Firma: nessuna chiave con cui confrontarla</string>
+    <string name="appdetail_verification_signer_fingerprint">Firmato da %1$s</string>
+
+    <string name="appdetail_state_reading_store">Sto leggendo la pagina di questo store…</string>
+    <string name="appdetail_stores_title">Altri store</string>
+    <string name="appdetail_stores_none">MultiStore non ha ancora visto quest’app su nessun altro store.</string>
+    <string name="appdetail_stores_lookup_action">Cerca sugli altri store</string>
+    <string name="appdetail_stores_lookup_running">Sto chiedendo agli altri store…</string>
+    <string name="appdetail_possible_match_title">Possibile corrispondenza</string>
+    <string name="appdetail_possible_match_message">Sembrano la stessa app, ma MultiStore non può dimostrarlo: gli store pubblicano nomi di pacchetto diversi, o non li pubblicano affatto. Unire le due sbagliate ti farebbe scaricare l’APK di un’altra app, quindi la scelta è tua.</string>
+    <string name="appdetail_possible_match_confirm">È la stessa</string>
+    <string name="appdetail_possible_match_reject">Sono diverse</string>
+    <plurals name="appdetail_stores_available_count">
+        <item quantity="one">Disponibile su %1$d store</item>
+        <item quantity="many">Disponibile su %1$d store</item>
+        <item quantity="other">Disponibile su %1$d store</item>
+    </plurals>
+
+    <string name="appdetail_state_update_unknown">Questo store non pubblica il codice di versione: non è possibile accorgersi di una versione più recente.</string>
+    <string name="appdetail_pinned_title">Bloccata al codice di versione %1$d</string>
+    <string name="appdetail_pinned_message">La versione %1$s è disponibile, ma hai bloccato quest’app. Sbloccala in «Le mie app» per aggiornarla.</string>
+
+    <!-- Split containers (XAPK, APKM, APKS) -->
+    <string name="appdetail_state_unpacking">Apertura del contenitore…</string>
+    <plurals name="appdetail_unpacking_detail">
+        <item quantity="one">%1$d file, %2$s da installare</item>
+        <item quantity="many">%1$d file, %2$s da installare</item>
+        <item quantity="other">%1$d file, %2$s da installare</item>
+    </plurals>
+    <string name="appdetail_state_placing_expansions">Copia dei dati di gioco…</string>
+    <string name="appdetail_container_rejected_title">Questo file non si è potuto aprire</string>
+    <string name="appdetail_container_unreadable">Il file scaricato non è un contenitore che quest\'app sappia aprire: %1$s</string>
+    <string name="appdetail_container_incompatible_abi">Il contenitore porta codice nativo solo per %1$s, che questo dispositivo non esegue.</string>
+    <string name="appdetail_container_not_enough_space">Servono %1$s per aprirlo e ce ne sono liberi %2$s.</string>
+    <string name="appdetail_container_expansions_privileged">Questo file porta dati di gioco che vanno in una cartella che Android lascia scrivere solo a un canale privilegiato. Attiva Shizuku o root nelle impostazioni, oppure cerca una versione senza dati di gioco.</string>
+    <string name="appdetail_container_expansion_failed">I dati di gioco non si sono potuti copiare: %1$s</string>
+    <string name="appdetail_rejected_foreign_split">Il pezzo %1$s non appartiene a quest\'app: %2$s.</string>
+    <string name="appdetail_unknown_sources_unreachable">Questo dispositivo non ha una schermata per quell\'impostazione: il software %1$s potrebbe averla spostata o tolta. Cerca «installa app sconosciute» nelle impostazioni di sistema.</string>
+</resources>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The update-check notification.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="update_notification_channel_name">Mises à jour</string>
+    <string name="update_notification_channel_description">Vous prévient quand les applications installées via MultiStore ont une version plus récente.</string>
+    <plurals name="update_notification_title">
+        <item quantity="one">%1$d mise à jour disponible</item>
+        <item quantity="many">%1$d mises à jour disponibles</item>
+        <item quantity="other">%1$d mises à jour disponibles</item>
+    </plurals>
+    <string name="install_notification_channel_name">Installations</string>
+    <string name="install_notification_channel_description">Vous prévient quand une mise à jour téléchargée seule par MultiStore est prête, et comment son installation s’est passée.</string>
+    <plurals name="install_ready_title">
+        <item quantity="one">%1$d application prête à installer</item>
+        <item quantity="many">%1$d applications prêtes à installer</item>
+        <item quantity="other">%1$d applications prêtes à installer</item>
+    </plurals>
+    <plurals name="install_result_title">
+        <item quantity="one">%1$d application mise à jour</item>
+        <item quantity="many">%1$d applications mises à jour</item>
+        <item quantity="other">%1$d applications mises à jour</item>
+    </plurals>
+    <plurals name="install_result_failed_title">
+        <item quantity="one">%1$d application n’a pas pu être mise à jour</item>
+        <item quantity="many">%1$d applications n’ont pas pu être mises à jour</item>
+        <item quantity="other">%1$d applications n’ont pas pu être mises à jour</item>
+    </plurals>
+    <string name="store_alert_channel_name">Boutiques injoignables</string>
+    <string name="store_alert_channel_description">Vous prévient quand une boutique d’où MultiStore met à jour vos applications n’a pas répondu.</string>
+    <plurals name="store_alert_title">
+        <item quantity="one">%1$d boutique n’a pas répondu</item>
+        <item quantity="many">%1$d boutiques n’ont pas répondu</item>
+        <item quantity="other">%1$d boutiques n’ont pas répondu</item>
+    </plurals>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The browse-a-store's-catalogue screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+
+  Category names are NOT here: the store publishes them, already localised.
+-->
+<resources>
+    <string name="storelisting_all_categories">Tutte</string>
+    <string name="storelisting_load_more">Carica altri</string>
+    <string name="storelisting_empty_title">Niente in questa categoria</string>
+    <string name="storelisting_empty_message">Il catalogo scaricato non ha nessuna app qui. Prova un\'altra categoria, oppure sincronizza di nuovo dalla home.</string>
+    <string name="storelisting_choose_category">Scegli una categoria</string>
+    <plurals name="storelisting_category_app_count">
+        <item quantity="one">%1$d app</item>
+        <item quantity="many">%1$d app</item>
+        <item quantity="other">%1$d app</item>
+    </plurals>
+</resources>

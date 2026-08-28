@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Cerca</string>
+    <string name="search_field_label">Cerca app</string>
+    <string name="search_field_clear">Cancella la ricerca</string>
+
+    <string name="search_idle_title">Cerca su tutti gli store insieme</string>
+    <string name="search_idle_message">Una sola ricerca, i risultati di ogni store collegato, uniti e confrontati fianco a fianco.</string>
+
+    <string name="search_no_results_title">Nessun risultato per «%1$s»</string>
+    <string name="search_no_results_message">Prova con un altro termine, o controlla l\'ortografia.</string>
+
+    <string name="search_load_more">Carica altri</string>
+
+    <string name="search_shortfall_title">Alcuni store non hanno risposto</string>
+    <string name="search_shortfall_entry">%1$s — %2$s</string>
+    <string name="search_shortfall_paused">In pausa dopo ripetuti fallimenti. Non abbiamo nemmeno provato.</string>
+    <string name="search_shortfall_partial">Risultati parziali.</string>
+    <string name="search_shortfall_unknown">Nessuna risposta.</string>
+    <string name="search_shortfall_retry">Cerca di nuovo</string>
+
+    <string name="search_bootstrap_notice">Risultati parziali: il catalogo si sta ancora scaricando, quindi questo store può rispondere solo con una manciata di corrispondenze.</string>
+
+    <string name="search_progress_stores">%1$d store su %2$d hanno risposto</string>
+    <string name="search_progress_still_arriving">%1$d store su %2$d hanno risposto. La lista si sta ancora riempiendo, quindi i risultati possono spostarsi.</string>
+    <plurals name="search_available_on_stores">
+        <item quantity="one">Su %1$d store</item>
+        <item quantity="many">Su %1$d store</item>
+        <item quantity="other">Su %1$d store</item>
+    </plurals>
+    <plurals name="search_shortfall_paused_retry">
+        <item quantity="one">In pausa dopo ripetuti errori. Riprovo fra circa %1$d minuto.</item>
+        <item quantity="many">In pausa dopo ripetuti errori. Riprovo fra circa %1$d minuti.</item>
+        <item quantity="other">In pausa dopo ripetuti errori. Riprovo fra circa %1$d minuti.</item>
+    </plurals>
+
+    <!-- The filter panel. -->
+    <string name="search_filters_open">Filtri</string>
+    <string name="search_filters_title">Filtri</string>
+    <string name="search_filters_reset">Azzera</string>
+    <string name="search_filters_close">Fatto</string>
+    <string name="search_filters_kind_label">Tipo</string>
+    <string name="search_filters_kind_all">Tutto</string>
+    <string name="search_filters_kind_apps">App</string>
+    <string name="search_filters_kind_games">Giochi</string>
+    <string name="search_filters_rating_label">Voto minimo</string>
+    <string name="search_filters_rating_any">Qualsiasi</string>
+    <string name="search_filters_rating_value">Da %1$s in su</string>
+    <string name="search_filters_sort_label">Ordina per</string>
+    <string name="search_filters_sort_relevance">Rilevanza</string>
+    <string name="search_filters_sort_name">Nome</string>
+    <string name="search_filters_sort_rating">Voto</string>
+    <string name="search_filters_stores_label">Store</string>
+    <string name="search_filters_stores_hint">Solo per questa ricerca. Per spegnere uno store in modo stabile, usa le Impostazioni.</string>
+    <string name="search_filtered_out_title">Alcuni store non sanno rispondere a questa domanda</string>
+    <string name="search_filter_name_content_kind">il tipo (app o gioco)</string>
+    <string name="search_filter_name_min_rating">il voto</string>
+    <string name="search_filter_name_category">la categoria</string>
+    <string name="search_rating">★ %1$s</string>
+    <plurals name="search_filters_active">
+        <item quantity="one">%1$d filtro</item>
+        <item quantity="many">%1$d filtri</item>
+        <item quantity="other">%1$d filtri</item>
+    </plurals>
+    <plurals name="search_filtered_out_entry">
+        <item quantity="one">%1$s non pubblica %2$s nei suoi risultati, quindi non è stato interrogato.</item>
+        <item quantity="many">%1$s non pubblicano %2$s nei loro risultati, quindi non sono stati interrogati.</item>
+        <item quantity="other">%1$s non pubblicano %2$s nei loro risultati, quindi non sono stati interrogati.</item>
+    </plurals>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_network">Sin conexión. Comprueba la red e inténtalo de nuevo.</string>
+    <string name="error_rate_limited">La tienda nos pide ir más despacio. Inténtalo en un momento.</string>
+    <string name="error_blocked">La tienda bloqueó la solicitud.</string>
+    <string name="error_parse">La tienda respondió en un formato inesperado.</string>
+    <string name="error_not_found">No se encuentra en esta tienda.</string>
+    <string name="error_integrity">Falló una comprobación de integridad. El archivo se descartó.</string>
+    <string name="error_storage">Espacio insuficiente, o archivo no escribible.</string>
+    <string name="error_install_failed">El sistema rechazó la instalación.</string>
+    <string name="error_cancelled">Cancelado.</string>
+    <string name="error_user_assistance_disabled">Esta descarga necesita una pulsación en la página de la tienda, y esa vía está desactivada en los Ajustes.</string>
+    <string name="error_unexpected">Algo salió mal.</string>
+    <!-- Actions shared by several screens. -->
+    <string name="action_back">Atrás</string>
+    <string name="install_failed_unknown">El sistema rechazó la instalación y no dijo por qué.</string>
+    <string name="install_failed_blocked">El rechazo viene de algo por encima de Android: una política del dispositivo, una app de seguridad o una función del software de %1$s. No está en los ajustes de Android.</string>
+    <string name="install_failed_blocked_generic">El rechazo viene de algo por encima de Android: una política del dispositivo, una app de seguridad o una función del software del fabricante.</string>
+    <string name="install_failed_invalid">El archivo no es un APK válido. Casi siempre es una descarga interrumpida: vuelve a descargarlo.</string>
+    <string name="install_failed_conflict">Entra en conflicto con la copia ya instalada: firma distinta o versión más antigua. Desinstalar primero la app instalada lo resuelve, y pierde sus datos.</string>
+    <string name="install_failed_storage">No hay espacio suficiente en el dispositivo.</string>
+    <string name="install_failed_incompatible">La app no funciona en este dispositivo: necesita un Android más reciente o una arquitectura de procesador que este dispositivo no tiene.</string>
+    <string name="install_failed_timeout">El sistema tardó demasiado. Volver a intentarlo suele funcionar.</string>
+
+    <!-- The progress card that appears above every screen. -->
+    <string name="downloads_overlay_title_one">Descargando %1$s</string>
+    <string name="downloads_overlay_unknown_app">una aplicación</string>
+    <string name="downloads_overlay_dismiss">Ocultar el panel de descargas</string>
+    <plurals name="downloads_overlay_title_many">
+        <item quantity="one">Descargando %1$d aplicación</item>
+        <item quantity="many">Descargando %1$d aplicaciones</item>
+        <item quantity="other">Descargando %1$d aplicaciones</item>
+    </plurals>
+</resources>

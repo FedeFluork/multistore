@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Home screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="home_title">Home</string>
+    <string name="home_refresh_action">Refresh the catalogue</string>
+
+    <!-- First launch: the catalogue is not there yet. -->
+    <string name="home_first_sync_title">The catalogue is not on this device yet</string>
+    <string name="home_first_sync_message">MultiStore searches offline. Download the store catalogue once, then search without waiting for the network.</string>
+    <string name="home_first_sync_action">Download the catalogue</string>
+
+    <!-- Sync in progress. -->
+    <string name="home_syncing_title">Downloading the catalogue</string>
+    <string name="home_syncing_progress">%1$d of %2$d entries</string>
+    <string name="home_syncing_processed">%1$d entries so far</string>
+
+    <!-- Sync failed. -->
+    <string name="home_sync_failed_title">The catalogue could not be updated</string>
+    <string name="home_sync_retry">Try again</string>
+    <string name="home_sync_dismiss">Dismiss</string>
+
+    <!-- Content. -->
+    <string name="home_recently_updated_title">Recently updated</string>
+    <plurals name="home_catalogue_size">
+        <item quantity="one">%1$d app in the catalogue</item>
+        <item quantity="other">%1$d apps in the catalogue</item>
+    </plurals>
+    <string name="home_catalogue_empty_title">The catalogue is empty</string>
+    <string name="home_catalogue_empty_message">The sync finished, but the store published nothing we can show.</string>
+    <string name="home_no_indexed_store_title">No offline catalogue</string>
+    <string name="home_no_indexed_store_message">None of the connected stores publishes a full index, so there is nothing to download.</string>
+
+    <!-- Metered network. -->
+    <string name="home_metered_title">Use mobile data?</string>
+    <string name="home_metered_message">The catalogue is a large download and this connection is metered. This choice applies to this download only.</string>
+    <string name="home_metered_confirm">Download now</string>
+    <string name="home_metered_dismiss">Not now</string>
+    <!-- Category shortcuts: the only way into the catalogue for whoever does not know what to search for. -->
+    <string name="home_categories_title">Browse the catalogue</string>
+    <string name="home_categories_all">All apps</string>
+
+    <!-- Available updates. -->
+    <string name="home_updates_update_all">Update all</string>
+    <string name="home_updates_applying">Updating %1$d of %2$d</string>
+    <string name="home_updates_finished">%1$d updated, %2$d not done</string>
+    <string name="home_updates_dismiss">OK</string>
+    <string name="home_updates_version_change">%1$s → %2$s</string>
+    <plurals name="home_updates_title">
+        <item quantity="one">%1$d update available</item>
+        <item quantity="other">%1$d updates available</item>
+    </plurals>
+    <string name="home_popular_title">Most popular</string>
+    <string name="home_new_title">What’s new</string>
+    <string name="home_self_update_title">A new version of MultiStore</string>
+    <string name="home_self_update_versions">%1$s → %2$s</string>
+    <string name="home_self_update_action">Update MultiStore</string>
+    <string name="home_self_update_downloading">Downloading the update…</string>
+    <string name="home_self_update_installing">Installing. MultiStore will close.</string>
+    <string name="home_self_update_dismiss">Dismiss</string>
+</resources>

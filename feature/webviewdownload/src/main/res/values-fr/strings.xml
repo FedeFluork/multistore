@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The assisted-download screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="webviewdownload_hint_tap_download">Touchez le bouton de téléchargement sur la page. MultiStore récupère le fichier et le vérifie avant de l\'installer.</string>
+    <string name="webviewdownload_hint_solve_captcha">Cette boutique demande la preuve qu\'il y a bien une personne. Résolvez le contrôle sur la page : le téléchargement se poursuit ensuite tout seul.</string>
+    <string name="webviewdownload_hint_wait_countdown">La page fait un compte à rebours avant de libérer le fichier. Attendez la fin, puis touchez le lien de téléchargement.</string>
+    <string name="webviewdownload_hint_choose_mirror">Choisissez l\'un des miroirs proposés par la page.</string>
+    <string name="webviewdownload_hint_accept_terms">Acceptez les conditions demandées par la page, puis lancez le téléchargement.</string>
+    <string name="webviewdownload_current_host">Vous êtes sur %1$s</string>
+    <string name="webviewdownload_error_dismiss">Fermer</string>
+    <string name="webviewdownload_hint_dismiss">Masquer les instructions</string>
+</resources>

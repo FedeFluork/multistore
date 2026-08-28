@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The backup excludes the settings DataStore, the database and the APK staging area. The settings
+  include device-bound choices (privileged installer, dynamic colour) that would give an incoherent
+  state if restored elsewhere; the database is rebuildable from a sync; and staged APKs must not
+  travel through a restore, which is the least obvious of the three: they are executable binaries,
+  downloaded from third-party sources and not yet through pre-install verification, that would end
+  up in a user's cloud backup and from there on a second device. The folder is `filesDir/staging`,
+  that is `domain="file"`.
+
+  `remoteconfig/` is the fourth, for a different reason from the other three: the document is public
+  and signed, so there is nothing to protect. It stays excluded because the rule has no exceptions —
+  a private folder that travels through a restore is a folder nobody examined — and because it is a
+  file that re-downloads in one request.
+-->
+<full-backup-content>
+    <exclude domain="file" path="datastore/" />
+    <exclude domain="file" path="staging/" />
+    <exclude domain="file" path="remoteconfig/" />
+    <exclude domain="database" path="multistore.db" />
+</full-backup-content>

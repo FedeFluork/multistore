@@ -1,0 +1,14 @@
+{
+ "org.fdroid.fdroid": {
+  "signer": "43238d512c1e5eb2d6569f4a3afbf5523418b82e0a3ed1552770abb9a9c9ccab"
+ },
+ "juloo.keyboard2": {
+  "signer": "9f2ed3b0ff79e892780e986e602d63cb74bd3099a454daca56024cb7d606b99c"
+ },
+ "me.hackerchick.catima": {
+  "signer": "62864db787cc31928dc2c114673cdbb017beabb13ba6df6ae5256e738bb953ae"
+ },
+ "ch.protonvpn.android": {
+  "signer": "950ee2d4d0a43ffba7ee1da9541c4a13defe81eb697ba7d24c17f6f886e32124"
+ }
+}

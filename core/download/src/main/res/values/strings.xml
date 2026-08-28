@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The download notification.
+
+  It is this module's only text, and it exists because a foreground service *must* show something:
+  the system does not allow keeping one alive silently.
+
+  Written together with the other 4 languages: TranslationParityTest fails the build if a key is
+  missing from one of them.
+-->
+<resources>
+    <string name="download_notification_channel_name">Downloads</string>
+    <string name="download_notification_channel_description">Progress of the apps being downloaded.</string>
+    <string name="download_notification_title">Downloading %1$s</string>
+    <string name="download_notification_title_unknown">Downloading an app</string>
+    <string name="download_notification_cancel">Cancel</string>
+</resources>

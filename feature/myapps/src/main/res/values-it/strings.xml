@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The My apps screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="myapps_title">Le mie app</string>
+    <string name="myapps_empty_state_title">Ancora nessuna app installata tramite MultiStore</string>
+    <string name="myapps_empty_state_message">Le app installate da qui compaiono con lo store da cui provengono, così i loro aggiornamenti continuano ad arrivare dalla stessa fonte.</string>
+
+    <plurals name="myapps_installed_count">
+        <item quantity="one">%1$d app installata tramite MultiStore</item>
+        <item quantity="many">%1$d app installate tramite MultiStore</item>
+        <item quantity="other">%1$d app installate tramite MultiStore</item>
+    </plurals>
+    <string name="myapps_version">Versione %1$s</string>
+    <string name="myapps_installed_from">Da %1$s</string>
+    <string name="myapps_uninstall_app">Disinstalla %1$s</string>
+
+    <string name="myapps_action_uninstall">Disinstalla</string>
+    <string name="myapps_uninstall_confirm_title">Disinstallare %1$s?</string>
+    <string name="myapps_uninstall_confirm_message">L\'app e i suoi dati vengono rimossi da questo dispositivo. L\'app resta disponibile sul suo store.</string>
+    <string name="myapps_uninstall_confirm_action">Disinstalla</string>
+    <string name="myapps_uninstall_dismiss">Annulla</string>
+    <string name="myapps_uninstalling">In attesa della conferma del sistema…</string>
+    <string name="myapps_uninstall_failed_title">Disinstallazione non riuscita</string>
+    <string name="myapps_uninstall_failed_dismiss">OK</string>
+
+    <!-- Updates. -->
+    <string name="myapps_action_check">Controlla aggiornamenti</string>
+    <string name="myapps_checking">Controllo aggiornamenti in corso…</string>
+    <string name="myapps_check_dismiss">OK</string>
+    <string name="myapps_update_available">Aggiornamento disponibile: %1$s</string>
+    <string name="myapps_update_paused">Aggiornamenti sospesi</string>
+    <string name="myapps_update_paused_with_pending">Aggiornamenti sospesi — ne è uscito uno più recente</string>
+    <string name="myapps_update_pinned">Bloccata al codice di versione %1$d — è uscita la %2$s</string>
+    <string name="myapps_update_undeterminable">Questo store non pubblica il codice di versione: gli aggiornamenti non si possono rilevare</string>
+    <string name="myapps_update_no_channel">Origine degli aggiornamenti sconosciuta</string>
+    <string name="myapps_more_actions">Altre azioni per %1$s</string>
+    <string name="myapps_action_pause_updates">Sospendi aggiornamenti</string>
+    <string name="myapps_action_resume_updates">Riprendi aggiornamenti</string>
+    <string name="myapps_action_pin">Blocca alla %1$s</string>
+    <string name="myapps_action_unpin">Togli il blocco di versione</string>
+    <plurals name="myapps_check_incomplete">
+        <item quantity="one">%1$d store non ha risposto</item>
+        <item quantity="many">%1$d store non hanno risposto</item>
+        <item quantity="other">%1$d store non hanno risposto</item>
+    </plurals>
+</resources>

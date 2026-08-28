@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The assisted-download screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+
+  The five hints correspond one-to-one to the `DownloadHint` values in `:store:api`, which is pure
+  Kotlin and cannot contain translated text.
+-->
+<resources>
+    <string name="webviewdownload_hint_tap_download">Tap the download button on the page. MultiStore takes the file from there and checks it before installing.</string>
+    <string name="webviewdownload_hint_solve_captcha">This store asks a human to prove it. Solve the check on the page: the download continues by itself afterwards.</string>
+    <string name="webviewdownload_hint_wait_countdown">The page counts down before it releases the file. Wait for it, then tap the download link.</string>
+    <string name="webviewdownload_hint_choose_mirror">Pick one of the mirrors offered by the page.</string>
+    <string name="webviewdownload_hint_accept_terms">Accept the terms the page asks for, then start the download.</string>
+    <string name="webviewdownload_current_host">You are on %1$s</string>
+    <string name="webviewdownload_error_dismiss">Dismiss</string>
+    <string name="webviewdownload_hint_dismiss">Hide these instructions</string>
+</resources>

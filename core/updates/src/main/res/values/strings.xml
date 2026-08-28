@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The update-check notification.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="update_notification_channel_name">Updates</string>
+    <string name="update_notification_channel_description">Tells you when the apps installed through MultiStore have a newer version.</string>
+    <plurals name="update_notification_title">
+        <item quantity="one">%1$d update available</item>
+        <item quantity="other">%1$d updates available</item>
+    </plurals>
+    <string name="install_notification_channel_name">Installations</string>
+    <string name="install_notification_channel_description">Tells you when an update MultiStore fetched on its own is ready, and how installing it went.</string>
+    <plurals name="install_ready_title">
+        <item quantity="one">%1$d app ready to install</item>
+        <item quantity="other">%1$d apps ready to install</item>
+    </plurals>
+    <plurals name="install_result_title">
+        <item quantity="one">%1$d app updated</item>
+        <item quantity="other">%1$d apps updated</item>
+    </plurals>
+    <plurals name="install_result_failed_title">
+        <item quantity="one">%1$d app could not be updated</item>
+        <item quantity="other">%1$d apps could not be updated</item>
+    </plurals>
+    <string name="store_alert_channel_name">Unreachable stores</string>
+    <string name="store_alert_channel_description">Tells you when a store MultiStore updates your apps from did not answer.</string>
+    <plurals name="store_alert_title">
+        <item quantity="one">%1$d store did not answer</item>
+        <item quantity="other">%1$d stores did not answer</item>
+    </plurals>
+</resources>

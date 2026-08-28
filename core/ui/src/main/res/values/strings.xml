@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Text shared by several features: the error vocabulary and the labels of an app's list row.
+
+  It lives here rather than in a feature because the same sentence must say the same thing in
+  search, on the Home and on the detail page. Written together with the other 4 languages:
+  TranslationParityTest fails the build if a key is missing from one of them.
+-->
+<resources>
+    <!-- Errors: one for each AppError case, no more and no less. -->
+    <string name="error_network">No connection. Check the network and try again.</string>
+    <string name="error_rate_limited">The store is asking us to slow down. Try again shortly.</string>
+    <string name="error_blocked">The store blocked the request.</string>
+    <string name="error_parse">The store answered in an unexpected format.</string>
+    <string name="error_not_found">Not found on this store.</string>
+    <string name="error_integrity">An integrity check failed. The file was discarded.</string>
+    <string name="error_storage">Not enough space, or the file could not be written.</string>
+    <string name="error_install_failed">The system refused the installation.</string>
+    <string name="error_cancelled">Cancelled.</string>
+    <string name="error_user_assistance_disabled">This download needs a tap on the store page, and that path is turned off in Settings.</string>
+    <string name="error_unexpected">Something went wrong.</string>
+    <!-- Actions shared by several screens. -->
+    <string name="action_back">Back</string>
+    <string name="install_failed_unknown">The system refused the installation and did not say why.</string>
+    <string name="install_failed_blocked">Something above Android refused: a device policy, a security app, or a feature of the %1$s software. Android’s own setting is not where to look.</string>
+    <string name="install_failed_blocked_generic">Something above Android refused: a device policy, a security app, or a feature of the manufacturer’s software.</string>
+    <string name="install_failed_invalid">The file is not a valid APK. It is almost always an interrupted download: try downloading it again.</string>
+    <string name="install_failed_conflict">It clashes with the copy already installed: a different signature, or an older version. Uninstalling the installed app first resolves it, and loses its data.</string>
+    <string name="install_failed_storage">Not enough space on the device.</string>
+    <string name="install_failed_incompatible">The app does not run on this device: it needs a newer Android, or a processor architecture this device does not have.</string>
+    <string name="install_failed_timeout">The system took too long. Trying again usually works.</string>
+
+    <!-- The progress card that appears above every screen. -->
+    <string name="downloads_overlay_title_one">Downloading %1$s</string>
+    <string name="downloads_overlay_unknown_app">an app</string>
+    <string name="downloads_overlay_dismiss">Hide the download panel</string>
+    <plurals name="downloads_overlay_title_many">
+        <item quantity="one">Downloading %1$d app</item>
+        <item quantity="other">Downloading %1$d apps</item>
+    </plurals>
+</resources>

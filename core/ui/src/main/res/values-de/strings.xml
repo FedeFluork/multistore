@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_network">Keine Verbindung. Prüfe das Netzwerk und versuche es erneut.</string>
+    <string name="error_rate_limited">Der Store bittet uns, langsamer zu machen. Versuche es gleich erneut.</string>
+    <string name="error_blocked">Der Store hat die Anfrage blockiert.</string>
+    <string name="error_parse">Der Store hat in einem unerwarteten Format geantwortet.</string>
+    <string name="error_not_found">In diesem Store nicht gefunden.</string>
+    <string name="error_integrity">Eine Integritätsprüfung ist fehlgeschlagen. Die Datei wurde verworfen.</string>
+    <string name="error_storage">Zu wenig Speicher, oder Datei nicht beschreibbar.</string>
+    <string name="error_install_failed">Das System hat die Installation abgelehnt.</string>
+    <string name="error_cancelled">Abgebrochen.</string>
+    <string name="error_user_assistance_disabled">Dieser Download braucht ein Antippen auf der Store-Seite, und dieser Weg ist in den Einstellungen ausgeschaltet.</string>
+    <string name="error_unexpected">Etwas ist schiefgelaufen.</string>
+    <!-- Actions shared by several screens. -->
+    <string name="action_back">Zurück</string>
+    <string name="install_failed_unknown">Das System hat die Installation abgelehnt, ohne einen Grund zu nennen.</string>
+    <string name="install_failed_blocked">Abgelehnt hat etwas oberhalb von Android: eine Geräterichtlinie, eine Sicherheits-App oder eine Funktion der %1$s-Software. In den Android-Einstellungen ist dazu nichts zu finden.</string>
+    <string name="install_failed_blocked_generic">Abgelehnt hat etwas oberhalb von Android: eine Geräterichtlinie, eine Sicherheits-App oder eine Funktion der Hersteller-Software.</string>
+    <string name="install_failed_invalid">Die Datei ist kein gültiges APK. Fast immer ist es ein abgebrochener Download: lade sie erneut herunter.</string>
+    <string name="install_failed_conflict">Sie steht im Konflikt mit der bereits installierten Kopie: andere Signatur oder ältere Version. Die installierte App zuerst zu deinstallieren löst das — und löscht ihre Daten.</string>
+    <string name="install_failed_storage">Nicht genug Speicherplatz auf dem Gerät.</string>
+    <string name="install_failed_incompatible">Die App läuft auf diesem Gerät nicht: sie braucht ein neueres Android oder eine Prozessorarchitektur, die dieses Gerät nicht hat.</string>
+    <string name="install_failed_timeout">Das System hat zu lange gebraucht. Ein erneuter Versuch klappt meistens.</string>
+
+    <!-- The progress card that appears above every screen. -->
+    <string name="downloads_overlay_title_one">%1$s wird heruntergeladen</string>
+    <string name="downloads_overlay_unknown_app">eine App</string>
+    <string name="downloads_overlay_dismiss">Download-Leiste ausblenden</string>
+    <plurals name="downloads_overlay_title_many">
+        <item quantity="one">%1$d App wird heruntergeladen</item>
+        <item quantity="other">%1$d Apps werden heruntergeladen</item>
+    </plurals>
+</resources>

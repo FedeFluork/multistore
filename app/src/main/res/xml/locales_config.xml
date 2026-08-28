@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The languages MultiStore declares to the system.
+
+  On Android 13+ this is what makes MultiStore appear in the "App languages" list of the system
+  settings. It must stay aligned with `SupportedLanguage` and with the `values-*/strings.xml`: the
+  three together are the list of supported languages, and TranslationParityTest fails the build if
+  the files diverge.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="it" />
+    <locale android:name="fr" />
+    <locale android:name="es" />
+    <locale android:name="de" />
+</locale-config>

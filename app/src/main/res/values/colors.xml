@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The project's only XML colours.
+
+  Fixed colours are forbidden in composables, not in system resources: these two are for the window
+  background and the launcher icon, which the system draws without going through Compose. The value
+  must stay identical to `background` in MultiStoreLightColorScheme (:core:designsystem) — if the
+  two diverge, a flash of the wrong colour shows at startup.
+-->
+<resources>
+    <color name="window_background">#FFFBFF</color>
+    <color name="ic_launcher_background">#4F5BD5</color>
+
+    <!--
+      The splash background is the brand indigo in **both** themes, and deliberately has no
+      values-night variant.
+
+      The reason is a platform constraint, not an aesthetic choice: the window theme is resolved by
+      the system at launch, before AppCompat can apply a night mode chosen inside the app. A splash
+      that followed @color/window_background would therefore be white even for somebody who chose
+      the dark theme. A brand colour, always the same, cannot be "the wrong one".
+    -->
+    <color name="splash_background">#4F5BD5</color>
+</resources>

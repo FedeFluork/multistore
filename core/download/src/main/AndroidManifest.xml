@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Downloading an APK. Declared here because this is where the connection is opened. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      The download continues while the app is not in the foreground.
+
+      `DATA_SYNC` is the right type and has to be declared: since Android 14 a foreground service
+      with no declared type does not start at all, and since Android 15 a `dataSync` has a ceiling of
+      six hours a day — generous for a download, but not unlimited.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!--
+      Showing download progress.
+
+      Since Android 13 this is a **runtime** permission, and it is asked for on first real use — that
+      is, when the user starts their first download — not at the splash screen.
+
+      Denying it stops nothing: a foreground service does not require POST_NOTIFICATIONS, and the
+      transfer continues unseen. That is why the worker checks the permission nowhere.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!--
+          The type of WorkManager's foreground service.
+
+          `setForeground()` does not start a service of ours: it starts `SystemForegroundService`,
+          which lives in the library and is declared in **its** manifest without a type — it cannot
+          know, that depends on what the caller does with it. Since Android 14 a foreground service
+          started without a declared type throws `MissingForegroundServiceTypeException`, so the type
+          has to be added here, by the module that decided to go to the foreground.
+
+          It lives in `:core:download` and not in `:app` for the same reason as the permissions:
+          whoever adds this module to another application must not be able to forget it.
+        -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+    </application>
+
+</manifest>

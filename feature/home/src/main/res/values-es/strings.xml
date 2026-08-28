@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_title">Inicio</string>
+    <string name="home_refresh_action">Actualizar el catálogo</string>
+
+    <string name="home_first_sync_title">El catálogo aún no está en este dispositivo</string>
+    <string name="home_first_sync_message">MultiStore busca sin conexión. Descarga el catálogo de la tienda una vez y luego busca sin esperar a la red.</string>
+    <string name="home_first_sync_action">Descargar el catálogo</string>
+
+    <string name="home_syncing_title">Descargando el catálogo</string>
+    <string name="home_syncing_progress">%1$d entradas de %2$d</string>
+    <string name="home_syncing_processed">%1$d entradas hasta ahora</string>
+
+    <string name="home_sync_failed_title">No se pudo actualizar el catálogo</string>
+    <string name="home_sync_retry">Reintentar</string>
+    <string name="home_sync_dismiss">Cerrar</string>
+
+    <string name="home_recently_updated_title">Actualizadas recientemente</string>
+    <plurals name="home_catalogue_size">
+        <item quantity="one">%1$d aplicación en el catálogo</item>
+        <item quantity="many">%1$d aplicaciones en el catálogo</item>
+        <item quantity="other">%1$d aplicaciones en el catálogo</item>
+    </plurals>
+    <string name="home_catalogue_empty_title">El catálogo está vacío</string>
+    <string name="home_catalogue_empty_message">La sincronización terminó, pero la tienda no publicó nada que podamos mostrar.</string>
+    <string name="home_no_indexed_store_title">Sin catálogo sin conexión</string>
+    <string name="home_no_indexed_store_message">Ninguna de las tiendas conectadas publica un índice completo, así que no hay nada que descargar.</string>
+
+    <string name="home_metered_title">¿Usar datos móviles?</string>
+    <string name="home_metered_message">El catálogo es una descarga grande y esta conexión es de uso medido. Esta elección vale solo para esta descarga.</string>
+    <string name="home_metered_confirm">Descargar ahora</string>
+    <string name="home_metered_dismiss">Ahora no</string>
+    <!-- Category shortcuts: the only way into the catalogue for whoever does not know what to search for. -->
+    <string name="home_categories_title">Explorar el catálogo</string>
+    <string name="home_categories_all">Todas las aplicaciones</string>
+
+    <!-- Available updates. -->
+    <string name="home_updates_update_all">Actualizar todo</string>
+    <string name="home_updates_applying">Actualizando %1$d de %2$d</string>
+    <string name="home_updates_finished">%1$d actualizadas, %2$d sin hacer</string>
+    <string name="home_updates_dismiss">OK</string>
+    <string name="home_updates_version_change">%1$s → %2$s</string>
+    <plurals name="home_updates_title">
+        <item quantity="one">%1$d actualización disponible</item>
+        <item quantity="many">%1$d actualizaciones disponibles</item>
+        <item quantity="other">%1$d actualizaciones disponibles</item>
+    </plurals>
+    <string name="home_popular_title">Más populares</string>
+    <string name="home_new_title">Novedades</string>
+    <string name="home_self_update_title">Una versión nueva de MultiStore</string>
+    <string name="home_self_update_versions">%1$s → %2$s</string>
+    <string name="home_self_update_action">Actualizar MultiStore</string>
+    <string name="home_self_update_downloading">Descargando la actualización…</string>
+    <string name="home_self_update_installing">Instalando. MultiStore se cerrará.</string>
+    <string name="home_self_update_dismiss">Cerrar</string>
+</resources>

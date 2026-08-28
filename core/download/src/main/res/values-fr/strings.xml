@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="download_notification_channel_name">Téléchargements</string>
+    <string name="download_notification_channel_description">Progression des applications en cours de téléchargement.</string>
+    <string name="download_notification_title">Téléchargement de %1$s</string>
+    <string name="download_notification_title_unknown">Téléchargement d\'une application</string>
+    <string name="download_notification_cancel">Annuler</string>
+</resources>

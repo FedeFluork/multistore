@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Buscar</string>
+    <string name="search_field_label">Buscar aplicaciones</string>
+    <string name="search_field_clear">Borrar la búsqueda</string>
+
+    <string name="search_idle_title">Busca en todas las tiendas a la vez</string>
+    <string name="search_idle_message">Una sola consulta, los resultados de cada tienda conectada, unidos y comparados uno al lado del otro.</string>
+
+    <string name="search_no_results_title">Sin resultados para «%1$s»</string>
+    <string name="search_no_results_message">Prueba con otro término, o revisa la ortografía.</string>
+
+    <string name="search_load_more">Cargar más</string>
+
+    <string name="search_shortfall_title">Algunas tiendas no respondieron</string>
+    <string name="search_shortfall_entry">%1$s — %2$s</string>
+    <string name="search_shortfall_paused">En pausa tras fallos repetidos. Ni siquiera lo intentamos.</string>
+    <string name="search_shortfall_partial">Resultados parciales.</string>
+    <string name="search_shortfall_unknown">Sin respuesta.</string>
+    <string name="search_shortfall_retry">Buscar de nuevo</string>
+
+    <string name="search_bootstrap_notice">Resultados parciales: el catálogo todavía se está descargando, así que esta tienda solo puede responder con unas pocas coincidencias.</string>
+
+    <string name="search_progress_stores">%1$d tiendas de %2$d han respondido</string>
+    <string name="search_progress_still_arriving">%1$d tiendas de %2$d han respondido. La lista aún se está completando, así que los resultados pueden moverse.</string>
+    <plurals name="search_available_on_stores">
+        <item quantity="one">En %1$d tienda</item>
+        <item quantity="many">En %1$d tiendas</item>
+        <item quantity="other">En %1$d tiendas</item>
+    </plurals>
+    <plurals name="search_shortfall_paused_retry">
+        <item quantity="one">En pausa tras errores repetidos. Reintento dentro de %1$d minuto aproximadamente.</item>
+        <item quantity="many">En pausa tras errores repetidos. Reintento dentro de %1$d minutos aproximadamente.</item>
+        <item quantity="other">En pausa tras errores repetidos. Reintento dentro de %1$d minutos aproximadamente.</item>
+    </plurals>
+
+    <!-- The filter panel. -->
+    <string name="search_filters_open">Filtros</string>
+    <string name="search_filters_title">Filtros</string>
+    <string name="search_filters_reset">Restablecer</string>
+    <string name="search_filters_close">Hecho</string>
+    <string name="search_filters_kind_label">Tipo</string>
+    <string name="search_filters_kind_all">Todo</string>
+    <string name="search_filters_kind_apps">Aplicaciones</string>
+    <string name="search_filters_kind_games">Juegos</string>
+    <string name="search_filters_rating_label">Valoración mínima</string>
+    <string name="search_filters_rating_any">Cualquiera</string>
+    <string name="search_filters_rating_value">%1$s o más</string>
+    <string name="search_filters_sort_label">Ordenar por</string>
+    <string name="search_filters_sort_relevance">Relevancia</string>
+    <string name="search_filters_sort_name">Nombre</string>
+    <string name="search_filters_sort_rating">Valoración</string>
+    <string name="search_filters_stores_label">Tiendas</string>
+    <string name="search_filters_stores_hint">Solo para esta búsqueda. Para desactivar una tienda de forma permanente, usa Ajustes.</string>
+    <string name="search_filtered_out_title">Algunas tiendas no saben responder a esta pregunta</string>
+    <string name="search_filter_name_content_kind">el tipo (aplicación o juego)</string>
+    <string name="search_filter_name_min_rating">la valoración</string>
+    <string name="search_filter_name_category">la categoría</string>
+    <string name="search_rating">★ %1$s</string>
+    <plurals name="search_filters_active">
+        <item quantity="one">%1$d filtro</item>
+        <item quantity="many">%1$d filtros</item>
+        <item quantity="other">%1$d filtros</item>
+    </plurals>
+    <plurals name="search_filtered_out_entry">
+        <item quantity="one">%1$s no publica %2$s en sus resultados, así que no se ha consultado.</item>
+        <item quantity="many">%1$s no publican %2$s en sus resultados, así que no se han consultado.</item>
+        <item quantity="other">%1$s no publican %2$s en sus resultados, así que no se han consultado.</item>
+    </plurals>
+</resources>

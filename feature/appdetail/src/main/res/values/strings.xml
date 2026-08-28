@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  An app's detail page.
+
+  The sentences about verification outcomes are deliberately specific: the difference between "the
+  hash does not match" and "the signature differs from the installed one" decides what the user can
+  do next, and reducing them to "verification failed" would remove the only useful information.
+
+  Written together with the other 4 languages: TranslationParityTest fails the build if a key is
+  missing from one of them.
+-->
+<resources>
+    <string name="appdetail_title">App</string>
+    <string name="appdetail_from_store">From %1$s</string>
+    <string name="appdetail_installed_version">Installed: %1$s</string>
+    <string name="appdetail_stale_notice">This page is older than its refresh window. Updating in the background.</string>
+    <string name="appdetail_not_found_title">App not found</string>
+    <string name="appdetail_not_found_message">This app is not in the catalogue of the selected store.</string>
+
+    <!-- Actions. -->
+    <string name="appdetail_action_install">Install</string>
+    <string name="appdetail_action_update">Update</string>
+    <string name="appdetail_action_uninstall">Uninstall</string>
+    <string name="appdetail_action_cancel">Cancel</string>
+    <string name="appdetail_action_dismiss">Dismiss</string>
+
+    <!-- Progress. -->
+    <string name="appdetail_state_resolving">Choosing the version…</string>
+    <string name="appdetail_state_downloading">Downloading</string>
+    <string name="appdetail_state_verifying">Verifying the package…</string>
+    <string name="appdetail_state_writing">Writing to the install session</string>
+    <string name="appdetail_state_committing">Handing over to the system…</string>
+    <string name="appdetail_state_awaiting_user">Waiting for your confirmation</string>
+    <string name="appdetail_state_uninstalling">Uninstalling…</string>
+    <string name="appdetail_state_installed">Installed</string>
+    <string name="appdetail_state_uninstalled">Uninstalled</string>
+    <string name="appdetail_state_cancelled">Cancelled</string>
+    <string name="appdetail_state_up_to_date">Up to date</string>
+    <string name="appdetail_bytes_of">%1$s of %2$s</string>
+
+    <!-- Outcomes that are not progress. -->
+    <string name="appdetail_incompatible_title">Not compatible with this device</string>
+    <string name="appdetail_incompatible_message">No published version runs on this Android version or on this CPU.</string>
+    <string name="appdetail_nothing_installable_title">Nothing to install</string>
+    <string name="appdetail_nothing_installable_message">This store publishes no installable package for this app.</string>
+    <string name="appdetail_only_other_channels_title">Only in a preview channel</string>
+    <string name="appdetail_only_other_channels_message">This app is published only in %1$s, not in the store’s default channel.</string>
+    <string name="appdetail_only_other_channels_action">Show the versions</string>
+    <string name="appdetail_versions_title">Previous versions</string>
+    <string name="appdetail_versions_loading">Asking the store…</string>
+    <string name="appdetail_versions_failed">The store did not answer. What follows is only what MultiStore already had.</string>
+    <string name="appdetail_versions_retry">Try again</string>
+    <string name="appdetail_versions_only_current">This store publishes only the current version.</string>
+    <string name="appdetail_versions_state_installed">Installed</string>
+    <string name="appdetail_versions_state_older">Older than the installed one: Android will not replace an app with it.</string>
+    <string name="appdetail_versions_state_incompatible">Does not run on this device.</string>
+    <string name="appdetail_versions_state_unsupported">MultiStore cannot open this file format.</string>
+    <string name="appdetail_failed_title">Installation failed</string>
+
+    <string name="appdetail_signer_conflict_title">The signature does not match</string>
+    <string name="appdetail_signer_conflict_message">The installed app was signed with a different key, so Android will refuse the update. The only way forward is to uninstall — which deletes the app data — and install again afterwards.</string>
+    <string name="appdetail_signer_conflict_action">Uninstall (you lose the data)</string>
+
+    <string name="appdetail_user_assisted_title">This download needs you</string>
+    <string name="appdetail_user_assisted_message">The store asks for a real interaction on its own page. Open it and complete the download there; verification and installation then continue as usual.</string>
+    <string name="appdetail_user_assisted_action">Open the store page</string>
+
+    <string name="appdetail_unknown_sources_title">Allow installing apps</string>
+    <string name="appdetail_unknown_sources_message">Android has to be told that MultiStore may install apps. It is a one-time system setting.</string>
+    <string name="appdetail_unknown_sources_action">Open the setting</string>
+
+    <!-- Pre-install verification outcomes. -->
+    <string name="appdetail_rejected_title">The package was rejected</string>
+    <string name="appdetail_rejected_generic">The verification did not complete.</string>
+    <string name="appdetail_rejected_unreadable">The archive could not be read: %1$s</string>
+    <string name="appdetail_rejected_not_signed">The archive is not validly signed: %1$s</string>
+    <string name="appdetail_rejected_size">The file size does not match what the store declared.</string>
+    <string name="appdetail_rejected_hash">The SHA-256 does not match the one the store published.</string>
+    <string name="appdetail_rejected_package_name">The file declares the package %2$s, but the listing said %1$s. This check cannot be turned off.</string>
+    <string name="appdetail_rejected_signer_installed">The signature differs from the one of the app already installed.</string>
+    <string name="appdetail_rejected_unexpected_signer">The signature is not the one the store declared.</string>
+    <string name="appdetail_rejected_downgrade">Version %1$d is older than the installed %2$d. Installing it back would reintroduce bugs already fixed.</string>
+    <string name="appdetail_rejected_incompatible">This package needs Android API %1$d; this device is on %2$d.</string>
+
+    <!-- Sections. -->
+    <string name="appdetail_section_description">Description</string>
+    <string name="appdetail_section_antifeatures">Warnings from the store</string>
+    <string name="appdetail_section_details">Details</string>
+    <string name="appdetail_meta_rating">★ %1$.1f</string>
+    <string name="appdetail_newer_elsewhere">%1$s publishes %2$s</string>
+    <string name="appdetail_action_open_in_browser">Open in browser</string>
+    <string name="appdetail_version_min_sdk">Requires Android API %1$d or newer</string>
+    <string name="appdetail_license">License: %1$s</string>
+    <!-- A file already in staging that nobody installed: assisted-path return, or cancelled confirmation. -->
+    <string name="appdetail_ready_to_install_title">The file is already downloaded</string>
+    <string name="appdetail_ready_to_install_message">This app was downloaded but never installed. Installing it now does not download anything again.</string>
+    <string name="appdetail_verification_title">What was actually checked</string>
+    <string name="appdetail_verification_package_ok">Package name matches the one the store declared</string>
+    <string name="appdetail_verification_package_unchecked">Package name: the store declares none, so it could not be contradicted</string>
+    <string name="appdetail_verification_hash_ok">Checksum matches the one the store published</string>
+    <string name="appdetail_verification_hash_unchecked">Checksum: not verified against a published value</string>
+    <string name="appdetail_verification_signer_ok">Signature matches the expected key</string>
+    <string name="appdetail_verification_signer_unchecked">Signature: no key to compare it with</string>
+    <string name="appdetail_verification_signer_fingerprint">Signed by %1$s</string>
+
+    <string name="appdetail_state_reading_store">Reading this store’s page…</string>
+    <string name="appdetail_stores_title">Other stores</string>
+    <string name="appdetail_stores_none">MultiStore hasn’t seen this app on any other store yet.</string>
+    <string name="appdetail_stores_lookup_action">Search the other stores</string>
+    <string name="appdetail_stores_lookup_running">Asking the other stores…</string>
+    <string name="appdetail_possible_match_title">Possible match</string>
+    <string name="appdetail_possible_match_message">These look like the same app, but MultiStore can’t prove it: the stores publish different package names, or none at all. Merging the wrong two would offer you somebody else’s APK, so the choice is yours.</string>
+    <string name="appdetail_possible_match_confirm">Same app</string>
+    <string name="appdetail_possible_match_reject">Different app</string>
+    <plurals name="appdetail_stores_available_count">
+        <item quantity="one">Available on %1$d store</item>
+        <item quantity="other">Available on %1$d stores</item>
+    </plurals>
+
+    <string name="appdetail_state_update_unknown">This store does not publish version codes, so a newer release cannot be detected.</string>
+    <string name="appdetail_pinned_title">Locked to version code %1$d</string>
+    <string name="appdetail_pinned_message">Version %1$s is available, but you locked this app. Unlock it in My apps to update.</string>
+
+    <!-- Split containers (XAPK, APKM, APKS) -->
+    <string name="appdetail_state_unpacking">Opening the container…</string>
+    <plurals name="appdetail_unpacking_detail">
+        <item quantity="one">%1$d file, %2$s to install</item>
+        <item quantity="other">%1$d files, %2$s to install</item>
+    </plurals>
+    <string name="appdetail_state_placing_expansions">Copying the game data…</string>
+    <string name="appdetail_container_rejected_title">This file could not be opened</string>
+    <string name="appdetail_container_unreadable">The downloaded file is not a container this app can open: %1$s</string>
+    <string name="appdetail_container_incompatible_abi">The container only carries native code for %1$s, which this device does not run.</string>
+    <string name="appdetail_container_not_enough_space">%1$s are needed to open it and only %2$s are free.</string>
+    <string name="appdetail_container_expansions_privileged">This file carries game data that has to go into a folder Android only lets a privileged channel write. Turn on Shizuku or root in Settings, or look for a version without game data.</string>
+    <string name="appdetail_container_expansion_failed">The game data could not be copied: %1$s</string>
+    <string name="appdetail_rejected_foreign_split">The piece %1$s does not belong to this app: %2$s.</string>
+    <string name="appdetail_unknown_sources_unreachable">This device has no screen for that setting: the %1$s software may have moved or removed it. Look for “install unknown apps” in the system settings.</string>
+</resources>

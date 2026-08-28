@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The My apps screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="myapps_title">Mes applications</string>
+    <string name="myapps_empty_state_title">Aucune application installée via MultiStore pour le moment</string>
+    <string name="myapps_empty_state_message">Les applications installées ici apparaissent avec la boutique dont elles proviennent, afin que leurs mises à jour continuent de venir de la même source.</string>
+
+    <plurals name="myapps_installed_count">
+        <item quantity="one">%1$d application installée via MultiStore</item>
+        <item quantity="many">%1$d applications installées via MultiStore</item>
+        <item quantity="other">%1$d applications installées via MultiStore</item>
+    </plurals>
+    <string name="myapps_version">Version %1$s</string>
+    <string name="myapps_installed_from">De %1$s</string>
+    <string name="myapps_uninstall_app">Désinstaller %1$s</string>
+
+    <string name="myapps_action_uninstall">Désinstaller</string>
+    <string name="myapps_uninstall_confirm_title">Désinstaller %1$s ?</string>
+    <string name="myapps_uninstall_confirm_message">L\'application et ses données sont supprimées de cet appareil. L\'application reste disponible sur sa boutique.</string>
+    <string name="myapps_uninstall_confirm_action">Désinstaller</string>
+    <string name="myapps_uninstall_dismiss">Annuler</string>
+    <string name="myapps_uninstalling">En attente de la confirmation du système…</string>
+    <string name="myapps_uninstall_failed_title">Désinstallation impossible</string>
+    <string name="myapps_uninstall_failed_dismiss">OK</string>
+
+    <!-- Updates. -->
+    <string name="myapps_action_check">Rechercher des mises à jour</string>
+    <string name="myapps_checking">Recherche de mises à jour…</string>
+    <string name="myapps_check_dismiss">OK</string>
+    <string name="myapps_update_available">Mise à jour disponible : %1$s</string>
+    <string name="myapps_update_paused">Mises à jour en pause</string>
+    <string name="myapps_update_paused_with_pending">Mises à jour en pause — une version plus récente est sortie</string>
+    <string name="myapps_update_pinned">Verrouillée au code de version %1$d — %2$s est sortie</string>
+    <string name="myapps_update_undeterminable">Cette logithèque ne publie pas de code de version : les mises à jour ne peuvent pas être détectées</string>
+    <string name="myapps_update_no_channel">Source des mises à jour inconnue</string>
+    <string name="myapps_more_actions">Autres actions pour %1$s</string>
+    <string name="myapps_action_pause_updates">Mettre les mises à jour en pause</string>
+    <string name="myapps_action_resume_updates">Reprendre les mises à jour</string>
+    <string name="myapps_action_pin">Verrouiller sur %1$s</string>
+    <string name="myapps_action_unpin">Retirer le verrou de version</string>
+    <plurals name="myapps_check_incomplete">
+        <item quantity="one">%1$d logithèque n’a pas répondu</item>
+        <item quantity="many">%1$d logithèques n’ont pas répondu</item>
+        <item quantity="other">%1$d logithèques n’ont pas répondu</item>
+    </plurals>
+</resources>

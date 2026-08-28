@@ -1,0 +1,467 @@
+syntax = "proto3";
+
+package com.multistore.core.datastore;
+
+option java_package = "com.multistore.core.datastore.proto";
+option java_multiple_files = true;
+
+// MultiStore settings.
+//
+// Rule 2: EVERY field in this file must have an entry in the Settings screen, with a label and
+// description in all 5 languages. `SettingsCoverageTest` compares the fields declared here with
+// the screen's registry and fails if one is left uncovered. Do not work around it with an
+// exception: a field the user cannot configure does not belong in this file.
+//
+// THE DEFAULTS RULE — proto3 has no explicit defaults: a field's zero value *is* its default. A
+// `bool` that wants to start switched on therefore cannot be written as such, and several fields
+// here are phrased negatively for that reason: the zero value is the safe behaviour, and turning
+// the switch on is the explicit act of giving it up. The same applies to enums, where the
+// *declaration order* is a behavioural decision, and to integers, where zero means "never
+// written" and is translated back to the compiled default.
+//
+// NUMBERING — unused numbers stay reserved, so later work adds fields without ever renumbering
+// (renumbering a proto3 means reading old data as new fields). Two numbers are deliberately
+// reserved and never written:
+//
+//   22 remote_index_url    — the address is a build fact (`BuildConfig.INDEX_URL_OVERRIDE`) and
+//                            the signature stays pinned, so a different address can at most
+//                            deliver no index. A text field would buy the ability to type a
+//                            wrong URL and nothing else.
+//   24 search_store_ids    — which stores to query is already known, from one place: the
+//                            `enabled` column of the `stores` table. A second copy in the
+//                            DataStore would be a value that diverges. "For this search only"
+//                            exists in the filter panel and is transient state.
+//   33 http_cache_max_mb   — measured on device after a day's use with nine stores wired: the
+//                            HTTP cache held 1.5 MB against a 50 MB ceiling. The ceiling is also
+//                            fixed when `okhttp3.Cache` is constructed, so the entry would have
+//                            to say "takes effect next launch". What that level needs is the
+//                            button that empties it, and that exists.
+
+message Settings {
+  // --- Appearance ----------------------------------------------------------
+  // Light / dark / system theme. SYSTEM at the zero value.
+  ThemeMode theme_mode = 1;
+
+  // Palette derived from the user's wallpaper (Android 12+). The real default lives in
+  // SettingsSerializer.defaultValue, not here: proto3 has no explicit defaults.
+  bool dynamic_color = 2;
+
+  // BCP-47 tag of the interface language. Empty string = follow the system, falling back to
+  // "en". That is the default on first launch.
+  string language_tag = 3;
+
+  // --- Updates ---------------------------------------------------------------
+  // How often to check for something to update. The zero value is DAILY: see the note on the
+  // ordering inside the enum.
+  UpdateInterval update_interval = 5;
+
+  // Only check while the device is charging. Off (zero value) = check anyway: an update check
+  // is a few HTTP requests, not a sync.
+  bool update_only_when_charging = 7;
+
+  // Download the update as soon as it is found, without waiting for a tap. Off (zero value) =
+  // the periodic check only notifies.
+  //
+  // An automatic transfer honours `metered_network_allowed`: where a metered network is not
+  // permitted the download **waits** for one that is not, instead of starting. That is the
+  // difference between a tap — where the user has just decided to spend that traffic — and a
+  // transfer that begins on its own.
+  bool auto_download_updates = 8;
+
+  // Install by itself, showing nothing. Off (zero value) = it downloads at most, and the user
+  // presses "Install".
+  //
+  // **Requires a silent installer.** Without Shizuku or root the only route is the system
+  // confirmation screen, which from API 34 will not even appear from the background: the entry
+  // stays visible in Settings but disabled, with the reason written next to it. See
+  // `InstallerSelector.selectSilent`, which answers `null` rather than degrading.
+  bool auto_install_updates = 9;
+
+  // Do not show the "updates available" notification.
+  //
+  // Negative, for the same reason as the two security fields below: the zero value is the
+  // default, and the default needed is "do notify". Named `notify_updates_available` it would
+  // have started off — the feature invisible to anyone who never went looking for it.
+  bool mute_update_notifications = 10;
+
+  // Also offer versions from preview channels: beta, alpha, release candidate.
+  //
+  // WRITTEN POSITIVELY, and that is the rule applied rather than an exception to it. The
+  // criterion is that **the zero value must be the prudent behaviour**, and here the prudent
+  // behaviour is not to choose, unasked, a version its publisher considers unfinished. For a
+  // `bool` that is zero, so the positive name already gives the right default; flipping it for
+  // uniformity would have started the app offering betas to everyone.
+  //
+  // WHO READS IT, and why only one place does: `selectVersion`, the single point that builds a
+  // `VersionSelection.Request`. From there it holds for both the listing and the periodic check.
+  // Were only one to read it, the listing would offer an update the worker refuses.
+  //
+  // WHAT IT IS NOT: the way to install *one* beta. That is the version history on a listing, a
+  // one-off gesture on a precise version. This field changes what the app chooses **by itself**,
+  // which is a different question and has to be remembered between launches.
+  bool allow_preview_channels = 34;
+
+  // Let advertising through in the assisted-download WebView.
+  //
+  // NEGATIVE IN MEANING despite the positive name: the zero value is "do not let it through",
+  // i.e. the filter **on**. The usual criterion — zero must be the prudent behaviour — and here
+  // prudent means filtering: the pages this WebView opens are download pages of stores that live
+  // on advertising, where on pdalife two of the three buttons are adverts and one of them serves
+  // a real `.apk`.
+  //
+  // WHY A SWITCH EXISTS: because a filter that gets it wrong breaks **the only** thing that
+  // screen is for, namely reaching the file. The list also arrives over the signed channel, so it
+  // can grow between releases; without a way out, a host blocked by mistake would leave the user
+  // in front of a page that never completes and no way to find out why.
+  //
+  // WHAT IT DOES NOT SWITCH OFF: the exceptions. Cloudflare Turnstile and reCAPTCHA are never
+  // blocked, so turning this on does not "unblock" a download that was failing because of them.
+  bool allow_web_ads = 35;
+
+  // NOTE on what is NOT here. There is no `update_only_on_wifi`, and that is not an oversight:
+  // `metered_network_allowed` (18) already means "allow heavy traffic on a metered network",
+  // which is the same question. Two overlapping switches are two values that can diverge.
+
+  // --- Notifications ---------------------------------------------------------
+  // Do not notify when a file downloaded **unattended** is ready and waiting for a tap.
+  //
+  // NEGATIVE. Named `notify_download_complete` it would have started off, i.e. an overnight
+  // transfer finishing with nobody saying so.
+  //
+  // WHAT IT DOES NOT GOVERN: downloads the user has just asked for. There the progress bar is on
+  // the screen in front of them, and a notification would repeat what they are already reading.
+  // This field concerns transfers born of the periodic check — the ones where, by construction,
+  // nobody is watching.
+  bool mute_download_notifications = 11;
+
+  // Do not report how an **unattended** installation went.
+  //
+  // NEGATIVE. Named `notify_install_result` it would have started off.
+  //
+  // The perimeter matters here too: an installation the user started is already reported by the
+  // listing, in more detail than fits a notification. What would otherwise be invisible is the
+  // outcome of the ones that begin on their own — including the **failed** ones, which is where
+  // silence costs most: an update refused for a signature mismatch never comes back by itself.
+  bool mute_install_notifications = 12;
+
+  // Do not notify when a store fails to answer the periodic check.
+  //
+  // NEGATIVE. Named `notify_store_unavailable` it would have started off.
+  //
+  // Not the same thing as a store failing during a search: there the notice beside the results
+  // already says so, and a notification would be noise on a fact the user is looking at. Here
+  // the set of stores queried is **exactly** the set of update channels of the installed apps:
+  // if one does not answer, those apps stop updating, and without this line nobody would know.
+  bool mute_store_alerts = 13;
+
+  // --- Installation ----------------------------------------------------------
+  // Which installer to proceed with. The zero value is AUTOMATIC — see the note on the ordering
+  // inside the enum — i.e. the chain `root -> Shizuku -> system confirmation`.
+  //
+  // The three explicit choices mean "try this first", not "only this": a chosen channel that is
+  // unavailable walks down the chain rather than failing the installation. The app must work
+  // fully with `SessionInstaller` alone.
+  InstallerPreference installer_preference = 14;
+
+  // Keep the APK in `files/staging` even after a successful installation.
+  //
+  // THE OPPOSITE OF THE OBVIOUS NAME, and for the usual reason. Named `delete_apk_after_install`
+  // the proto3 zero value would have meant "do not delete" — the opposite of what the app does,
+  // and a private directory growing by one APK per installation with nobody seeing it. This way
+  // the zero value is the existing behaviour: on a successful installation the file is thrown
+  // away.
+  //
+  // WHEN ON, THE FILE STAYS **AND IS REUSED**. That is not a stylistic nicety: `filesDir` is
+  // private to the app and no file manager opens it, so an APK kept there and never read again
+  // would be space occupied by bytes nobody can use — a switch whose only effect is waste. The
+  // download row stays in `DONE` with its file, and a second `enqueue` for the same version
+  // finds it instead of re-downloading.
+  //
+  // The way out is on the same screen: "Downloaded APKs" says how much they take and deletes
+  // them.
+  bool keep_apk_after_install = 17;
+
+  // --- Security ----------------------------------------------------------------
+  // Install even when the SHA-256 the store publishes does NOT match the downloaded file. Off
+  // (zero value) = a mismatch blocks the installation.
+  //
+  // It exists because more than one of the nine stores publishes stale hashes next to legitimate
+  // files: without a way out, a store's mistake would become an app that simply cannot be
+  // installed. When on, the mismatch does not block but stays **declared** on the verification
+  // card: the result reads "hash not verified", not "verified".
+  bool allow_unverified_hash = 15;
+
+  // Install even when the signature is not the expected one. Off (zero value) = it blocks.
+  //
+  // Note what it does NOT govern: when the package is already installed under a different
+  // signature the operating system refuses the update regardless of this field. There the way
+  // out is not a switch but an explicit per-app choice — "uninstall and reinstall (you lose your
+  // data)" — which stays available with this switch off.
+  bool allow_signer_mismatch = 16;
+
+  // --- Remote configuration ------------------------------------------------------
+  // Refuse the configuration fixes we publish: CSS selectors, patterns and store domains. Off
+  // (zero value) = the app downloads them and applies them at the next launch.
+  //
+  // NEGATIVE. Named `remote_parsers_enabled` the proto3 zero value would have started it
+  // **off** — a repair channel nobody has, except whoever goes looking for it in Settings. The
+  // channel is needed exactly when a store changes its markup and an adapter stops working;
+  // starting off would mean the repair reaches only those who did not need it badly enough to
+  // have already adjusted their settings.
+  //
+  // Why a switch exists at all: it is a network request towards us, made without the user asking,
+  // and some people prefer an app that only talks to the stores. Switched off, the compiled
+  // defaults apply — and those must always exist and stay current.
+  bool block_remote_parsers = 23;
+
+  // Refuse the index we publish: the "most popular" and "new" sections of Home, and the store
+  // status the pipeline observed. Off (zero value) = the app downloads it.
+  //
+  // NEGATIVE. Named `remote_index_enabled` the proto3 zero value would have started it **off**,
+  // i.e. with two Home sections empty for anyone who never went and enabled them — and with
+  // nothing connecting the two facts.
+  //
+  // Why a switch exists at all: it is a network request towards us, made without the user asking.
+  // Switched off, Home is whatever the local catalogue holds: the two sections do not appear, and
+  // nothing else changes.
+  bool block_remote_index = 21;
+
+  // NOTE on what is NOT here: a user-chosen `remote_index_url` (number 22, reserved). The
+  // address is a build fact — `BuildConfig.INDEX_URL_OVERRIDE`, empty in every normal build —
+  // and the signature stays pinned, so a different address can at most deliver no index at all.
+  // A text field in Settings would buy the ability to type a wrong URL and nothing else.
+
+  // Do not check whether a newer MultiStore exists. Off (zero value) = check, using the index
+  // the app already downloads.
+  //
+  // NEGATIVE. Named `self_update_check` it would have started **off**: MultiStore is not on the
+  // Play Store and none of the nine stores publishes it, so that default would have meant a
+  // security fix reaching only those who had already gone and enabled a switch.
+  //
+  // What does NOT change: MultiStore's own APK goes through the same pre-install verification
+  // steps as any other, **including comparing the signer with the installed one**. An index
+  // signed with our key can declare an address; it cannot make a package signed by someone else
+  // valid.
+  bool block_self_update_check = 28;
+
+  // --- Content -------------------------------------------------------------------
+  // Also show what a store labels as adult content. Off (zero value) = it is not shown.
+  //
+  // Written **positively**, and that is the rule applied rather than an exception to it: the
+  // criterion is that the zero value must be the safe behaviour, and here the safe behaviour
+  // *is* "do not show", i.e. `false`, i.e. zero. Flipping the name (`hide_nsfw_content`) would
+  // have started the app showing everything.
+  //
+  // WHAT THIS SWITCH DOES NOT PROMISE, and the description in Settings says so in the same
+  // words: that the filtered catalogue is clean. It hides what the store **declares** adult, and
+  // only one store declares it — modyolo, with six WordPress categories and 698 posts. Measured
+  // 25/08/2026: the site's three most recent articles were adult visual novels distributed via
+  // Patreon, all three filed under "Role Playing". No filter can know more than the source, and
+  // guessing by keyword would hide "Truple Porn Filter Blocker", which is a parental control.
+  bool show_nsfw_content = 31;
+
+  // --- Search ----------------------------------------------------------------
+  // How many seconds to wait for **one** store before declaring it absent from this search.
+  //
+  // A **per-store** timeout, not a per-search one: the stores do not answer together and no
+  // attempt is made to have them do so — F-Droid reads the local index in milliseconds, apkmirror
+  // honours a three-second `Crawl-delay` *before* making the request. A store that times out
+  // becomes a shortfall next to the other eight's results, not a shared wait.
+  //
+  // THE ZERO VALUE, and here this file's rule meets a number for the first time. On a `bool` the
+  // trap is visible when choosing the name; on an enum, when choosing the order. On an `int32`
+  // zero is a legitimate domain value, and taken literally it would mean "wait for nobody": the
+  // first search after installation would return nothing, from all nine stores, with no message
+  // connecting the two facts. Zero therefore means "never written", and the translation to the
+  // domain replaces it with the compiled default. An out-of-range value meets the same fate, for
+  // the same reason: a future version writing 100000 would leave the app waiting twenty-eight
+  // hours.
+  int32 search_timeout_seconds = 19;
+
+  // How to order results when the user chooses nothing else in the search.
+  //
+  // THE ORDER IS A BEHAVIOURAL DECISION, as with every enum in this file: the zero value is the
+  // default for an absent field, and here it must be `RELEVANCE` — the order the aggregator
+  // produces by itself, what the app did before this preference existed. Any other value at the
+  // head would have reordered the search of everyone who never opened Settings.
+  // head would have reordered the search of everyone who never opened Settings.
+  //
+  // THREE VALUES AND NOT SIX, and the difference is a measurement. The domain knows six — a local
+  // index can order by date — but the **aggregated** search can only order by what nine sources
+  // publish together, and a census of the fixtures says: title 9 stores out of 9, rating 3 of 9,
+  // date **none** (apkmirror carries it on 9 rows of 10, the other eight on zero), download count
+  // none. Ordering by date across eight absent values is a list that looks sorted and is not.
+  SearchSort default_sort = 25;
+
+  // Show only apps, only games, or everything.
+  //
+  // The zero value is `ALL`, and it is the only one that could be: any other at the head would
+  // hide half the catalogue from someone who asked for nothing. Nor is it a free filter — with
+  // "games only" active, eight stores out of nine cannot answer and are excluded from the search
+  // (see `FilterPlan`), so the zero value is also the only one that does not reduce the sources
+  // queried.
+  ContentKindFilter default_content_kind = 26;
+
+  // --- Storage ---------------------------------------------------------------
+  // How many megabytes of icons and screenshots to keep on disk.
+  //
+  // THE ZERO VALUE MEANS "NEVER WRITTEN", as with the search timeout — and this is the second
+  // number in this file. The difference is that there zero was an *absurd* value ("wait for no
+  // store"), so a defect would show immediately; here it would be **plausible**: "keep no icons
+  // on disk" is a choice someone might want, and an app re-downloading every icon on every
+  // scroll does not look broken, it looks slow. A plausible zero is worse than an absurd one,
+  // because nobody questions it.
+  //
+  // WHAT IT REPLACES, and why the field exists at all. No `ImageLoader` used to be configured:
+  // Coil used its own, with its default size — **2% of free space**. Measured on the emulator:
+  // 3,184,072 KB free, i.e. a ceiling of about 62 MB; on a phone with 200 GB free it would be
+  // 4 GB. Not a large number — a number nobody chose, and one that changes per device.
+  //
+  // An out-of-range value falls back to the default rather than being clamped.
+  //
+  // TAKES EFFECT NEXT LAUNCH: a `DiskCache`'s size is fixed at construction, and the
+  // `ImageLoader` is built once per process. The Settings row says so.
+  int32 image_cache_max_mb = 20;
+
+  // How long to keep **already expired** store listings before throwing them away.
+  //
+  // NOT A TTL OVERRIDE. A listing's TTL says *when it must be re-fetched before being shown as
+  // fresh*: that is a fact about the store, declared by the adapter in
+  // `StoreCapabilities.listingTtl`, and letting the user change it would mean a scraped page
+  // declared fresh for a month. Retention says *how long to keep it after it expired*, and that
+  // is a fact about the device: while it is there, search shows it immediately while re-fetching;
+  // throwing it away the instant it expires would empty exactly the first moment someone reopens
+  // yesterday's search.
+  //
+  // IT DOES NOT TOUCH LOCALLY-INDEXED STORES, and the measurement says why. On a device with nine
+  // stores wired, 4,268 of the 4,279 rows in `store_listings` are F-Droid's, and they are
+  // **projections of the index**, not downloaded pages. Deleting them would not free the source —
+  // the 37 MB of `store_index_entries` would remain — and would break that store's search until
+  // the next sync. A downloaded catalogue is deleted from the button that says so, not by an
+  // automatic policy.
+  CatalogRetention catalog_retention = 32;
+
+  // --- Advanced ----------------------------------------------------------------
+  // Also record **successful** requests in the local diagnostic log.
+  //
+  // WRITTEN POSITIVELY, and that is the rule applied: the criterion is that the zero value must
+  // be the safe behaviour, and here the safe behaviour *is* "do not record", i.e. `false`, i.e.
+  // zero. The same case as `show_nsfw_content`.
+  //
+  // WHAT ACTUALLY CHANGES. The log already exists and is not optional: `health_events` records
+  // what **goes wrong** — a selector that finds nothing, a block, an escalation rung that was
+  // needed. What it does not record is what went right, and the reason is written in
+  // `StoreHttpClient`: a row per successful request would fill the table with the news that
+  // nothing happened. The problem is that the most common questions — "why is search so slow",
+  // "why does this store find nothing" — have exactly that shape: the failure log is **empty**,
+  // and empty because nothing failed.
+  //
+  // WHAT IT RECORDS, and the description in Settings says so in the same words: the full address
+  // of every request, the response code, and how long it took. The address **contains the search
+  // terms** on stores that put them in the path — pdalife writes `/search/telegram/`. Stripping
+  // them would make the log useless for the very question that turns it on; staying silent about
+  // it would be worse. It stays local, in the app's private database, and leaves only where the
+  // user exports it.
+  bool diagnostics_log_enabled = 27;
+
+  // --- Network -------------------------------------------------------------------
+  // Allow heavy traffic (store indexes, downloads) on a metered connection. Off (zero value) =
+  // on a metered network the app asks instead of starting on its own.
+  bool metered_network_allowed = 18;
+
+  // How far the app may climb on its own when a store challenges it. See the enum at the end:
+  // the zero value is BALANCED, i.e. up to the silent WebView.
+  ChallengeStrategy challenge_strategy = 29;
+
+  // Do not open the store page even when the only way to reach the file is a tap from the user.
+  // Off (zero value) = the assisted path stays available.
+  //
+  // NEGATIVE. Named `allow_user_assisted_challenge` with a "default true" — a default proto3
+  // cannot express — the field would have started **off**, i.e. with uptodown's and pdalife's
+  // downloads unreachable for anyone who never went and enabled it, and with nothing saying why.
+  //
+  // What this field does NOT govern: rung 3. That WebView asks nothing of anyone and is decided
+  // by `challenge_strategy`. This is only about the path where a person presses.
+  bool block_user_assisted_challenge = 30;
+}
+
+enum UpdateInterval {
+  // proto3's value 0 is also the default for an absent field, and the default wanted here is
+  // "once a day". In the natural order — manual, 6h, 12h, daily, weekly — value 0 would have been
+  // MANUAL, i.e. the app would start with the update check switched off.
+  UPDATE_INTERVAL_DAILY = 0;
+  UPDATE_INTERVAL_MANUAL = 1;
+  UPDATE_INTERVAL_6_HOURS = 2;
+  UPDATE_INTERVAL_12_HOURS = 3;
+  UPDATE_INTERVAL_WEEKLY = 4;
+}
+
+enum InstallerPreference {
+  // Value 0 is the default for an absent field, and here it must be "you decide": any other
+  // value at the head would have started the app forcing a channel the device may not have. The
+  // same trap as ThemeMode and UpdateInterval.
+  INSTALLER_PREFERENCE_AUTOMATIC = 0;
+  INSTALLER_PREFERENCE_SESSION = 1;
+  INSTALLER_PREFERENCE_SHIZUKU = 2;
+  INSTALLER_PREFERENCE_ROOT = 3;
+}
+
+// The ordering criteria the aggregated search can actually compute.
+// Fewer than the domain's `SearchSort`, and deliberately so: see the `default_sort` comment.
+enum SearchSort {
+  // The aggregator's order. Zero value because it is what the app does when nobody chooses
+  // anything.
+  SEARCH_SORT_RELEVANCE = 0;
+  SEARCH_SORT_NAME      = 1;
+  SEARCH_SORT_RATING    = 2;
+}
+
+// Apps, games, or everything.
+enum ContentKindFilter {
+  // Zero value: no filter, no store excluded.
+  CONTENT_KIND_FILTER_ALL   = 0;
+  CONTENT_KIND_FILTER_APPS  = 1;
+  CONTENT_KIND_FILTER_GAMES = 2;
+}
+
+// How long to keep an expired listing from a scraped store.
+//
+// AN ENUM AND NOT A NUMBER OF DAYS, and the reason is the zero-value rule seen from a third
+// angle. On an `int32` zero means "never written", which works as long as no legitimate user
+// choice would land there. Here two would: "zero days" and "forever" are both things someone can
+// want to ask for, and neither could inhabit zero. With an enum the order decides, and at the
+// head goes what the app should do for someone who chose nothing.
+//
+// Thirty days at the zero value, matching `health_events`: the same criterion — not a space limit
+// but a usefulness limit. A listing not reopened in a month is not what makes the next search
+// instant.
+enum CatalogRetention {
+  CATALOG_RETENTION_30_DAYS = 0;
+  CATALOG_RETENTION_7_DAYS  = 1;
+  CATALOG_RETENTION_90_DAYS = 2;
+  // Throw nothing away. It exists because it is a real choice — whoever searches the same apps
+  // repeatedly on slow stores wants it — and because without it the only way to get it would be
+  // an enormous number, i.e. the same thing written worse.
+  CATALOG_RETENTION_KEEP    = 3;
+}
+
+enum ChallengeStrategy {
+  // Value 0 is the default for an absent field, and here the trap is more insidious than usual.
+  // With CONSERVATIVE at the head the app would have started **without a WebView**: the stores
+  // that need rung 3 would have been broken for anyone who never opened Settings, and no message
+  // would have connected the two facts.
+  //
+  // The same correction already applied to ThemeMode, UpdateInterval, InstallerPreference and
+  // mute_update_notifications, and always the same rule: the zero value must be the behaviour
+  // that is wanted, not the first element of a list ordered by aggressiveness.
+  CHALLENGE_STRATEGY_BALANCED = 0;      // rungs 0-3: up to the silent WebView
+  CHALLENGE_STRATEGY_CONSERVATIVE = 1;  // rungs 0-1: network only, no WebView
+  CHALLENGE_STRATEGY_AGGRESSIVE = 2;    // like BALANCED, with more retries and longer waits
+}
+
+enum ThemeMode {
+  // proto3's value 0 is also the default for an absent field: it must be SYSTEM.
+  THEME_MODE_SYSTEM = 0;
+  THEME_MODE_LIGHT = 1;
+  THEME_MODE_DARK = 2;
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Application strings: name, bottom-bar labels, accessibility.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="app_name" translatable="false">MultiStore</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_myapps">My apps</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_bar_content_description">Main navigation</string>
+</resources>

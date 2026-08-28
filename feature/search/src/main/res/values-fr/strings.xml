@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Recherche</string>
+    <string name="search_field_label">Rechercher des applications</string>
+    <string name="search_field_clear">Effacer la recherche</string>
+
+    <string name="search_idle_title">Cherchez dans tous les magasins à la fois</string>
+    <string name="search_idle_message">Une seule requête, les résultats de chaque magasin connecté, réunis et comparés côte à côte.</string>
+
+    <string name="search_no_results_title">Aucun résultat pour « %1$s »</string>
+    <string name="search_no_results_message">Essayez un autre terme, ou vérifiez l\'orthographe.</string>
+
+    <string name="search_load_more">Charger plus</string>
+
+    <string name="search_shortfall_title">Certains magasins n\'ont pas répondu</string>
+    <string name="search_shortfall_entry">%1$s — %2$s</string>
+    <string name="search_shortfall_paused">En pause après des échecs répétés. Nous n\'avons même pas essayé.</string>
+    <string name="search_shortfall_partial">Résultats partiels.</string>
+    <string name="search_shortfall_unknown">Aucune réponse.</string>
+    <string name="search_shortfall_retry">Rechercher à nouveau</string>
+
+    <string name="search_bootstrap_notice">Résultats partiels : le catalogue est encore en cours de téléchargement, ce magasin ne peut donc répondre qu\'avec quelques correspondances.</string>
+
+    <string name="search_progress_stores">%1$d magasins sur %2$d ont répondu</string>
+    <string name="search_progress_still_arriving">%1$d magasins sur %2$d ont répondu. La liste se remplit encore, les résultats peuvent donc se déplacer.</string>
+    <plurals name="search_available_on_stores">
+        <item quantity="one">Sur %1$d magasin</item>
+        <item quantity="many">Sur %1$d magasins</item>
+        <item quantity="other">Sur %1$d magasins</item>
+    </plurals>
+    <plurals name="search_shortfall_paused_retry">
+        <item quantity="one">En pause après des échecs répétés. Nouvel essai dans environ %1$d minute.</item>
+        <item quantity="many">En pause après des échecs répétés. Nouvel essai dans environ %1$d minutes.</item>
+        <item quantity="other">En pause après des échecs répétés. Nouvel essai dans environ %1$d minutes.</item>
+    </plurals>
+
+    <!-- The filter panel. -->
+    <string name="search_filters_open">Filtres</string>
+    <string name="search_filters_title">Filtres</string>
+    <string name="search_filters_reset">Réinitialiser</string>
+    <string name="search_filters_close">Terminé</string>
+    <string name="search_filters_kind_label">Type</string>
+    <string name="search_filters_kind_all">Tout</string>
+    <string name="search_filters_kind_apps">Applications</string>
+    <string name="search_filters_kind_games">Jeux</string>
+    <string name="search_filters_rating_label">Note minimale</string>
+    <string name="search_filters_rating_any">Indifférent</string>
+    <string name="search_filters_rating_value">%1$s et plus</string>
+    <string name="search_filters_sort_label">Trier par</string>
+    <string name="search_filters_sort_relevance">Pertinence</string>
+    <string name="search_filters_sort_name">Nom</string>
+    <string name="search_filters_sort_rating">Note</string>
+    <string name="search_filters_stores_label">Boutiques</string>
+    <string name="search_filters_stores_hint">Pour cette recherche uniquement. Pour désactiver durablement une boutique, utilisez les Paramètres.</string>
+    <string name="search_filtered_out_title">Certaines boutiques ne savent pas répondre à cette question</string>
+    <string name="search_filter_name_content_kind">le type (application ou jeu)</string>
+    <string name="search_filter_name_min_rating">de note</string>
+    <string name="search_filter_name_category">de catégorie</string>
+    <string name="search_rating">★ %1$s</string>
+    <plurals name="search_filters_active">
+        <item quantity="one">%1$d filtre</item>
+        <item quantity="many">%1$d filtres</item>
+        <item quantity="other">%1$d filtres</item>
+    </plurals>
+    <plurals name="search_filtered_out_entry">
+        <item quantity="one">%1$s ne publie pas %2$s dans ses résultats, elle n\'a donc pas été interrogée.</item>
+        <item quantity="many">%1$s ne publient pas %2$s dans leurs résultats, elles n\'ont donc pas été interrogées.</item>
+        <item quantity="other">%1$s ne publient pas %2$s dans leurs résultats, elles n\'ont donc pas été interrogées.</item>
+    </plurals>
+</resources>

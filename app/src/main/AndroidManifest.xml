@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Only INTERNET is here, and that is not an oversight: **every permission is declared by the
+      module that uses it**, and the manifest merger collects them.
+
+      REQUEST_INSTALL_PACKAGES, REQUEST_DELETE_PACKAGES and QUERY_ALL_PACKAGES live in
+      `:core:installer`; FOREGROUND_SERVICE, FOREGROUND_SERVICE_DATA_SYNC and POST_NOTIFICATIONS in
+      `:core:download`; ACCESS_NETWORK_STATE in `:core:domain`. That way they cannot be forgotten
+      when a module is moved, and from there it is visible why they exist.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name=".MultiStoreApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MultiStore.Splash"
+        tools:targetApi="34">
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="uiMode|locale|layoutDirection|orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.MultiStore.Splash"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Remove WorkManager's automatic initialiser.
+
+          `MultiStoreApplication` implements `Configuration.Provider` in order to install the
+          `HiltWorkerFactory`, without which a `@HiltWorker` cannot be constructed — `DownloadWorker`
+          has injected dependencies. If this provider stays, however, WorkManager initialises itself
+          **before** anybody asks for our configuration, and the factory is never installed.
+
+          The defect does not show up as an error: it shows up as a download that never starts, with
+          nothing in the log. Hence the explicit removal.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <!--
+          Per-app language backport below Android 13. `autoStoreLocales` makes AppCompat re-apply the
+          chosen language *before* MainActivity exists, which removes the recreate() that would
+          otherwise be visible on every launch. The source of truth stays settings.proto:
+          MainActivity realigns AppCompat only when the two diverge.
+        -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
+    </application>
+
+</manifest>

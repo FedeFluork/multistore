@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The My apps screen.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+
+  A store's name is NOT here: "F-Droid" is a proper name and the adapter declares it. What is here
+  is only the frame around it.
+-->
+<resources>
+    <string name="myapps_title">My apps</string>
+    <string name="myapps_empty_state_title">Nothing installed through MultiStore yet</string>
+    <string name="myapps_empty_state_message">Apps installed from here are listed with the store they came from, so their updates keep coming from the same source.</string>
+
+    <!-- List row. -->
+    <plurals name="myapps_installed_count">
+        <item quantity="one">%1$d app installed through MultiStore</item>
+        <item quantity="other">%1$d apps installed through MultiStore</item>
+    </plurals>
+    <string name="myapps_version">Version %1$s</string>
+    <string name="myapps_installed_from">From %1$s</string>
+    <string name="myapps_uninstall_app">Uninstall %1$s</string>
+
+    <!-- Uninstallation. -->
+    <string name="myapps_action_uninstall">Uninstall</string>
+    <string name="myapps_uninstall_confirm_title">Uninstall %1$s?</string>
+    <string name="myapps_uninstall_confirm_message">The app and its data are removed from this device. The app itself stays available on its store.</string>
+    <string name="myapps_uninstall_confirm_action">Uninstall</string>
+    <string name="myapps_uninstall_dismiss">Cancel</string>
+    <string name="myapps_uninstalling">Waiting for the system to confirm…</string>
+    <string name="myapps_uninstall_failed_title">Could not uninstall</string>
+    <string name="myapps_uninstall_failed_dismiss">OK</string>
+
+    <!-- Updates. -->
+    <string name="myapps_action_check">Check for updates</string>
+    <string name="myapps_checking">Checking for updates…</string>
+    <string name="myapps_check_dismiss">OK</string>
+    <string name="myapps_update_available">Update available: %1$s</string>
+    <string name="myapps_update_paused">Updates paused</string>
+    <string name="myapps_update_paused_with_pending">Updates paused — a newer version is out</string>
+    <string name="myapps_update_pinned">Locked to version code %1$d — %2$s is out</string>
+    <string name="myapps_update_undeterminable">This store publishes no version code: updates cannot be detected</string>
+    <string name="myapps_update_no_channel">Update source unknown</string>
+    <string name="myapps_more_actions">More actions for %1$s</string>
+    <string name="myapps_action_pause_updates">Pause updates</string>
+    <string name="myapps_action_resume_updates">Resume updates</string>
+    <string name="myapps_action_pin">Lock to %1$s</string>
+    <string name="myapps_action_unpin">Remove version lock</string>
+    <plurals name="myapps_check_incomplete">
+        <item quantity="one">%1$d store did not answer</item>
+        <item quantity="other">%1$d stores did not answer</item>
+    </plurals>
+</resources>

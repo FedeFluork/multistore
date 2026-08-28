@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      A permission is declared by the module that needs it, not by :app.
+
+      Announcing that updates exist. Since Android 13 this is a runtime permission, asked for on
+      first real use: here that is the first "updates available" notification, which comes from a
+      worker. A worker cannot request a permission — it has no UI — so the request stays where the
+      user is in the foreground, and a denied notification simply is not seen. The periodic check
+      keeps running and the Home list stays correct: the notification is a notice, not the mechanism.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      NO `RECEIVE_BOOT_COMPLETED`, and that is not an oversight.
+
+      It would be for "rescheduling the workers". WorkManager reschedules its own periodic work after
+      a reboot: the library declares **its own** boot receiver and rebuilds the queue from its own
+      database. Adding the permission here would mean asking for one we do not use, for a receiver
+      that does not exist.
+    -->
+
+</manifest>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108" role="img" aria-label="MultiStore">
+  <rect width="108" height="108" rx="24" fill="#4F5BD5"/>
+  <path fill="#FFFFFF" fill-opacity="0.45" d="M36,31 L60,31 A5,5 0 0 1 65,36 L65,60 A5,5 0 0 1 60,65 L36,65 A5,5 0 0 1 31,60 L31,36 A5,5 0 0 1 36,31 Z"/>
+  <path fill="#FFFFFF" fill-opacity="0.70" d="M42,37 L66,37 A5,5 0 0 1 71,42 L71,66 A5,5 0 0 1 66,71 L42,71 A5,5 0 0 1 37,66 L37,42 A5,5 0 0 1 42,37 Z"/>
+  <path fill="#FFFFFF" d="M48,43 L72,43 A5,5 0 0 1 77,48 L77,72 A5,5 0 0 1 72,77 L48,77 A5,5 0 0 1 43,72 L43,48 A5,5 0 0 1 48,43 Z"/>
+</svg>

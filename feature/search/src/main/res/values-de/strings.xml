@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Suche</string>
+    <string name="search_field_label">Apps suchen</string>
+    <string name="search_field_clear">Suche löschen</string>
+
+    <string name="search_idle_title">Alle Stores auf einmal durchsuchen</string>
+    <string name="search_idle_message">Eine Anfrage, die Ergebnisse jedes verbundenen Stores, zusammengeführt und nebeneinander verglichen.</string>
+
+    <string name="search_no_results_title">Keine Treffer für „%1$s“</string>
+    <string name="search_no_results_message">Versuche einen anderen Begriff, oder prüfe die Schreibweise.</string>
+
+    <string name="search_load_more">Mehr laden</string>
+
+    <string name="search_shortfall_title">Einige Stores haben nicht geantwortet</string>
+    <string name="search_shortfall_entry">%1$s — %2$s</string>
+    <string name="search_shortfall_paused">Nach wiederholten Fehlern pausiert. Wir haben es gar nicht erst versucht.</string>
+    <string name="search_shortfall_partial">Teilweise Ergebnisse.</string>
+    <string name="search_shortfall_unknown">Keine Antwort.</string>
+    <string name="search_shortfall_retry">Erneut suchen</string>
+
+    <string name="search_bootstrap_notice">Teilweise Ergebnisse: Der Katalog wird noch heruntergeladen, dieser Store kann daher nur mit wenigen Treffern antworten.</string>
+
+    <string name="search_progress_stores">%1$d von %2$d Stores haben geantwortet</string>
+    <string name="search_progress_still_arriving">%1$d von %2$d Stores haben geantwortet. Die Liste füllt sich noch, Ergebnisse können sich also verschieben.</string>
+    <plurals name="search_available_on_stores">
+        <item quantity="one">In %1$d Store</item>
+        <item quantity="other">In %1$d Stores</item>
+    </plurals>
+    <plurals name="search_shortfall_paused_retry">
+        <item quantity="one">Nach wiederholten Fehlern pausiert. Neuer Versuch in etwa %1$d Minute.</item>
+        <item quantity="other">Nach wiederholten Fehlern pausiert. Neuer Versuch in etwa %1$d Minuten.</item>
+    </plurals>
+
+    <!-- The filter panel. -->
+    <string name="search_filters_open">Filter</string>
+    <string name="search_filters_title">Filter</string>
+    <string name="search_filters_reset">Zurücksetzen</string>
+    <string name="search_filters_close">Fertig</string>
+    <string name="search_filters_kind_label">Art</string>
+    <string name="search_filters_kind_all">Alles</string>
+    <string name="search_filters_kind_apps">Apps</string>
+    <string name="search_filters_kind_games">Spiele</string>
+    <string name="search_filters_rating_label">Mindestbewertung</string>
+    <string name="search_filters_rating_any">Beliebig</string>
+    <string name="search_filters_rating_value">Ab %1$s</string>
+    <string name="search_filters_sort_label">Sortieren nach</string>
+    <string name="search_filters_sort_relevance">Relevanz</string>
+    <string name="search_filters_sort_name">Name</string>
+    <string name="search_filters_sort_rating">Bewertung</string>
+    <string name="search_filters_stores_label">Stores</string>
+    <string name="search_filters_stores_hint">Nur für diese Suche. Um einen Store dauerhaft abzuschalten, nutze die Einstellungen.</string>
+    <string name="search_filtered_out_title">Einige Stores können diese Frage nicht beantworten</string>
+    <string name="search_filter_name_content_kind">die Art (App oder Spiel)</string>
+    <string name="search_filter_name_min_rating">die Bewertung</string>
+    <string name="search_filter_name_category">die Kategorie</string>
+    <string name="search_rating">★ %1$s</string>
+    <plurals name="search_filters_active">
+        <item quantity="one">%1$d Filter</item>
+        <item quantity="other">%1$d Filter</item>
+    </plurals>
+    <plurals name="search_filtered_out_entry">
+        <item quantity="one">%1$s veröffentlicht %2$s nicht in den Ergebnissen und wurde deshalb nicht abgefragt.</item>
+        <item quantity="other">%1$s veröffentlichen %2$s nicht in den Ergebnissen und wurden deshalb nicht abgefragt.</item>
+    </plurals>
+</resources>

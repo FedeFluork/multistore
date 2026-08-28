@@ -1,0 +1,233 @@
+# Nightly canary: the adapters' parsers against the **real** sites.
+#
+# Non-blocking, because a failure is not up to us: a store can be down, have changed its markup or
+# have decided to rate-limit us. Blocking a PR for something nobody in that PR touched would only
+# teach people to ignore red.
+#
+# Against the real sites, because fixtures freeze the markup of the day they were captured. A green
+# suite on old fixtures says nothing about what the store answers today, and that is exactly how a
+# scraping adapter dies in silence.
+#
+# The `ci.yml` pipeline stays hermetic and offline: these tests are tagged `@Tag("canary")` and the
+# `test` task excludes them. Here they are run by `canaryTest`, which only exists on `:store:*`
+# modules.
+name: Canary
+
+on:
+  schedule:
+    # 04:17 UTC: outside the sites' peak hours, and at a non-round minute so as not to arrive
+    # together with every other scheduled pipeline on the planet.
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: canary
+  cancel-in-progress: false
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.welcome=never
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  canary:
+    name: Adapter contro i siti reali
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # The adapters one by one, with `continue-on-error` on each: if apkcombo breaks, the canary
+      # must still say whether apkmirror is fine. A single command would stop at the first red and
+      # the following morning we would know half of what happened.
+      # f-droid is not a scraped store, and for a long time that seemed like a reason not to have a
+      # canary. It was not: what can break silently here is not a selector but the **pinned
+      # certificate** with which the repository signs the index — and if that changes, the index is
+      # discarded and with it search, detail, updates and categories for the whole store disappear.
+      #
+      # It is also the only canary that can compare a **published** hash with the downloaded bytes:
+      # on the other eight either there is no hash, or there is one sometimes, or the file sits
+      # behind a human gesture. It downloads the index once for the whole class (57 MB) and one
+      # artifact chosen because it is the smallest in the index (~9 KB).
+      - name: f-droid
+        id: fdroid
+        continue-on-error: true
+        run: ./gradlew :store:fdroid:canaryTest
+
+      - name: apkcombo
+        id: apkcombo
+        continue-on-error: true
+        run: ./gradlew :store:apkcombo:canaryTest
+
+      - name: apkmirror
+        id: apkmirror
+        continue-on-error: true
+        run: ./gradlew :store:apkmirror:canaryTest
+
+      - name: apkmody
+        id: apkmody
+        continue-on-error: true
+        run: ./gradlew :store:apkmody:canaryTest
+
+      # uptodown downloads nothing: the file sits behind a Turnstile and obtaining it without
+      # executing the challenge would be pretending to have solved it. The canary verifies the
+      # metadata — including the SHA-256, which is what makes the assisted download verifiable.
+      - name: uptodown
+        id: uptodown
+        continue-on-error: true
+        run: ./gradlew :store:uptodown:canaryTest
+
+      # modyolo has a check the others do not: the adult category ids are WordPress numbers, and if
+      # they changed the "Show NSFW content" filter would stay on while doing nothing. The canary
+      # compares the two result sets.
+      - name: modyolo
+        id: modyolo
+        continue-on-error: true
+        run: ./gradlew :store:modyolo:canaryTest
+
+      - name: an1
+        id: an1
+        continue-on-error: true
+        run: ./gradlew :store:an1:canaryTest
+
+      # pdalife has a test that hopes to fail: it verifies the **reCAPTCHA is still there**. That is
+      # the reason that store is `USER_ASSISTED_ONLY`, and if it disappeared the download would become
+      # automatically resolvable again — an improvement nobody would ever notice, because everything
+      # would keep working as before.
+      - name: pdalife
+        id: pdalife
+        continue-on-error: true
+        run: ./gradlew :store:pdalife:canaryTest
+
+      # liteapks has **two** tests that hope to fail. The first verifies the CDN's transit token is
+      # still needed: without the `?token=` the worker must answer 403, and if it stopped we would be
+      # adding a useless parameter to every download URL. The second verifies the "XAPKS Installer"
+      # advert is still there, that is that the container defence on the Google Play link still has a
+      # reason to exist.
+      - name: liteapks
+        id: liteapks
+        continue-on-error: true
+        run: ./gradlew :store:liteapks:canaryTest
+
+      - name: Report dei test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canary-reports
+          path: store/*/build/reports/tests/canaryTest/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # The issue carries the tests' message, which is written precisely to tell the three cases
+      # apart — markup changed / blocked / rate limited — because they lead to three different jobs.
+      # `update_existing` avoids thirty identical issues if a store stays broken for a month.
+      - name: Apre una issue se un adapter si e' rotto
+        if: >-
+          steps.fdroid.outcome == 'failure' ||
+          steps.apkcombo.outcome == 'failure' ||
+          steps.apkmirror.outcome == 'failure' ||
+          steps.apkmody.outcome == 'failure' ||
+          steps.uptodown.outcome == 'failure' ||
+          steps.modyolo.outcome == 'failure' ||
+          steps.an1.outcome == 'failure' ||
+          steps.pdalife.outcome == 'failure' ||
+          steps.liteapks.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // An object instead of a sequence of `if`s: adding a store is one line, and there is no
+            // way to add one to the steps and forget it here without the line being visibly
+            // missing.
+            const outcomes = {
+              'f-droid': '${{ steps.fdroid.outcome }}',
+              apkcombo: '${{ steps.apkcombo.outcome }}',
+              apkmirror: '${{ steps.apkmirror.outcome }}',
+              apkmody: '${{ steps.apkmody.outcome }}',
+              uptodown: '${{ steps.uptodown.outcome }}',
+              modyolo: '${{ steps.modyolo.outcome }}',
+              an1: '${{ steps.an1.outcome }}',
+              pdalife: '${{ steps.pdalife.outcome }}',
+              liteapks: '${{ steps.liteapks.outcome }}',
+            };
+            const broken = Object.keys(outcomes).filter(store => outcomes[store] === 'failure');
+            const title = `Canary: ${broken.join(', ')} not answering as expected`;
+            const body = [
+              `The nightly canary of ${new Date().toISOString().slice(0, 10)} found`,
+              `a problem on: **${broken.join('**, **')}**.`,
+              '',
+              'The tests\' message tells the cases apart, and that distinction is the point:',
+              '',
+              '- **the markup has changed** — it names the selector: update `<Store>Selectors`',
+              '  and recapture the matching fixture;',
+              '- **blocked** — there is nothing to fix in the parsers: reassess the tier, the',
+              '  User-Agent and the escalation rung, and update the store table in `REFERENCE.md`;',
+              '- **rate limited** — look at `permitsPerSecond` before touching the adapter.',
+              '',
+              'Five cases that apply to one store each:',
+              '',
+              '- **f-droid, "the index signature is not the pinned one"** — the most serious of the',
+              '  five, and it is not fixed by updating a selector. The certificate the repo signs',
+              '  `entry.jar` with has changed: either F-Droid rotated the key (to be verified',
+              '  **outside** this channel, on their announcement, not by trusting the new document)',
+              '  or the mirror is serving something that did not come from them. Until that is',
+              '  cleared up, the pin is **not** updated: a discarded index is a stale catalogue, a',
+              '  widened pin is every installation trusting whoever signed. If instead it is the',
+              '  file hash that failed, the news is different and concerns a single mirror;',
+              '- **modyolo, "the filter no longer removes anything"** — not a broken parser: the',
+              '  adult category ids have changed. Update `ModyoloConfig.nsfwCategoryIds` (or publish',
+              '  a `parsers.json` that does): while it stays like this, the "Show NSFW content"',
+              '  switch is on and does nothing;',
+              '- **an1, "the hash is gone"** — `x-amz-meta-checksum-sha256` is on only some of the',
+              '  objects. If it disappeared from the reference file, an1 becomes a store with no',
+              '  integrity verification and the capability must go back to `NONE`;',
+              '- **liteapks, "without a token the CDN no longer refuses"** — not a fault either: the',
+              '  transit permission is gone and the adapter is adding a `?token=` that is no longer',
+              '  needed. Remove it, together with `tokenizedFileHosts`. If instead what is missing is',
+              '  the **package** on the reference listing, it is the opposite: the `.app-stats`',
+              '  container has been renamed, and a naive read would return the advert package —',
+              '  which on that store is on 31 listings out of 31;',
+              '- **pdalife, "the reCAPTCHA is gone"** — not a fault, good news: the download would',
+              '  become resolvable in one request and `downloadMode` should go back to `DIRECT`. If',
+              '  instead what is missing is the **package** on the reference listing, it is the',
+              '  opposite: the `.game-download__stores` container has been renamed and the assisted',
+              '  path has just lost its only defence.',
+              '',
+              `Full reports in the [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) artifacts.`,
+            ].join('\n');
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'canary',
+            });
+            const match = existing.data.find(issue => issue.title === title);
+            if (match) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: match.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['canary'],
+              });
+            }
