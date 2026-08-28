@@ -6,7 +6,9 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.dropbox.differ.SimpleImageComparator
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
+import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.checkRoboAccessibility
 import com.multistore.core.designsystem.theme.MultiStoreTheme
@@ -85,8 +87,69 @@ abstract class ScreenshotTest {
                 content()
             }
         }
-        composeTestRule.onRoot().captureRoboImage(screenshotPath(screenName, themeMode))
+        composeTestRule.onRoot().captureRoboImage(
+            filePath = screenshotPath(screenName, themeMode),
+            roborazziOptions = COMPARE_ACROSS_PLATFORMS,
+        )
         checkAccessibility()
+    }
+
+    private companion object {
+        /**
+         * Comparison tolerance, and the reason it is a **per-pixel colour distance** and not a
+         * changed-pixel ratio.
+         *
+         * The goldens are recorded on macOS/arm64 and compared on the Linux/x86-64 CI runner, and
+         * those two rasterise curved edges and hairlines differently: switch thumbs and 1px
+         * dividers, with every glyph identical.
+         *
+         * ### The numbers, measured
+         *
+         * Taken on 28/08/2026 from the first real CI run, comparing each committed golden against
+         * the runner's own output for the 12 screenshots that failed:
+         *
+         * | | |
+         * |---|---|
+         * | pixels differing | 0.05-0.26% (56 to 110049 of 2586122) |
+         * | largest per-channel delta | **2 / 255**, on every one of the 12 |
+         * | largest `Color.distance` | **0.01358** |
+         * | pixels still differing at `maxDistance` 0.010 | 286 |
+         * | pixels still differing at `maxDistance` 0.014 | **0** |
+         *
+         * `0.01358` is not a coincidence: `Color.distance` is the Euclidean distance over
+         * **normalised RGBA and is not divided by the channel count**, so a delta of 2/255 on all
+         * three colour channels is `2/255 * sqrt(3)` = 0.01358. A first attempt at 0.01 failed for
+         * exactly that reason — it was sized against the per-channel delta instead of the metric.
+         *
+         * ### Why 0.02 and not 0.014
+         *
+         * 0.014 clears the measured ceiling by 3%, which is no margin at all if a runner image
+         * change nudges the rasteriser. 0.02 clears it by 47% and still catches everything real:
+         * a uniform 3/255 shift is 0.0204 and fails, and the worst it can hide is about 5/255 on a
+         * single channel. Material's tonal steps are far larger, and a moved or missing glyph flips
+         * pixels between text and background — distances above 0.5.
+         *
+         * ### Why not `changeThreshold`
+         *
+         * A changed-pixel *ratio* would tolerate a small region changing **completely** — a wrong
+         * icon, a missing badge, a swapped colour on one row — because a small region is a small
+         * fraction of the image. That is the tolerance `ci.yml` was right to refuse. This is the
+         * other kind: it tolerates only what no eye can resolve, and it tolerates it *everywhere*,
+         * so any pixel that changes visibly still fails however small the area.
+         *
+         * ### Why not record on Linux instead
+         *
+         * That was the earlier plan, and it costs more than it looks. `verifyRoborazziDebug` would
+         * fail on every developer machine, so the fast local check before opening a PR is gone — and
+         * the next `recordRoborazziDebug` run locally out of habit silently rewrites all 42 goldens
+         * with macOS ones and puts CI back to red, with no guardrail able to notice. One golden set
+         * valid on both platforms has no such footgun.
+         */
+        val COMPARE_ACROSS_PLATFORMS = RoborazziOptions(
+            compareOptions = RoborazziOptions.CompareOptions(
+                imageComparator = SimpleImageComparator(maxDistance = 0.02f),
+            ),
+        )
     }
 
     /**
