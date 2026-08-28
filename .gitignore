@@ -8,6 +8,7 @@ build-logic/**/build/
 # Android / local toolchain
 local.properties
 *.apk
+!**/src/test/resources/**/*.apk
 *.aab
 *.ap_
 *.dex
