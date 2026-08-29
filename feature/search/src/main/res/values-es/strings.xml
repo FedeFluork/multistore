@@ -12,6 +12,7 @@
 
     <string name="search_load_more">Cargar más</string>
 
+    <string name="search_notice_dismiss">Ocultar este aviso</string>
     <string name="search_shortfall_title">Algunas tiendas no respondieron</string>
     <string name="search_shortfall_entry">%1$s — %2$s</string>
     <string name="search_shortfall_paused">En pausa tras fallos repetidos. Ni siquiera lo intentamos.</string>

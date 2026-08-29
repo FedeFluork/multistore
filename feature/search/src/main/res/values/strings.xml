@@ -19,6 +19,7 @@
     <string name="search_load_more">Load more</string>
 
     <!-- Sources that did not report back. -->
+    <string name="search_notice_dismiss">Hide this notice</string>
     <string name="search_shortfall_title">Some stores did not answer</string>
     <string name="search_shortfall_entry">%1$s — %2$s</string>
     <string name="search_shortfall_paused">Paused after repeated failures. We did not even try.</string>

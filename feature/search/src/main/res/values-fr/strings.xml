@@ -12,6 +12,7 @@
 
     <string name="search_load_more">Charger plus</string>
 
+    <string name="search_notice_dismiss">Masquer cet avis</string>
     <string name="search_shortfall_title">Certains magasins n\'ont pas répondu</string>
     <string name="search_shortfall_entry">%1$s — %2$s</string>
     <string name="search_shortfall_paused">En pause après des échecs répétés. Nous n\'avons même pas essayé.</string>

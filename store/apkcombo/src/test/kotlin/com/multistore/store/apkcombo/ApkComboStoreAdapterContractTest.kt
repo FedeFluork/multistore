@@ -157,6 +157,38 @@ class ApkComboStoreAdapterContractTest : StoreAdapterContractTest() {
         assertThat(versions.mapNotNull { it.sizeBytes }).isNotEmpty()
     }
 
+    /**
+     * A listing whose latest page offers **no file** still arrives installable.
+     *
+     * The dead end, and it was reachable on the real store: on `com.iMe.android` the latest-version
+     * segment publishes zero variants, so the listing came back with an empty version list and the
+     * screen said "this store publishes no installable package for this app". Nothing said why, and
+     * the way out was undiscoverable — opening the version-history section made an Install button
+     * appear, because on that store the files live only under the per-version segments.
+     *
+     * The fixture is that real page served at the fixture app's path: see the README. Telegram has
+     * variants on its latest page, so the dead end cannot be photographed from it.
+     */
+    @Test
+    @DisplayName("a listing with no variant on its latest page still names its versions")
+    fun aListingWithoutVariantsFallsBackToTheVersionsOnThePage() = runTest {
+        fake.overrides["/${Fixtures.APP_PATH}/download/apk"] = Fixtures.DOWNLOAD_NO_VARIANTS
+
+        val versions = apkcombo.getAppDetails(existingRef).expect().versions
+
+        // **The premise is verified, not assumed.** Variants carry a size; the version list cannot —
+        // apkcombo publishes neither size nor version code on it. If the served page ever grew
+        // variants, the assertions below would pass without proving anything.
+        assertThat(versions.mapNotNull { it.sizeBytes }).isEmpty()
+        assertThat(versions.map { it.versionName }).containsExactly("12.9.4", "12.9.3", "12.9.2")
+
+        // And it costs nothing: the page that proved there is nothing to install is the page that
+        // names the versions. A second request to `/old-versions/` would have worked too, on every
+        // listing of the store, for 28 rows the history section fetches only when opened.
+        assertThat(fake.received.map { it.url.encodedPath })
+            .doesNotContain("/${Fixtures.APP_PATH}/old-versions/")
+    }
+
     private fun <T> StoreResult<T>.expect(): T = when (this) {
         is StoreResult.Success -> value
         is StoreResult.Failure -> error("should have succeeded on the fixtures, gave $error")

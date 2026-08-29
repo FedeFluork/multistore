@@ -12,6 +12,7 @@
 
     <string name="search_load_more">Mehr laden</string>
 
+    <string name="search_notice_dismiss">Diesen Hinweis ausblenden</string>
     <string name="search_shortfall_title">Einige Stores haben nicht geantwortet</string>
     <string name="search_shortfall_entry">%1$s — %2$s</string>
     <string name="search_shortfall_paused">Nach wiederholten Fehlern pausiert. Wir haben es gar nicht erst versucht.</string>

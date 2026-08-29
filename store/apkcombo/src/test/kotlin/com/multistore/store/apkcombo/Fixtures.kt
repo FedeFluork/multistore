@@ -39,6 +39,14 @@ object Fixtures {
     const val DETAIL: String = "detail.html.gz"
     const val DOWNLOAD: String = "download.html.gz"
     const val DOWNLOAD_OLD: String = "download-old.html.gz"
+
+    /**
+     * A variants page with **no variant**, and the version list still on it.
+     *
+     * It is another app on purpose — see the README: the fixture app has variants on its latest
+     * page, so the dead end cannot be photographed from it.
+     */
+    const val DOWNLOAD_NO_VARIANTS: String = "download-no-variants.html.gz"
     const val OLD_VERSIONS: String = "old-versions.html.gz"
     const val NOT_FOUND: String = "not-found.html.gz"
 

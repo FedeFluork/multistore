@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,8 +29,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,8 +80,13 @@ fun SearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
+    // The field's text comes from `queryText` and **not** from `uiState.query`: see the doc on
+    // `SearchViewModel.queryText`. They differ exactly while a search is in flight — which is when
+    // someone is still typing.
+    val query by viewModel.queryText.collectAsStateWithLifecycle()
     SearchScreen(
         uiState = uiState,
+        query = query,
         filters = filters,
         preferredLanguageTags = rememberPreferredLanguageTags(),
         storeDisplayName = viewModel::storeDisplayName,
@@ -91,6 +99,7 @@ fun SearchScreen(
         onSortChange = viewModel::setSort,
         onStoreToggle = viewModel::toggleStore,
         onResetFilters = { viewModel.resetFilters() },
+        onSubmit = viewModel::searchNow,
         modifier = modifier,
     )
 }
@@ -106,6 +115,14 @@ internal fun SearchScreen(
     onAppClick: (StoreId, StoreAppRef) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
+    /**
+     * The text **in the field**, which is not [SearchUiState.query].
+     *
+     * It defaults to it so that the previews and the goldens, which photograph a settled screen where
+     * the two agree, stay unchanged. On the live screen they diverge while a search is in flight.
+     */
+    query: String = uiState.query,
+    onSubmit: () -> Unit = {},
     filters: SearchFilterState = SearchFilterState(),
     onContentKindChange: (ContentKind?) -> Unit = {},
     onMinRatingChange: (Float?) -> Unit = {},
@@ -119,6 +136,19 @@ internal fun SearchScreen(
     val spacing = LocalSpacing.current
     val keyboard = LocalSoftwareKeyboardController.current
     var showFilters by rememberSaveable { mutableStateOf(initiallyShowingFilters) }
+    // Which query's notices were dismissed, rather than a plain `Boolean`.
+    //
+    // A new search is new information, so its notices have to come back — a flag would silence every
+    // search from then on, which is a different promise from the one the X makes. Keying it to the
+    // query also decides the case that a counter could not: the notice is dismissed for *this*
+    // question, and the shortfalls of the next one are somebody else's news.
+    //
+    // It deliberately does **not** reset when the shortfalls change within one query: stores answer
+    // one at a time, so an X that undid itself a second later because a ninth store fell over would
+    // read as a broken button rather than as an update.
+    var noticesDismissedFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val noticesHidden = noticesDismissedFor == uiState.query
+    val dismissNotices = { noticesDismissedFor = uiState.query }
 
     Scaffold(
         modifier = modifier,
@@ -130,7 +160,7 @@ internal fun SearchScreen(
                 .padding(innerPadding),
         ) {
             OutlinedTextField(
-                value = uiState.query,
+                value = query,
                 onValueChange = onQueryChange,
                 singleLine = true,
                 label = { Text(text = stringResource(R.string.search_field_label)) },
@@ -138,7 +168,7 @@ internal fun SearchScreen(
                     Icon(imageVector = Icons.Rounded.Search, contentDescription = null)
                 },
                 trailingIcon = {
-                    if (uiState.query.isNotEmpty()) {
+                    if (query.isNotEmpty()) {
                         IconButton(onClick = { onQueryChange("") }) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
@@ -148,7 +178,14 @@ internal fun SearchScreen(
                     }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
+                // The search key searches. Hiding the keyboard was all it used to do, so the gesture
+                // someone reaches for when the results look stale produced nothing.
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        keyboard?.hide()
+                        onSubmit()
+                    },
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = spacing.screenHorizontal, vertical = spacing.small),
@@ -193,7 +230,14 @@ internal fun SearchScreen(
 
                 is SearchUiState.NoResults -> Column(modifier = Modifier.weight(1f)) {
                     FilteredOutBanner(uiState.shortfalls, storeDisplayName)
-                    ShortfallBanner(uiState.shortfalls, storeDisplayName, onRetry)
+                    if (!noticesHidden) {
+                        ShortfallBanner(
+                            shortfalls = uiState.shortfalls,
+                            storeDisplayName = storeDisplayName,
+                            onRetry = onRetry,
+                            onDismiss = dismissNotices,
+                        )
+                    }
                     EmptyState(
                         icon = Icons.Rounded.Search,
                         title = stringResource(R.string.search_no_results_title, uiState.query),
@@ -203,15 +247,26 @@ internal fun SearchScreen(
 
                 is SearchUiState.Results -> Column(modifier = Modifier.weight(1f)) {
                     FilteredOutBanner(uiState.shortfalls, storeDisplayName)
-                    ShortfallBanner(uiState.shortfalls, storeDisplayName, onRetry)
-                    if (uiState.stillArriving) {
-                        InfoBanner(
-                            text = stringResource(
-                                R.string.search_progress_still_arriving,
-                                uiState.answered,
-                                uiState.queried,
-                            ),
+                    // One X for both, because they are one piece of news read together: how many
+                    // stores answered, and which did not. Two separate controls on two stacked
+                    // notices would be two taps to silence one sentence.
+                    if (!noticesHidden) {
+                        ShortfallBanner(
+                            shortfalls = uiState.shortfalls,
+                            storeDisplayName = storeDisplayName,
+                            onRetry = onRetry,
+                            onDismiss = dismissNotices,
                         )
+                        if (uiState.stillArriving) {
+                            InfoBanner(
+                                text = stringResource(
+                                    R.string.search_progress_still_arriving,
+                                    uiState.answered,
+                                    uiState.queried,
+                                ),
+                                onDismiss = dismissNotices,
+                            )
+                        }
                     }
                     if (uiState.partialByBootstrap) {
                         InfoBanner(text = stringResource(R.string.search_bootstrap_notice))
@@ -358,7 +413,32 @@ private fun ResultList(
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier = modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+
+    // The list stays at the top until the reader moves it, and that needs saying out loud because
+    // `LazyColumn` works the other way round on purpose.
+    //
+    // Given `key = { it.listKey }` it anchors the position to the **key** of the first visible item
+    // and restores that key to the top after the data changes. That is right when someone is reading
+    // half-way down a list that grows: the row under their eyes stays under their eyes. It is wrong
+    // at the top of a search, because aggregation **reorders on every store that answers** — a late
+    // arrival ranked higher is inserted above the anchor, the list scrolls to keep the anchor where
+    // it was, and the result is rows above the first visible one that nobody scrolled past. The
+    // search looked as if it had opened part-way down its own results.
+    //
+    // Hence: re-pin on every change of the answer while the reader has not moved, and never once
+    // they have.
+    var readerMoved by remember(state.query) { mutableStateOf(false) }
+    // Only a real drag counts. `interactionSource` reports gestures, not programmatic scrolls, so
+    // the `scrollToItem` below cannot mistake itself for the reader — which a
+    // `firstVisibleItemIndex` check would have done.
+    LaunchedEffect(listState, state.query) {
+        listState.interactionSource.interactions.collect { readerMoved = true }
+    }
+    LaunchedEffect(state.query, state.apps, readerMoved) {
+        if (!readerMoved) listState.scrollToItem(0)
+    }
+    LazyColumn(state = listState, modifier = modifier.fillMaxSize()) {
         items(
             items = state.apps,
             // `listKey` and not `appKey`: the group's key is the **domain** identity and is not unique
@@ -456,6 +536,7 @@ private fun ShortfallBanner(
     shortfalls: List<StoreShortfall>,
     storeDisplayName: (StoreId) -> String,
     onRetry: () -> Unit,
+    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Whoever was excluded by the filters already has their own notice, with its own explanation and
@@ -470,11 +551,15 @@ private fun ShortfallBanner(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(spacing.large)) {
-            Text(
-                text = stringResource(R.string.search_shortfall_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.search_shortfall_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                if (onDismiss != null) DismissNoticeButton(onDismiss)
+            }
             failures.forEach { shortfall ->
                 val name = storeDisplayName(shortfall.storeId)
                 val detail = when {
@@ -510,16 +595,48 @@ private fun ShortfallBanner(
 }
 
 @Composable
-private fun InfoBanner(text: String, modifier: Modifier = Modifier) {
+private fun InfoBanner(
+    text: String,
+    modifier: Modifier = Modifier,
+    onDismiss: (() -> Unit)? = null,
+) {
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(LocalSpacing.current.large),
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(LocalSpacing.current.large),
+            )
+            if (onDismiss != null) {
+                DismissNoticeButton(
+                    onDismiss = onDismiss,
+                    modifier = Modifier.padding(end = LocalSpacing.current.small),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The X that puts a notice away.
+ *
+ * An `IconButton`, so the touch target is the 48dp the accessibility check inside every capture
+ * demands — the text next to it is `bodySmall`, and a control sized to that text would be half of
+ * it. It carries a `contentDescription` for the same reason: it is the only thing a screen reader
+ * would otherwise announce as an unlabelled button.
+ */
+@Composable
+private fun DismissNoticeButton(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    IconButton(onClick = onDismiss, modifier = modifier) {
+        Icon(
+            imageVector = Icons.Rounded.Close,
+            contentDescription = stringResource(R.string.search_notice_dismiss),
         )
     }
 }

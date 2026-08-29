@@ -73,6 +73,12 @@ class SearchViewModelTest {
         registry = registry,
     )
 
+    private companion object {
+        /** The ViewModel's own debounce window, and the fake's gap between two store arrivals. */
+        const val DEBOUNCE_MILLIS = 300L
+        const val EMISSION_GAP = 1L
+    }
+
     private fun storeEntry(storeId: StoreId, name: String) = StoreEntry(
         storeId = storeId,
         displayName = name,
@@ -385,6 +391,172 @@ class SearchViewModelTest {
         assertThat(filters.contentKind).isEqualTo(ContentKind.APP)
         assertThat(filters.minRating).isNull()
         assertThat(filters.excludedStores).isEmpty()
+    }
+
+
+    // --- The text in the field, and the results' label ---------------------------------------
+
+    /**
+     * A store answering an **abandoned** search must not publish over what is being typed.
+     *
+     * This is the reported bug, at the ViewModel. `runSearch` captures the debounced text and stamps
+     * it into every state it publishes; the fan-out emits once per store arrival, over seconds. The
+     * old job is cancelled only by the next debounce — 300 ms after the last keystroke — so while
+     * someone keeps typing, the previous query's arrivals kept rewriting the state the text field was
+     * bound to, and the caret snapped back to where it had been when that search started.
+     *
+     * Cancelling on every keystroke would not be enough, which is why the defence is a value check:
+     * cancellation is cooperative and there is no suspension point before the assignment, so a
+     * continuation already resumed with a buffered element runs the collect body once more anyway.
+     */
+    @Test
+    fun `a store answering an abandoned search does not publish over what is being typed`() =
+        runTest(dispatcher) {
+            // One store has answered; a second is still to come.
+            search.partials = listOf(
+                SearchProgress(
+                    page = SearchPage(apps = listOf(app("primo")), page = 0, hasMore = false),
+                    answered = setOf(StoreId.FDROID),
+                    pending = setOf(StoreId.APKMIRROR),
+                ),
+            )
+            search.onSearch = { _, _ ->
+                SearchPage(apps = listOf(app("primo"), app("secondo")), page = 0, hasMore = false)
+            }
+            val viewModel = viewModel()
+            runCurrent()
+
+            viewModel.onQueryChange("fire")
+            advanceTimeBy(DEBOUNCE_MILLIS)
+            runCurrent()
+            assertThat((viewModel.uiState.value as SearchUiState.Results).apps).hasSize(1)
+
+            // One more letter, while the fan-out for "fire" still has a store to hear from.
+            viewModel.onQueryChange("firefox")
+            runCurrent()
+            // The abandoned search's last emission arrives now.
+            advanceTimeBy(EMISSION_GAP)
+            runCurrent()
+
+            // It was dropped: the state is still the one-store answer, not the two-store one.
+            assertThat((viewModel.uiState.value as SearchUiState.Results).apps).hasSize(1)
+            // And the field kept the letter. `queryText` has one writer, and this is what it is for.
+            assertThat(viewModel.queryText.value).isEqualTo("firefox")
+        }
+
+    /**
+     * Typing over results **keeps them** instead of replacing them with a spinner.
+     *
+     * The old guard published `Searching` on every non-blank keystroke, so the `LazyColumn` was
+     * disposed and rebuilt once per letter on the main thread — the other half of "the field freezes".
+     * The results belong to the previous word, which is honest: they are the best answer there is
+     * until the next one arrives.
+     */
+    @Test
+    fun `typing over results keeps them instead of raising the spinner`() = runTest(dispatcher) {
+        search.onSearch = { _, _ -> SearchPage(listOf(app("primo")), 0, hasMore = false) }
+        val viewModel = viewModel()
+        viewModel.onQueryChange("fire")
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value).isInstanceOf(SearchUiState.Results::class.java)
+
+        viewModel.onQueryChange("firefox")
+        runCurrent()
+
+        assertThat(viewModel.uiState.value).isInstanceOf(SearchUiState.Results::class.java)
+        assertThat(viewModel.queryText.value).isEqualTo("firefox")
+    }
+
+    /**
+     * Clearing the field and retyping the same word **searches again**.
+     *
+     * `distinctUntilChanged()` sat after the `debounce` and remembered what it had emitted, so this
+     * gesture — the one someone makes to correct a typo — was dropped as a duplicate. Nothing
+     * searched, while `onQueryChange` had already raised the spinner: the screen stayed on it for
+     * ever. A dedupe may only suppress a search that is running or already answered on screen, and a
+     * spinner is neither.
+     */
+    @Test
+    fun `clearing the field and retyping the same word searches again`() = runTest(dispatcher) {
+        search.onSearch = { _, _ -> SearchPage(listOf(app("primo")), 0, hasMore = false) }
+        val viewModel = viewModel()
+        viewModel.onQueryChange("tor")
+        advanceUntilIdle()
+        assertThat(search.searches).hasSize(1)
+
+        // Both inside one debounce window, which is what makes it the hard case: the debounce only
+        // ever emits the last value, so the empty string never reaches the chain.
+        viewModel.onQueryChange("")
+        runCurrent()
+        viewModel.onQueryChange("tor")
+        advanceUntilIdle()
+
+        assertThat(search.searches).hasSize(2)
+        assertThat(viewModel.uiState.value).isInstanceOf(SearchUiState.Results::class.java)
+    }
+
+    /**
+     * A word already answered on screen is not searched again.
+     *
+     * The other half of the dedupe: deleting a letter and putting it back inside one window must not
+     * cost a second nine-store fan-out.
+     */
+    @Test
+    fun `a word already answered on screen is not searched again`() = runTest(dispatcher) {
+        search.onSearch = { _, _ -> SearchPage(listOf(app("primo")), 0, hasMore = false) }
+        val viewModel = viewModel()
+        viewModel.onQueryChange("tor")
+        advanceUntilIdle()
+        assertThat(search.searches).hasSize(1)
+
+        viewModel.onQueryChange("tors")
+        advanceTimeBy(100)
+        viewModel.onQueryChange("tor")
+        advanceUntilIdle()
+
+        assertThat(search.searches).hasSize(1)
+    }
+
+    /**
+     * A word that answered **nothing** is searched again after a detour, instead of hanging.
+     *
+     * This is the case the dedupe's shape exists for, and it is the one a simple "same text as last
+     * time" check gets wrong. With no results on screen, a detour through another word leaves the
+     * screen on a spinner — `onQueryChange` raised it — and if the debounce then drops the returning
+     * word as a duplicate, nothing ever takes the spinner down. `alreadyAnswered` may therefore only
+     * suppress a search that is **running** or **settled**: a spinner is neither.
+     */
+    @Test
+    fun `a word that answered nothing is searched again after a detour`() = runTest(dispatcher) {
+        search.onSearch = { _, _ -> SearchPage(apps = emptyList(), page = 0, hasMore = false) }
+        val viewModel = viewModel()
+        viewModel.onQueryChange("tor")
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value).isInstanceOf(SearchUiState.NoResults::class.java)
+
+        viewModel.onQueryChange("tors")
+        advanceTimeBy(100)
+        viewModel.onQueryChange("tor")
+        advanceUntilIdle()
+
+        // Not left on the spinner, and asked again — the word was never answered while it was away.
+        assertThat(viewModel.uiState.value).isInstanceOf(SearchUiState.NoResults::class.java)
+        assertThat(search.searches).hasSize(2)
+    }
+
+    /** The keyboard's search key searches, instead of only hiding the keyboard. */
+    @Test
+    fun `the search key searches without waiting for the debounce`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        runCurrent()
+        viewModel.onQueryChange("tor")
+        runCurrent()
+        assertThat(search.searches).isEmpty()
+
+        viewModel.searchNow()
+        runCurrent()
+
+        assertThat(search.searches).containsExactly("tor" to 0)
     }
 
     private fun app(ref: String) = AggregatedApp(

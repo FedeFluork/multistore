@@ -196,13 +196,55 @@ class ApkComboStoreAdapter @Inject constructor(
         // with no versions, i.e. a screen saying "no versions" when the truth might be "the store
         // blocked us" or "the markup changed". Those lead to different jobs, and the user deserves
         // the first, not the third.
-        val variants = when (val parsed = latestVariants(path, detail.summary.title)) {
+        val variantsPage = when (
+            val fetched = fetcher.get(config.downloadUrl(path, ApkComboConfig.LATEST_VERSION_SEGMENT))
+        ) {
+            is StoreResult.Success -> fetched.value
+            is StoreResult.Failure -> return@storeCall fetched
+            StoreResult.Unsupported -> return@storeCall StoreResult.Unsupported
+        }
+        val variants = when (
+            val parsed = downloadParser.parse(variantsPage.html, variantsPage.url, detail.summary.title)
+        ) {
             is StoreResult.Success -> parsed.value
             is StoreResult.Failure -> return@storeCall parsed
             StoreResult.Unsupported -> return@storeCall StoreResult.Unsupported
         }
-        StoreResult.Success(detail.copy(versions = variants.map { it.toAppVersion(LATEST) }))
+
+        val versions = if (variants.isNotEmpty()) {
+            variants.map { it.toAppVersion(LATEST) }
+        } else {
+            versionsOnly(variantsPage)
+        }
+        StoreResult.Success(detail.copy(versions = versions))
     }
+
+    /**
+     * The versions a variants page names when it offers **no file**.
+     *
+     * On some apps the latest-version segment publishes no downloadable variant at all — measured on
+     * `com.iMe.android`, whose `/download/apk` has zero `/r2?` links — and the listing used to arrive
+     * with an empty version list. The screen then said "this store publishes no installable package
+     * for this app", which is a dead end with nothing saying why: opening the version-history section
+     * made an Install button appear, because on that store the files live **only** under the
+     * per-version segments.
+     *
+     * It costs **no extra request**, and that is the reason it reads this page rather than
+     * `/old-versions/`: the page that just proved there is nothing to install carries the version
+     * list itself, in the same `ul.list-versions a.ver-item` markup — three rows on the measured app
+     * against that page's thirty-one. Fetching the longer list here would buy 28 rows nobody has
+     * asked for; the history section fetches them when it is opened.
+     *
+     * A failure to parse it is **not** propagated, and that asymmetry is deliberate: the variants
+     * page has already been read successfully, so what is being answered here is "are there older
+     * releases named on it?". "No" is a legitimate answer — plenty of apps have exactly one release —
+     * and turning it into a store error would make a fault out of an app's ordinary shape.
+     */
+    private fun versionsOnly(page: PageFetcher.Page): List<AppVersion> =
+        when (val parsed = versionsParser.parse(page.html, page.url)) {
+            is StoreResult.Success -> parsed.value
+            is StoreResult.Failure, StoreResult.Unsupported -> emptyList()
+        }
 
     /**
      * The older releases.
@@ -272,9 +314,6 @@ class ApkComboStoreAdapter @Inject constructor(
     override suspend fun healthCheck(): StoreResult<Unit> = storeCall {
         fetcher.resolveRedirect(config.baseUrl).map { }
     }
-
-    private suspend fun latestVariants(path: String, title: String?): StoreResult<List<ApkComboVariant>> =
-        variantsAt(path, ApkComboConfig.LATEST_VERSION_SEGMENT, title)
 
     private suspend fun variantsAt(
         path: String,

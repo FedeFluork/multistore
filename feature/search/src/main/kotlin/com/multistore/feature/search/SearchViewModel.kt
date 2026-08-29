@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -153,9 +153,30 @@ class SearchViewModel @Inject constructor(
     private val _filters = MutableStateFlow(SearchFilterState())
     val filters: StateFlow<SearchFilterState> = _filters.asStateFlow()
 
-    private val query = MutableStateFlow("")
+    private val _query = MutableStateFlow("")
+
+    /**
+     * The text **in the field**, and the only state here with a single writer.
+     *
+     * [SearchUiState.query] answers a different question — *which query are these results for?* — and
+     * it is written by two asynchronous producers that cannot know what has been typed since they
+     * started. Binding the editor to it is what made the field revert its text and the caret jump
+     * back: the `String` overload of `BasicTextField` keeps the selection in a private state and
+     * recombines it as `copy(text = value)`, so a `value` that did not come from the last keystroke
+     * gets the old offset coerced into the shorter string. The same distinction is written down for
+     * the Settings field, in `SettingsScreen`: this is the search screen catching up with it.
+     */
+    val queryText: StateFlow<String> = _query.asStateFlow()
+
     private var searchJob: Job? = null
     private var page = 0
+
+    /**
+     * The last text handed to [runSearch]. Read only by [alreadyAnswered], and only together with
+     * whether that search is still running: on its own it is not a safe answer, which is what the
+     * doc on [alreadyAnswered] is about.
+     */
+    private var searchedQuery: String? = null
 
     init {
         // The two defaults arrive once, when the screen opens. Observing them would mean that changing
@@ -197,7 +218,7 @@ class SearchViewModel @Inject constructor(
             sort = defaults.defaultSort,
             excludedStores = emptySet(),
         )
-        runSearch(query.value)
+        runSearch(_query.value)
     }
 
     /**
@@ -211,32 +232,45 @@ class SearchViewModel @Inject constructor(
         val updated = _filters.value.change()
         if (updated == _filters.value) return
         _filters.value = updated
-        if (query.value.isNotBlank()) runSearch(query.value)
+        if (_query.value.isNotBlank()) runSearch(_query.value)
     }
 
     @OptIn(FlowPreview::class)
-    private val debounced = query
+    private val debounced = _query
         // Without debounce, "firefox" is seven searches. On a local-index store they would only cost
         // CPU; on the other eight they are seven HTTP requests each, and the rate limiter would make
         // whoever types fast pay for them.
         .debounce(DEBOUNCE_MILLIS)
-        .distinctUntilChanged()
+        .filter { !alreadyAnswered(it) }
         .onEach(::runSearch)
         .launchIn(viewModelScope)
 
     fun onQueryChange(value: String) {
-        query.value = value
-        // The field must respond immediately, not in 300 ms: the visible state changes now, the request
-        // leaves later.
+        _query.value = value
+        // The spinner goes up now and not in 300 ms — but only when there is nothing to keep. Results
+        // already on screen stay: they belong to the previous word, and replacing them with a spinner
+        // on every letter tore the `LazyColumn` down and rebuilt it once per keystroke, on the main
+        // thread, which is the other half of what "the field freezes" was describing.
         if (value.isBlank()) {
             searchJob?.cancel()
-            _uiState.value = SearchUiState.Idle(value)
-        } else if (_uiState.value.query != value) {
-            _uiState.value = SearchUiState.Searching(value)
+            publish(SearchUiState.Idle(value))
+        } else if (_uiState.value !is SearchUiState.Results) {
+            publish(SearchUiState.Searching(value))
         }
     }
 
-    fun retry() = runSearch(query.value)
+    /**
+     * Searches at once, for the keyboard's search key.
+     *
+     * That key used to only hide the keyboard, so the gesture someone reaches for when the results
+     * look stale did nothing at all.
+     */
+    fun searchNow() {
+        val text = _query.value
+        if (text.isNotBlank()) runSearch(text)
+    }
+
+    fun retry() = runSearch(_query.value)
 
     fun loadMore() {
         val current = _uiState.value as? SearchUiState.Results ?: return
@@ -244,7 +278,7 @@ class SearchViewModel @Inject constructor(
         if (searchJob?.isActive == true) return
 
         searchJob = viewModelScope.launch {
-            _uiState.value = current.copy(loadingMore = true)
+            publish(current.copy(loadingMore = true))
             val active = _filters.value
             val next = searchApps(
                 query = current.query,
@@ -253,11 +287,13 @@ class SearchViewModel @Inject constructor(
                 filters = active.toSearchFilters(),
             )
             page += 1
-            _uiState.value = current.copy(
-                apps = current.apps + next.apps,
-                shortfalls = next.shortfalls,
-                hasMore = next.hasMore,
-                loadingMore = false,
+            publish(
+                current.copy(
+                    apps = current.apps + next.apps,
+                    shortfalls = next.shortfalls,
+                    hasMore = next.hasMore,
+                    loadingMore = false,
+                ),
             )
         }
     }
@@ -268,13 +304,14 @@ class SearchViewModel @Inject constructor(
 
     private fun runSearch(text: String) {
         searchJob?.cancel()
+        searchedQuery = text
         page = 0
         if (text.isBlank()) {
-            _uiState.value = SearchUiState.Idle(text)
+            publish(SearchUiState.Idle(text))
             return
         }
         searchJob = viewModelScope.launch {
-            _uiState.value = SearchUiState.Searching(text)
+            publish(SearchUiState.Searching(text))
             val active = _filters.value
             searchApps.stream(
                 query = text,
@@ -282,28 +319,74 @@ class SearchViewModel @Inject constructor(
                 filters = active.toSearchFilters(),
             ).collect { progress ->
                 val apps = progress.page.apps
-                _uiState.value = when {
+                publish(
+                    when {
                     // Until there is nothing to show **and** somebody is still missing, the screen stays
                     // on the spinner: a "no results" screen that fills up a second later is worse than a
                     // wait.
-                    apps.isEmpty() && !progress.complete -> SearchUiState.Searching(
-                        query = text,
-                        answered = progress.answered.size,
-                        queried = progress.queried,
-                    )
+                        apps.isEmpty() && !progress.complete -> SearchUiState.Searching(
+                            query = text,
+                            answered = progress.answered.size,
+                            queried = progress.queried,
+                        )
 
-                    apps.isEmpty() -> SearchUiState.NoResults(text, progress.page.shortfalls)
+                        apps.isEmpty() -> SearchUiState.NoResults(text, progress.page.shortfalls)
 
-                    else -> SearchUiState.Results(
-                        query = text,
-                        apps = apps,
-                        shortfalls = progress.page.shortfalls,
-                        hasMore = progress.page.hasMore,
-                        answered = progress.answered.size,
-                        queried = progress.queried,
-                    )
-                }
+                        else -> SearchUiState.Results(
+                            query = text,
+                            apps = apps,
+                            shortfalls = progress.page.shortfalls,
+                            hasMore = progress.page.hasMore,
+                            answered = progress.answered.size,
+                            queried = progress.queried,
+                        )
+                    },
+                )
             }
+        }
+    }
+
+    /**
+     * Publishes a state **only if it is still about the text in the field**.
+     *
+     * One gate instead of a cancellation on every keystroke, and the difference is not tidiness. A
+     * search fans out to nine stores and emits once per arrival, so an abandoned query keeps writing
+     * for seconds; `searchJob?.cancel()` is reached only by the debounce, 300 ms after the last
+     * keystroke, and even then it does not help by itself — cancellation is cooperative and there is no
+     * suspension point between the check and the assignment, so a continuation already resumed with a
+     * buffered element runs the collect body once more after `cancel()` has returned.
+     *
+     * Comparing the **value** closes that window instead of narrowing it: whatever the state was
+     * computed from, it is dropped unless it is about what is being typed now. Both late writers —
+     * this collect loop, and [loadMore]'s write after an await of up to eight seconds — pass through
+     * here.
+     */
+    private fun publish(state: SearchUiState) {
+        if (state.query != _query.value) return
+        _uiState.value = state
+    }
+
+    /**
+     * `true` when a search for this exact text is **already running or already answered on screen**.
+     *
+     * It replaces the `distinctUntilChanged()` that used to sit after the `debounce`, and the
+     * difference is which question gets asked. That operator remembered what it had *emitted*, which
+     * is neither what was searched — a filter change calls [runSearch] outside this chain, so the same
+     * nine-store fan-out fired again 300 ms later — nor what is on screen: clearing the field and
+     * retyping the same word inside one window was dropped as a duplicate, and since [onQueryChange]
+     * had already raised the spinner, the screen stayed on it **for ever**.
+     *
+     * Asking about the running job and the settled state instead makes that outcome unreachable: the
+     * only states that suppress a search are the two that already answer the question, and a spinner
+     * is not one of them. `stillArriving` is part of it because a list some stores have yet to join is
+     * not an answer yet.
+     */
+    private fun alreadyAnswered(text: String): Boolean {
+        if (searchedQuery == text && searchJob?.isActive == true) return true
+        return when (val state = _uiState.value) {
+            is SearchUiState.Results -> state.query == text && !state.stillArriving
+            is SearchUiState.NoResults -> state.query == text
+            is SearchUiState.Idle, is SearchUiState.Searching -> false
         }
     }
 
