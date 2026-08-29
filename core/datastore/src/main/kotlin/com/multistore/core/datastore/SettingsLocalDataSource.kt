@@ -5,6 +5,7 @@ import com.multistore.core.datastore.proto.Settings
 import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.CatalogRetention
 import com.multistore.core.model.ContentKind
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.DiagnosticsSettings
 import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.InstallSettings
@@ -151,6 +152,14 @@ class SettingsLocalDataSource @Inject constructor(
 
     suspend fun setInstallerPreference(preference: InstallerPreference) {
         dataStore.updateData { it.toBuilder().setInstallerPreference(preference.toProto()).build() }
+    }
+
+    suspend fun setAutoInstallAfterDownload(auto: Boolean) {
+        dataStore.updateData { it.toBuilder().setAutoInstallAfterDownload(auto).build() }
+    }
+
+    suspend fun setDownloadHistoryLimit(limit: DownloadHistoryLimit) {
+        dataStore.updateData { it.toBuilder().setDownloadHistoryLimit(limit.toProto()).build() }
     }
 
     suspend fun setMuteUpdateNotifications(mute: Boolean) {

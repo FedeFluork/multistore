@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Downloads screen: transfers in flight, files waiting for a tap, and the history.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_empty_title">Keine Downloads</string>
+    <string name="downloads_empty_message">Hier erscheinen die Apps, die du herunterlädst: die noch laufenden, die auf die Installation wartenden und die bereits erledigten.</string>
+    <string name="downloads_section_ready">Bereit zur Installation</string>
+    <string name="downloads_section_active">Laufend</string>
+    <string name="downloads_section_history">Verlauf</string>
+    <string name="downloads_install">Installieren</string>
+    <string name="downloads_cancel">Abbrechen</string>
+    <string name="downloads_delete">Löschen</string>
+    <string name="downloads_history_clear">Verlauf leeren</string>
+    <string name="downloads_history_clear_action">Leeren</string>
+    <string name="downloads_history_clear_confirm_title">Verlauf leeren?</string>
+    <string name="downloads_history_clear_confirm_message">Entfernt die Aufzeichnung der bereits erledigten Downloads. Laufende Übertragungen und Dateien, die auf die Installation warten, bleiben erhalten.</string>
+    <string name="downloads_delete_confirm_title">Heruntergeladene Datei löschen?</string>
+    <string name="downloads_delete_confirm_message">Was von %1$s heruntergeladen wurde, wird von diesem Gerät gelöscht. Später installieren heißt erneut herunterladen.</string>
+    <string name="downloads_confirm_cancel">Abbrechen</string>
+    <string name="downloads_status_installing">Wird installiert…</string>
+    <string name="downloads_status_rejected">Die Prüfung hat diese Datei abgelehnt. Öffne die App-Seite, um zu sehen, was fehlgeschlagen ist.</string>
+    <string name="downloads_status_ready">Von %1$s · bereit zur Installation</string>
+    <string name="downloads_status_ready_sized">Von %1$s · %2$s · bereit zur Installation</string>
+    <string name="downloads_status_progress">%1$s von %2$s</string>
+    <string name="downloads_status_progress_unknown">%1$s heruntergeladen</string>
+    <string name="downloads_status_queued">Wartet auf den Start</string>
+    <string name="downloads_status_paused">Pausiert · auf der App-Seite fortsetzen</string>
+    <string name="downloads_status_verifying">Datei wird geprüft…</string>
+    <string name="downloads_status_failed">Der Download ist fehlgeschlagen.</string>
+    <string name="downloads_status_installed">Von %1$s · installiert</string>
+    <string name="downloads_status_removed">Von %1$s · Datei gelöscht</string>
+</resources>

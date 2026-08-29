@@ -286,6 +286,103 @@ class MigrationTest {
         }
     }
 
+    /**
+     * 4 → 5: the file already waiting to be installed stays, and it stays **un**-proposed.
+     *
+     * The two assertions on the new columns are the point of the test and neither is decoration.
+     * `installedAt` at `null` is what tells this history entry from one whose APK was deleted
+     * *after* being installed, and there is nothing to back-fill: a row written before this version
+     * never recorded when it was installed.
+     *
+     * `pendingInstall` at `false` is a **behavioural** default and the reason the migration does not
+     * back-fill it either. That row is a download which finished at some unknown point in the past;
+     * setting its intent to `1` would make the first launch after the update open the system's
+     * installation prompt for it — which is precisely the thing
+     * `auto_install_after_download` exists to let the user choose.
+     */
+    @Test
+    fun `from 4 to 5 the ready download stays, and is not marked for installation`() = runTest {
+        createVersion(4) { db ->
+            db.insertOrThrow(
+                "downloads",
+                null,
+                ContentValues().apply {
+                    put("listing_id", 3L)
+                    put("store_id", "f-droid")
+                    put("store_app_ref", "org.fdroid.fdroid")
+                    put("version_ref", "1001000")
+                    put("package_name", "org.fdroid.fdroid")
+                    put("state", "READY")
+                    put("bytes_downloaded", 8_647L)
+                    put("bytes_total", 8_647L)
+                    put("file_path", "/data/user/0/x/files/staging/1.apk")
+                    put("created_at", 1L)
+                    put("updated_at", 2L)
+                },
+            )
+        }
+
+        val database = openWithMigrations()
+        try {
+            val row = requireNotNull(database.downloadDao().get(1L)) {
+                "The row written at version 4 is gone after the migration: it recreated the " +
+                    "table instead of adding two columns."
+            }
+            assertThat(row.state).isEqualTo(com.multistore.core.model.DownloadState.READY)
+            assertThat(row.filePath).isEqualTo("/data/user/0/x/files/staging/1.apk")
+            assertThat(row.installedAt).isNull()
+            assertThat(row.pendingInstall).isFalse()
+        } finally {
+            database.close()
+        }
+    }
+
+    /**
+     * And after the migration the two columns are written and read back.
+     *
+     * Separate from the test above because they fail for different reasons: that one catches a
+     * migration that loses rows, this one a column the entity and the database disagree about — the
+     * `NOT NULL DEFAULT 0` whose default has to be declared **twice**, in the migration and in
+     * `@ColumnInfo`.
+     */
+    @Test
+    fun `after the migration the installation is recorded and the claim is spent once`() = runTest {
+        createVersion(4) { }
+
+        val database = openWithMigrations()
+        try {
+            val dao = database.downloadDao()
+            val id = dao.upsert(
+                com.multistore.core.database.entity.DownloadEntity(
+                    listingId = 1,
+                    storeId = com.multistore.core.model.StoreId.FDROID,
+                    storeAppRef = "org.fdroid.fdroid",
+                    versionRef = "1001000",
+                    packageName = "org.fdroid.fdroid",
+                    state = com.multistore.core.model.DownloadState.READY,
+                    filePath = "/tmp/1.apk",
+                    pendingInstall = true,
+                    createdAt = kotlin.time.Instant.fromEpochMilliseconds(1),
+                    updatedAt = kotlin.time.Instant.fromEpochMilliseconds(1),
+                ),
+            )
+
+            // The claim is a token, not a flag: exactly one of two candidates for the same file may
+            // proceed, and SQLite is what settles it.
+            assertThat(dao.claimPendingInstall(id)).isEqualTo(1)
+            assertThat(dao.claimPendingInstall(id)).isEqualTo(0)
+
+            dao.markInstalled(id, kotlin.time.Instant.fromEpochMilliseconds(5_000))
+            val installed = requireNotNull(dao.get(id))
+            assertThat(installed.installedAt)
+                .isEqualTo(kotlin.time.Instant.fromEpochMilliseconds(5_000))
+            assertThat(installed.filePath).isNull()
+            assertThat(installed.state).isEqualTo(com.multistore.core.model.DownloadState.DONE)
+        } finally {
+            database.close()
+        }
+    }
+
     private fun listingWrite(appKey: String, title: String, kind: ContentKind) =
         com.multistore.core.database.dao.ListingWrite(
             app = com.multistore.core.database.entity.AppEntity(

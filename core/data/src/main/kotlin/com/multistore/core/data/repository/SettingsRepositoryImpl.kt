@@ -3,6 +3,7 @@ package com.multistore.core.data.repository
 import com.multistore.core.datastore.SettingsLocalDataSource
 import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.CatalogRetention
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.DiagnosticsSettings
 import com.multistore.core.model.ChallengeStrategy
@@ -122,4 +123,10 @@ internal class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setCatalogRetention(retention: CatalogRetention) =
         local.setCatalogRetention(retention)
+
+    override suspend fun setDownloadHistoryLimit(limit: DownloadHistoryLimit) =
+        local.setDownloadHistoryLimit(limit)
+
+    override suspend fun setAutoInstallAfterDownload(auto: Boolean) =
+        local.setAutoInstallAfterDownload(auto)
 }

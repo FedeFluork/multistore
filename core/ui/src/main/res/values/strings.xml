@@ -34,8 +34,13 @@
     <string name="downloads_overlay_title_one">Downloading %1$s</string>
     <string name="downloads_overlay_unknown_app">an app</string>
     <string name="downloads_overlay_dismiss">Hide the download panel</string>
+    <string name="downloads_overlay_expand">Open the downloads screen</string>
     <plurals name="downloads_overlay_title_many">
         <item quantity="one">Downloading %1$d app</item>
         <item quantity="other">Downloading %1$d apps</item>
+    </plurals>
+    <plurals name="downloads_overlay_ready">
+        <item quantity="one">%1$d app ready to install</item>
+        <item quantity="other">%1$d apps ready to install</item>
     </plurals>
 </resources>

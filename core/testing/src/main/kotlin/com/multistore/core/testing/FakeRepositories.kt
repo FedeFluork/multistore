@@ -32,6 +32,7 @@ import com.multistore.core.data.repository.UpdateRepository
 import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.ContentKind
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.DownloadState
 import com.multistore.core.model.InstallSettings
 import com.multistore.core.model.InstalledApp
@@ -405,6 +406,14 @@ class FakeSettingsRepository(
         storage.value = storage.value.copy(catalogRetention = retention)
     }
 
+    override suspend fun setDownloadHistoryLimit(limit: DownloadHistoryLimit) {
+        storage.value = storage.value.copy(downloadHistoryLimit = limit)
+    }
+
+    override suspend fun setAutoInstallAfterDownload(auto: Boolean) {
+        installation.value = installation.value.copy(autoInstallAfterDownload = auto)
+    }
+
     override suspend fun setDefaultContentKind(kind: ContentKind?) {
         search.value = search.value.copy(defaultContentKind = kind)
     }
@@ -572,7 +581,27 @@ class FakeDownloadRepository : DownloadRepository {
      */
     val startedUnmetered = mutableListOf<Long>()
     val cancelled = mutableListOf<Long>()
+
+    /** Who was closed as installed: the rows whose file went and whose history entry stayed. */
     val discarded = mutableListOf<Long>()
+
+    /** Who had their staged file deleted without being installed: the Downloads screen's Delete. */
+    val deleted = mutableListOf<Long>()
+
+    /** Who was queued asking for an installation to follow, and who was not. */
+    val pendingInstalls = mutableListOf<Long>()
+
+    /**
+     * Whether [claimPendingInstall] hands the right over.
+     *
+     * A field and not always `true` because the interesting case is the one where it says no: two
+     * candidates for the same file, of which exactly one may proceed.
+     */
+    var claimSucceeds: Boolean = true
+    val claims = mutableListOf<Long>()
+
+    var historyPruned = 0
+    var historyCleared = 0
 
     var nextId = 1L
     var completion: Outcome<File> = Outcome.Failure(AppError.NotFound)
@@ -589,6 +618,8 @@ class FakeDownloadRepository : DownloadRepository {
 
     override fun observeActive(): Flow<List<DownloadStatus>> = active
 
+    override fun observeAll(): Flow<List<DownloadStatus>> = active
+
     override fun observe(id: Long): Flow<DownloadStatus?> =
         active.map { rows -> rows.firstOrNull { it.id == id } }
 
@@ -601,9 +632,11 @@ class FakeDownloadRepository : DownloadRepository {
         packageName: String?,
         listingId: Long?,
         resolution: DownloadResolution.Direct,
+        pendingInstall: Boolean,
     ): Long {
         val id = nextId++
         resolutions += resolution
+        if (pendingInstall) pendingInstalls += id
         active.value = active.value + DownloadStatus(
             id = id,
             storeId = storeId,
@@ -615,6 +648,7 @@ class FakeDownloadRepository : DownloadRepository {
             bytesTotal = resolution.expectedSize,
             file = null,
             error = null,
+            pendingInstall = pendingInstall,
         )
         return id
     }
@@ -638,7 +672,7 @@ class FakeDownloadRepository : DownloadRepository {
         cancelled += id
     }
 
-    override suspend fun discard(id: Long) {
+    override suspend fun recordInstalled(id: Long) {
         discarded += id
         active.value = active.value.filterNot { it.id == id }
     }
@@ -649,6 +683,26 @@ class FakeDownloadRepository : DownloadRepository {
     override suspend fun retire(id: Long) {
         retired += id
         active.value = active.value.filterNot { it.id == id }
+    }
+
+    override suspend fun deleteStaged(id: Long) {
+        deleted += id
+        active.value = active.value.filterNot { it.id == id }
+    }
+
+    override suspend fun claimPendingInstall(id: Long): Boolean {
+        claims += id
+        return claimSucceeds
+    }
+
+    override suspend fun pruneHistory(): Int {
+        historyPruned++
+        return 0
+    }
+
+    override suspend fun clearHistory(): Int {
+        historyCleared++
+        return 0
     }
 
     override suspend fun requeueInterrupted() = Unit

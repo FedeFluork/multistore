@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Downloads screen: transfers in flight, files waiting for a tap, and the history.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="downloads_title">Download</string>
+    <string name="downloads_empty_title">Nessun download</string>
+    <string name="downloads_empty_message">Qui compaiono le app che scarichi: quelle ancora in arrivo, quelle in attesa di essere installate e quelle già sistemate.</string>
+    <string name="downloads_section_ready">Pronte da installare</string>
+    <string name="downloads_section_active">In corso</string>
+    <string name="downloads_section_history">Cronologia</string>
+    <string name="downloads_install">Installa</string>
+    <string name="downloads_cancel">Annulla</string>
+    <string name="downloads_delete">Elimina</string>
+    <string name="downloads_history_clear">Svuota la cronologia</string>
+    <string name="downloads_history_clear_action">Svuota</string>
+    <string name="downloads_history_clear_confirm_title">Svuotare la cronologia?</string>
+    <string name="downloads_history_clear_confirm_message">Toglie il registro dei download già sistemati. I trasferimenti in corso e i file in attesa di installazione restano.</string>
+    <string name="downloads_delete_confirm_title">Eliminare il file scaricato?</string>
+    <string name="downloads_delete_confirm_message">Ciò che è stato scaricato di %1$s viene cancellato da questo dispositivo. Installarlo più avanti vuol dire riscaricarlo.</string>
+    <string name="downloads_confirm_cancel">Annulla</string>
+    <string name="downloads_status_installing">Installazione in corso…</string>
+    <string name="downloads_status_rejected">La verifica ha rifiutato questo file. Apri la scheda dell\'app per vedere cosa non è andato.</string>
+    <string name="downloads_status_ready">Da %1$s · pronta da installare</string>
+    <string name="downloads_status_ready_sized">Da %1$s · %2$s · pronta da installare</string>
+    <string name="downloads_status_progress">%1$s di %2$s</string>
+    <string name="downloads_status_progress_unknown">%1$s scaricati</string>
+    <string name="downloads_status_queued">In attesa di partire</string>
+    <string name="downloads_status_paused">In pausa · riprendilo dalla scheda dell\'app</string>
+    <string name="downloads_status_verifying">Controllo del file…</string>
+    <string name="downloads_status_failed">Il download non è riuscito.</string>
+    <string name="downloads_status_installed">Da %1$s · installata</string>
+    <string name="downloads_status_removed">Da %1$s · file eliminato</string>
+</resources>

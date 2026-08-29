@@ -116,6 +116,7 @@ class InstallAppUseCase @Inject constructor(
     private val installs: InstallRepository,
     private val details: AppDetailRepository,
     private val settings: SettingsRepository,
+    private val drivers: ActiveInstallDrivers,
 ) {
 
     /**
@@ -195,6 +196,11 @@ class InstallAppUseCase @Inject constructor(
             packageName = detail.listing.summary.packageName,
             listingId = null,
             resolution = resolved.resolution,
+            // "Download and stop" is the one origin where no installation is meant to follow, and
+            // it is a setting the user has already answered — `auto_install_updates` off. Every
+            // other path through here ends in an installation, including the unattended one that
+            // installs by itself.
+            pendingInstall = unattended?.downloadOnly != true,
         )
 
         downloadAndInstall(
@@ -237,6 +243,9 @@ class InstallAppUseCase @Inject constructor(
             packageName = packageName,
             listingId = null,
             resolution = resolution,
+            // We get here from the store's own page, where the user has just performed the gesture
+            // the store asks for. An installation is exactly what they are waiting for.
+            pendingInstall = true,
         )
         // `requireUnmetered = false`: we arrive here from the store's page, where the user has just
         // performed the gesture the store asks for. It does not get more attended than that.
@@ -323,6 +332,43 @@ class InstallAppUseCase @Inject constructor(
     ) {
         send(InstallProgressStep.Downloading(downloadId, 0, expectedSize))
 
+        // From here to the end of this function **a screen is driving this download**, and the
+        // register says so out loud. Without it the shell's coordinator — which watches every
+        // transfer so that leaving a listing no longer abandons the installation — would see the
+        // same row become `READY` and start a second `PackageInstaller` session: two confirmation
+        // dialogs for one app. The `finally` is the other half: leaving the listing cancels this
+        // flow, the declaration goes, and from that instant the coordinator is right to carry on.
+        drivers.acquire(downloadId)
+        try {
+            downloadAndInstallDriven(
+                storeId = storeId,
+                ref = ref,
+                detail = detail,
+                downloadId = downloadId,
+                expectedSha256 = expectedSha256,
+                expectedSize = expectedSize,
+                expectedSignerSha256 = expectedSignerSha256,
+                allowDowngrade = allowDowngrade,
+                preferredInstaller = preferredInstaller,
+                unattended = unattended,
+            )
+        } finally {
+            drivers.release(downloadId)
+        }
+    }
+
+    private suspend fun ProducerScope<InstallProgressStep>.downloadAndInstallDriven(
+        storeId: StoreId,
+        ref: StoreAppRef,
+        detail: AppDetail,
+        downloadId: Long,
+        expectedSha256: Sha256?,
+        expectedSize: Long?,
+        expectedSignerSha256: Sha256?,
+        allowDowngrade: Boolean,
+        preferredInstaller: InstallerKind?,
+        unattended: Unattended?,
+    ) {
         // `run` suspends until the end of the transfer, so progress has to be **observed** from
         // elsewhere: without this, the bar stays at 0 B for the whole duration of an 18 MB file, and on
         // a slow network the user concludes it has hung. It is also why this flow is a `channelFlow`
@@ -370,6 +416,12 @@ class InstallAppUseCase @Inject constructor(
             return
         }
 
+        // The claim is spent **here**, on the way in, and its result is deliberately ignored: this
+        // caller installs either way, because it is the one the user is watching. What spending it
+        // buys is that nobody else can — neither the shell's coordinator a millisecond later, nor
+        // this same row on a future launch after a confirmation the user dismissed.
+        downloads.claimPendingInstall(downloadId)
+
         var installed = false
         installs.install(
             InstallPlan(
@@ -407,7 +459,7 @@ class InstallAppUseCase @Inject constructor(
             if (settings.storage.first().keepApkAfterInstall) {
                 downloads.retire(downloadId)
             } else {
-                downloads.discard(downloadId)
+                downloads.recordInstalled(downloadId)
             }
         }
     }

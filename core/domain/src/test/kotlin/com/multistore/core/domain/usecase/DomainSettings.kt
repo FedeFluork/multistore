@@ -3,6 +3,7 @@ package com.multistore.core.domain.usecase
 import com.multistore.core.data.repository.SettingsRepository
 import com.multistore.core.model.StorageSettings
 import com.multistore.core.model.CatalogRetention
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.SearchSort
 import kotlin.time.Duration
@@ -96,6 +97,14 @@ internal class DomainSettings(
 
     override suspend fun setCatalogRetention(retention: CatalogRetention) {
         storage.value = storage.value.copy(catalogRetention = retention)
+    }
+
+    override suspend fun setDownloadHistoryLimit(limit: DownloadHistoryLimit) {
+        storage.value = storage.value.copy(downloadHistoryLimit = limit)
+    }
+
+    override suspend fun setAutoInstallAfterDownload(auto: Boolean) {
+        installation.value = installation.value.copy(autoInstallAfterDownload = auto)
     }
 
 }

@@ -220,4 +220,21 @@
     <string name="settings_donate_kofi_action">Abrir Ko-fi</string>
     <string name="settings_donate_paypal_label">Donar en PayPal</string>
     <string name="settings_donate_paypal_action">Abrir PayPal</string>
+    <string name="settings_auto_install_after_download_label">Proponer la instalación en cuanto se descargue</string>
+    <string name="settings_auto_install_after_download_description">Cuando una descarga termina y ya has salido de la ficha de la aplicación, MultiStore abre por su cuenta la petición de instalación del sistema. Desactivado, el archivo te espera en Descargas. Puede interrumpir lo que estés haciendo en la aplicación, y nunca se aplica a los archivos obtenidos por la comprobación automática de actualizaciones con la instalación desactivada.</string>
+    <string name="settings_auto_install_after_download_silent">No hace falta con el método de instalación que elegiste: instala sin preguntar nada.</string>
+    <string name="settings_download_history_label">Descargas guardadas en el historial</string>
+    <string name="settings_download_history_description">Cuántas descargas terminadas recuerda la pantalla Descargas: instaladas, fallidas y eliminadas. Las transferencias en curso y los archivos que esperan instalación no cuentan y nunca se quitan.</string>
+    <string name="settings_download_history_dialog_title">Descargas guardadas en el historial</string>
+    <string name="settings_download_history_50">Últimas 50</string>
+    <string name="settings_download_history_100">Últimas 100</string>
+    <string name="settings_download_history_500">Últimas 500</string>
+    <string name="settings_download_history_all">Guardarlas todas</string>
+    <string name="settings_storage_apks_confirm_title">¿Eliminar los archivos descargados?</string>
+    <string name="settings_storage_apks_confirm_message">Quita los archivos de instalación que siguen en este dispositivo. Las transferencias en curso o en pausa se quedan como están.</string>
+    <plurals name="settings_storage_apks_confirm_ready">
+        <item quantity="one">%1$d aplicación está lista para instalar y se borraría: reponerla significa volver a descargarla. Las transferencias en curso o en pausa se quedan como están.</item>
+        <item quantity="many">%1$d aplicaciones están listas para instalar y se borrarían: reponerlas significa volver a descargarlas. Las transferencias en curso o en pausa se quedan como están.</item>
+        <item quantity="other">%1$d aplicaciones están listas para instalar y se borrarían: reponerlas significa volver a descargarlas. Las transferencias en curso o en pausa se quedan como están.</item>
+    </plurals>
 </resources>

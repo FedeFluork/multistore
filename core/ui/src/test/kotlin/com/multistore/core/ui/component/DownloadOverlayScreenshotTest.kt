@@ -30,6 +30,12 @@ class DownloadOverlayScreenshotTest : ScreenshotTest() {
     @Test
     fun darkTheme() = capture(SCREEN_NAME, ThemeMode.DARK) { Content() }
 
+    @Test
+    fun readyLight() = capture(READY_SCREEN_NAME, ThemeMode.LIGHT) { ReadyContent() }
+
+    @Test
+    fun readyDark() = capture(READY_SCREEN_NAME, ThemeMode.DARK) { ReadyContent() }
+
     @Composable
     private fun Content() {
         // The `Surface` underneath is not framing: without it, the golden would have a transparent
@@ -47,7 +53,32 @@ class DownloadOverlayScreenshotTest : ScreenshotTest() {
         }
     }
 
+    /**
+     * One transfer still running and one file waiting for a tap.
+     *
+     * It is the state the card exists to make legible and the one it used to get wrong: a finished
+     * download has always been in `observeActive`, so it was drawn exactly like the others — a full
+     * bar — and the single moment at which the card had something to **ask** was the one at which it
+     * looked most finished. The mixed case is the one to photograph, because it is the only one
+     * where both sentences have to be on screen at once.
+     */
+    @Composable
+    private fun ReadyContent() {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Box(contentAlignment = Alignment.BottomCenter) {
+                DownloadOverlay(
+                    downloads = listOf(
+                        DownloadProgress(id = 1, title = "Telegram", fraction = 0.42f),
+                        DownloadProgress(id = 2, title = "F-Droid", fraction = 1f, ready = true),
+                    ),
+                    onDismiss = {},
+                )
+            }
+        }
+    }
+
     private companion object {
         const val SCREEN_NAME = "DownloadOverlay"
+        const val READY_SCREEN_NAME = "DownloadOverlayReady"
     }
 }

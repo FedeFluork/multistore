@@ -41,6 +41,7 @@ internal class DownloadRepositoryImpl @Inject constructor(
     private val catalogDao: CatalogDao,
     private val engine: DownloadEngine,
     private val scheduler: DownloadScheduler,
+    private val settings: SettingsRepository,
     private val clock: Clock,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : DownloadRepository, DownloadTask {
@@ -56,7 +57,10 @@ internal class DownloadRepositoryImpl @Inject constructor(
     private val stagingDir: File get() = Staging.dir(context)
 
     override fun observeActive(): Flow<List<DownloadStatus>> =
-        dao.observeActive().map { rows -> rows.map { it.download.toStatus(it.listingTitle) } }
+        dao.observeActive().map { rows -> rows.map { it.download.toStatus(it.listingTitle, it.iconUrl) } }
+
+    override fun observeAll(): Flow<List<DownloadStatus>> =
+        dao.observeAll().map { rows -> rows.map { it.download.toStatus(it.listingTitle, it.iconUrl) } }
 
     override fun observe(id: Long): Flow<DownloadStatus?> = dao.observe(id).map { it?.toStatus() }
 
@@ -72,16 +76,26 @@ internal class DownloadRepositoryImpl @Inject constructor(
         packageName: String?,
         listingId: Long?,
         resolution: DownloadResolution.Direct,
+        pendingInstall: Boolean,
     ): Long = withContext(io) {
         // One download per version: two concurrent runs would write to the same staging file, and
         // which of the two wins would be decided by chance.
-        dao.activeFor(versionRef.value)?.let { return@withContext it.id }
+        dao.activeFor(versionRef.value)?.let { row ->
+            // The intent is **raised**, never lowered, and the asymmetry is the point. Pressing
+            // Install on a file the periodic check is already fetching means an installation is now
+            // meant to follow; the opposite — a background check silencing a user's pending
+            // install — is a request nobody made.
+            if (pendingInstall && !row.pendingInstall) {
+                dao.upsert(row.copy(pendingInstall = true, updatedAt = clock.now()))
+            }
+            return@withContext row.id
+        }
 
         // The file `keep_apk_after_install` left in staging, if it is still the same one.
         //
-        // With the switch off this search never finds anything: `discard` deletes row and file as soon
-        // as the installation succeeds. On, it is what makes the setting a feature instead of a waste
-        // — see `retire`.
+        // With the switch off this search never finds anything: `recordInstalled` deletes the file
+        // as soon as the installation succeeds, and a row with no file is not a candidate. On, it is
+        // what makes the setting a feature instead of a waste — see `retire`.
         //
         // **The hash comparison is the part that counts.** A `versionRef` ought to identify a precise
         // artefact, but on eight stores out of nine it is a slug or a page id, and nothing stops that
@@ -91,7 +105,20 @@ internal class DownloadRepositoryImpl @Inject constructor(
         dao.completedFor(storeId, ref.value, versionRef.value)
             ?.takeIf { resolution.expectedSha256 == null || resolution.expectedSha256 == it.expectedSha256 }
             ?.takeIf { row -> row.filePath?.let { File(it).isFile } == true }
-            ?.let { return@withContext it.id }
+            ?.let { row ->
+                // The kept file is reused, and the row goes back to being a live one: it left
+                // `DONE` behind, so it is no longer history and `installedAt` has to stop claiming
+                // this copy was installed — that was the previous cycle.
+                dao.upsert(
+                    row.copy(
+                        state = DownloadState.READY,
+                        pendingInstall = pendingInstall,
+                        installedAt = null,
+                        updatedAt = clock.now(),
+                    ),
+                )
+                return@withContext row.id
+            }
         val now = clock.now()
         dao.upsert(
             DownloadEntity(
@@ -109,6 +136,7 @@ internal class DownloadRepositoryImpl @Inject constructor(
                 // the worker starts, or when a resumption rebuilds the request after a restart.
                 requestHeaders = resolution.headers.takeIf { it.isNotEmpty() },
                 expectedSha256 = resolution.expectedSha256,
+                pendingInstall = pendingInstall,
                 createdAt = now,
                 updatedAt = now,
             ),
@@ -296,21 +324,58 @@ internal class DownloadRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun discard(id: Long) = withContext(io) {
-        dao.get(id)?.filePath?.let { path ->
-            val file = File(path)
-            file.delete()
-            // And what came out of it: a container leaves a directory with base and splits next to
-            // itself, which without this line would outlive the file it came from. The startup sweep
-            // would find it anyway — it is [Staging]'s rule — but only at the next launch, and
-            // meanwhile they are the device's two hundred most useless megabytes.
-            Staging.splitsOf(file).deleteRecursively()
+    override suspend fun recordInstalled(id: Long) {
+        withContext(io) {
+            deleteStagedFileOf(id)
+            dao.markInstalled(id, clock.now())
         }
-        dao.delete(id)
+        pruneHistory()
     }
 
-    override suspend fun retire(id: Long) = withContext(io) {
-        dao.setState(id, DownloadState.DONE, clock.now())
+    override suspend fun retire(id: Long) {
+        withContext(io) { dao.markInstalledKeepingFile(id, clock.now()) }
+        pruneHistory()
+    }
+
+    override suspend fun deleteStaged(id: Long) {
+        withContext(io) {
+            deleteStagedFileOf(id)
+            // `installedAt` is deliberately not written: this file never became an installed app,
+            // and that absence is the whole difference between this history entry and the one
+            // [recordInstalled] leaves. `pending_install` goes because there is nothing left to
+            // carry on to — without clearing it, the shell's coordinator would keep the row on its
+            // list of things to propose.
+            dao.forgetFile(id, clock.now())
+        }
+        pruneHistory()
+    }
+
+    override suspend fun claimPendingInstall(id: Long): Boolean =
+        withContext(io) { dao.claimPendingInstall(id) == 1 }
+
+    override suspend fun pruneHistory(): Int {
+        // Read at every call rather than captured once: the ceiling is a Settings row, and a value
+        // taken when the graph was built would leave the entry doing nothing until the next launch
+        // — the defect already corrected in M3 on the update scheduling and in M4 on the challenge
+        // strategy.
+        val keep = settings.storage.first().downloadHistoryLimit.rows ?: return 0
+        return withContext(io) { dao.pruneHistory(keep) }
+    }
+
+    override suspend fun clearHistory(): Int = withContext(io) { dao.deleteHistory() }
+
+    /**
+     * Deletes the staged file of [id], and the directory a container was opened into.
+     *
+     * The pair "downloaded file / its directory" is [Staging]'s rule and nobody else's. The startup
+     * sweep would find the directory anyway, but only at the next launch, and meanwhile it is the
+     * device's two hundred most useless megabytes.
+     */
+    private suspend fun deleteStagedFileOf(id: Long) {
+        val path = dao.get(id)?.filePath ?: return
+        val file = File(path)
+        file.delete()
+        Staging.splitsOf(file).deleteRecursively()
     }
 
     override suspend fun requeueInterrupted() = withContext(io) {
@@ -386,7 +451,7 @@ internal class DownloadRepositoryImpl @Inject constructor(
         else -> AppError.Unexpected(null)
     }
 
-    private fun DownloadEntity.toStatus(title: String? = null) = DownloadStatus(
+    private fun DownloadEntity.toStatus(title: String? = null, iconUrl: String? = null) = DownloadStatus(
         id = id,
         storeId = storeId,
         ref = StoreAppRef(storeAppRef),
@@ -398,5 +463,10 @@ internal class DownloadRepositoryImpl @Inject constructor(
         file = filePath?.let(::File),
         error = errorCode?.toAppError(),
         title = title,
+        iconUrl = iconUrl,
+        installedAt = installedAt,
+        pendingInstall = pendingInstall,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 }

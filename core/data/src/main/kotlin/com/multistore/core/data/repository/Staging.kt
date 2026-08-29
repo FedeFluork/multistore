@@ -67,11 +67,14 @@ object Staging {
             ?.removeSuffix(SPLIT_SUFFIX)
             ?.let { File(splits.parentFile, "$it.apk") }
 
-    /** The files present, or an empty list if the directory has never been created. */
-    fun files(context: Context): List<File> =
-        File(context.filesDir, DIRECTORY).listFiles()?.filter { it.isFile }.orEmpty()
-
-    /** Top-level files **and directories**: that is what whoever cleans up has to look at. */
+    /**
+     * Top-level files **and directories**: what whoever cleans up, and whoever measures, has to
+     * look at.
+     *
+     * There used to be a `files()` next to this one that filtered on `isFile`, and it was the
+     * measurement's — which is how the size of an opened container read as zero while the sweep
+     * deleted it. One function, so the two answers cannot diverge again.
+     */
     fun entries(context: Context): List<File> =
         File(context.filesDir, DIRECTORY).listFiles().orEmpty().toList()
 }

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Downloads screen: transfers in flight, files waiting for a tap, and the history.
+
+  Written together with the other 4 languages: a key may never be added to one language alone,
+  and TranslationParityTest fails the build if that happens.
+-->
+<resources>
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_empty_title">No downloads yet</string>
+    <string name="downloads_empty_message">Apps you download appear here: the ones still coming down, the ones waiting to be installed, and the ones already dealt with.</string>
+    <string name="downloads_section_ready">Ready to install</string>
+    <string name="downloads_section_active">In progress</string>
+    <string name="downloads_section_history">History</string>
+    <string name="downloads_install">Install</string>
+    <string name="downloads_cancel">Cancel</string>
+    <string name="downloads_delete">Delete</string>
+    <string name="downloads_history_clear">Empty the history</string>
+    <string name="downloads_history_clear_action">Empty</string>
+    <string name="downloads_history_clear_confirm_title">Empty the history?</string>
+    <string name="downloads_history_clear_confirm_message">It removes the record of the downloads already dealt with. Transfers in progress and files waiting to be installed are kept.</string>
+    <string name="downloads_delete_confirm_title">Delete the downloaded file?</string>
+    <string name="downloads_delete_confirm_message">What has been downloaded of %1$s is deleted from this device. Installing it later means downloading it again.</string>
+    <string name="downloads_confirm_cancel">Cancel</string>
+    <string name="downloads_status_installing">Installing…</string>
+    <string name="downloads_status_rejected">Verification refused this file. Open the app page to see what failed.</string>
+    <string name="downloads_status_ready">From %1$s · ready to install</string>
+    <string name="downloads_status_ready_sized">From %1$s · %2$s · ready to install</string>
+    <string name="downloads_status_progress">%1$s of %2$s</string>
+    <string name="downloads_status_progress_unknown">%1$s downloaded</string>
+    <string name="downloads_status_queued">Waiting to start</string>
+    <string name="downloads_status_paused">Paused · resume it from the app page</string>
+    <string name="downloads_status_verifying">Checking the file…</string>
+    <string name="downloads_status_failed">The download failed.</string>
+    <string name="downloads_status_installed">From %1$s · installed</string>
+    <string name="downloads_status_removed">From %1$s · file deleted</string>
+</resources>

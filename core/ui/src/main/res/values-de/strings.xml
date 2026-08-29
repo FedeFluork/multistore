@@ -26,8 +26,13 @@
     <string name="downloads_overlay_title_one">%1$s wird heruntergeladen</string>
     <string name="downloads_overlay_unknown_app">eine App</string>
     <string name="downloads_overlay_dismiss">Download-Leiste ausblenden</string>
+    <string name="downloads_overlay_expand">Download-Bildschirm öffnen</string>
     <plurals name="downloads_overlay_title_many">
         <item quantity="one">%1$d App wird heruntergeladen</item>
         <item quantity="other">%1$d Apps werden heruntergeladen</item>
+    </plurals>
+    <plurals name="downloads_overlay_ready">
+        <item quantity="one">%1$d App kann installiert werden</item>
+        <item quantity="other">%1$d Apps können installiert werden</item>
     </plurals>
 </resources>

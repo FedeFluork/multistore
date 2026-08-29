@@ -97,8 +97,25 @@ internal class MaintenanceRepositoryImpl @Inject constructor(
             catalogBytes = maintenance.sizeBytes(),
             imagesBytes = imageCache.sizeBytes(),
             pagesBytes = httpClients.httpCacheBytes(),
-            stagedApkBytes = Staging.files(context).sumOf { it.length() },
+            stagedApkBytes = stagedBytes(),
+            stagedReadyToInstall = downloadDao.countReadyToInstall(),
         )
+    }
+
+    /**
+     * What `files/staging` occupies: the downloads **and** what has been unpacked out of them.
+     *
+     * It walks the directories instead of counting only top-level files, and the two are not the
+     * same number: opening a container leaves a folder with base and splits inside — 250 MB on
+     * Firefox — which a `filter { isFile }` would report as zero. It also has to agree with what
+     * the button that empties it deletes, or the row would announce a saving that never arrives.
+     */
+    private fun stagedBytes(): Long = Staging.entries(context).sumOf { entry ->
+        if (entry.isDirectory) {
+            entry.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+        } else {
+            entry.length()
+        }
     }
 
     override suspend fun clear(level: StorageLevel): SpaceReclaimed = withContext(io) {
@@ -167,15 +184,28 @@ internal class MaintenanceRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Throws away the staged APKs no transfer in progress is using.
+     * Throws away the staged APKs no transfer that is still going to move is using.
      *
-     * The completed rows disappear **after** the files and not before: if the process died in
-     * between, a row with no file is a listing offering "Install" on nothing, whereas a file with no
-     * row is picked up by the next sweep.
+     * ### What it spares, and the bug that was in the definition
+     *
+     * It spares [DownloadDao.transferringFilePaths]: queued, running, paused, verifying, installing.
+     * It used to spare `state NOT IN ('DONE', 'FAILED')`, which also covers `READY` — a download
+     * that has **finished** and that nobody installed. Those are exactly the files this button's
+     * own description promises to delete, and exactly the ones its size counts: the symptom was a
+     * row saying "over 100 MB" above a button answering "there was nothing to free", every time.
+     * The two halves disagreed because they read two different definitions of "in use".
+     *
+     * ### The rows lose their file and stay
+     *
+     * `forgetSettledFiles` runs **after** the files and not before: if the process died in between,
+     * a row with no file would be a listing offering "Install" on nothing, whereas a file with no
+     * row is picked up by the next sweep. And it forgets the file rather than deleting the row,
+     * because since M5/7 the row is the history entry — deleting it would throw away the record of
+     * a download to free the few hundred bytes of a row.
      */
     private suspend fun clearStagedApks() {
-        sweepStaging(downloadDao.activeFilePaths())
-        downloadDao.deleteSettled()
+        sweepStaging(downloadDao.transferringFilePaths())
+        downloadDao.forgetSettledFiles(clock.now())
     }
 
     /**

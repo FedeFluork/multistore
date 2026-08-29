@@ -181,6 +181,29 @@ message Settings {
   // them.
   bool keep_apk_after_install = 17;
 
+  // Carry on to the installation when the download finishes and nobody is on the listing any
+  // more. Off (zero value) = the file waits in staging and the user presses "Install" — from the
+  // listing, or from the Downloads screen.
+  //
+  // WRITTEN POSITIVELY, and that is the rule applied rather than an exception to it. The
+  // criterion has never been "booleans are phrased negatively": it is that **the zero value must
+  // be the prudent behaviour**. Here the prudent behaviour is not to put the system's
+  // confirmation dialog in front of somebody who has moved on to something else — which for a
+  // `bool` is `false`, i.e. zero. Flipping the name (`block_install_after_download`) would have
+  // started the app interrupting everyone.
+  //
+  // WHERE IT APPLIES, and where it says nothing: only where an installation actually shows a
+  // prompt. With root or Shizuku selected there is nothing to propose, and the Settings row is
+  // disabled with that reason written beside it. The predicate is not "the preference is SESSION"
+  // but "the installer that would be chosen is not silent" — with AUTOMATIC on a phone without a
+  // privileged channel the chosen one *is* the confirmation installer, which is the common case.
+  //
+  // WHAT IT DOES NOT GOVERN: transfers born of the periodic check with `auto_download_updates` on
+  // and `auto_install_updates` off. Those were asked to download **and stop**, and the download
+  // row records that intent (`downloads.pending_install`): honouring this switch there would mean
+  // overruling a setting the user has already answered.
+  bool auto_install_after_download = 36;
+
   // --- Security ----------------------------------------------------------------
   // Install even when the SHA-256 the store publishes does NOT match the downloaded file. Off
   // (zero value) = a mismatch blocks the installation.
@@ -341,6 +364,18 @@ message Settings {
   // automatic policy.
   CatalogRetention catalog_retention = 32;
 
+  // How many **concluded** downloads to keep in the Downloads screen's history.
+  //
+  // AN ENUM AND NOT A NUMBER OF ROWS, the same third angle on the zero-value rule that made
+  // `catalog_retention` an enum: on an `int32` zero means "never written", and that only works
+  // while no legitimate choice would land there. Here two would — "keep none" and "keep them
+  // all" — and neither can inhabit the value that means "the user chose nothing".
+  //
+  // WHAT IT DOES NOT PRUNE: anything that has not finished. A queued, running, paused or
+  // ready-to-install download is not history, and deleting its row would leave an APK on disk
+  // that no row claims and no button can install. See `DownloadDao.pruneHistory`.
+  DownloadHistoryLimit download_history_limit = 37;
+
   // --- Advanced ----------------------------------------------------------------
   // Also record **successful** requests in the local diagnostic log.
   //
@@ -457,6 +492,20 @@ enum ChallengeStrategy {
   CHALLENGE_STRATEGY_BALANCED = 0;      // rungs 0-3: up to the silent WebView
   CHALLENGE_STRATEGY_CONSERVATIVE = 1;  // rungs 0-1: network only, no WebView
   CHALLENGE_STRATEGY_AGGRESSIVE = 2;    // like BALANCED, with more retries and longer waits
+}
+
+// How many concluded downloads the history keeps.
+//
+// The order is the behavioural decision, as with every enum in this file: value 0 is the default
+// for an absent field, and it has to be the ceiling the app applies to whoever chose nothing.
+enum DownloadHistoryLimit {
+  DOWNLOAD_HISTORY_LIMIT_100 = 0;
+  DOWNLOAD_HISTORY_LIMIT_50  = 1;
+  DOWNLOAD_HISTORY_LIMIT_500 = 2;
+  // Keep every concluded download. It exists for the same reason `CATALOG_RETENTION_KEEP` does:
+  // it is a real choice, and without it the only way to express it would be an enormous number,
+  // i.e. the same thing written worse.
+  DOWNLOAD_HISTORY_LIMIT_ALL = 3;
 }
 
 enum ThemeMode {

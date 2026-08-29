@@ -40,6 +40,15 @@ data class StorageSettings(
     val imageCacheMaxBytes: Long = DEFAULT_IMAGE_CACHE_BYTES,
     /** How long to keep an **already expired** listing from a scraped store. */
     val catalogRetention: CatalogRetention = CatalogRetention.THIRTY_DAYS,
+    /**
+     * How many **concluded** download rows to keep as history.
+     *
+     * It bounds a list, not a directory, and that is why it sits here next to the levels rather
+     * than among the notifications: the rows it prunes are the ones the Downloads screen shows
+     * under "history", and a row whose file is still on disk is not history — see
+     * `DownloadDao.pruneHistory`, which never touches a transfer that has not finished.
+     */
+    val downloadHistoryLimit: DownloadHistoryLimit = DownloadHistoryLimit.LAST_100,
 ) {
     companion object {
         const val DEFAULT_IMAGE_CACHE_MB: Int = 200
@@ -101,6 +110,36 @@ enum class CatalogRetention(val duration: Duration?) {
 }
 
 /**
+ * How many concluded downloads the history keeps.
+ *
+ * ### An enum and not a number of rows, for the reason already written above [CatalogRetention]
+ *
+ * On an `int32` the proto3 zero value means "never written", and that works only as long as no
+ * legitimate choice would land on it. Here **two** would: "keep none" and "keep them all" are both
+ * things somebody can reasonably want, and neither can inhabit the value that means "the user
+ * chose nothing". With an enum the *order* decides, and at the head goes what the app should do
+ * for whoever never opened Settings.
+ *
+ * ### What it does not bound
+ *
+ * Only rows that have **finished** — installed, failed, or whose file was deleted. A queued,
+ * running, paused or ready-to-install download is not history: pruning it would delete the row
+ * that says an APK on disk is waiting to be installed, leaving a file nobody claims and a button
+ * nobody can press.
+ */
+enum class DownloadHistoryLimit(val rows: Int?) {
+    /** The default, and therefore the proto zero value. */
+    LAST_100(100),
+
+    LAST_50(50),
+
+    LAST_500(500),
+
+    /** Keep every concluded download. `null` is not "zero": it is "no ceiling". */
+    KEEP_ALL(null),
+}
+
+/**
  * The four levels the user can act on separately.
  *
  * Levels, not tables: each has its own technology, eviction policy and rebuild cost, and merging
@@ -135,6 +174,15 @@ data class StorageUsage(
     val imagesBytes: Long = 0,
     val pagesBytes: Long = 0,
     val stagedApkBytes: Long = 0,
+    /**
+     * How many of those staged APKs are whole files waiting to be installed.
+     *
+     * A count and not bytes, and it is not decoration: it is what the confirmation in front of
+     * "empty" has to say. Megabytes are recovered by every one of the four buttons; what this one
+     * alone can throw away is **a download that has already finished**, and putting that back costs
+     * the transfer again. A number of apps is what makes that cost legible before the tap.
+     */
+    val stagedReadyToInstall: Int = 0,
 ) {
     val totalBytes: Long get() = catalogBytes + imagesBytes + pagesBytes + stagedApkBytes
 

@@ -220,4 +220,21 @@
     <string name="settings_donate_kofi_action">Apri Ko-fi</string>
     <string name="settings_donate_paypal_label">Fai una donazione su PayPal</string>
     <string name="settings_donate_paypal_action">Apri PayPal</string>
+    <string name="settings_auto_install_after_download_label">Proponi l\'installazione appena scaricata</string>
+    <string name="settings_auto_install_after_download_description">Quando un download finisce e hai già lasciato la scheda dell\'app, MultiStore apre da solo la richiesta di installazione del sistema. Spento, il file ti aspetta in Download. Può interrompere quello che stai facendo nell\'app, e non vale mai per i file presi dal controllo automatico degli aggiornamenti con l\'installazione disattivata.</string>
+    <string name="settings_auto_install_after_download_silent">Non serve con il metodo di installazione che hai scelto: installa senza chiedere niente.</string>
+    <string name="settings_download_history_label">Download tenuti in cronologia</string>
+    <string name="settings_download_history_description">Quanti download conclusi ricorda la schermata Download: installati, falliti ed eliminati. I trasferimenti in corso e i file in attesa di installazione non contano e non vengono mai tolti.</string>
+    <string name="settings_download_history_dialog_title">Download tenuti in cronologia</string>
+    <string name="settings_download_history_50">Ultimi 50</string>
+    <string name="settings_download_history_100">Ultimi 100</string>
+    <string name="settings_download_history_500">Ultimi 500</string>
+    <string name="settings_download_history_all">Tienili tutti</string>
+    <string name="settings_storage_apks_confirm_title">Eliminare i file scaricati?</string>
+    <string name="settings_storage_apks_confirm_message">Toglie i file di installazione ancora su questo dispositivo. I trasferimenti in corso o in pausa restano dove sono.</string>
+    <plurals name="settings_storage_apks_confirm_ready">
+        <item quantity="one">%1$d app è pronta da installare e verrebbe cancellata: rimetterla vuol dire riscaricarla. I trasferimenti in corso o in pausa restano dove sono.</item>
+        <item quantity="many">%1$d app sono pronte da installare e verrebbero cancellate: rimetterle vuol dire riscaricarle. I trasferimenti in corso o in pausa restano dove sono.</item>
+        <item quantity="other">%1$d app sono pronte da installare e verrebbero cancellate: rimetterle vuol dire riscaricarle. I trasferimenti in corso o in pausa restano dove sono.</item>
+    </plurals>
 </resources>

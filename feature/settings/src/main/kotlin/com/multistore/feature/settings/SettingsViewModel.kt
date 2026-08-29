@@ -19,6 +19,7 @@ import com.multistore.core.model.StorageUsage
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.DiagnosticsSettings
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.InstallSettings
 import com.multistore.core.model.InstallerAvailability
@@ -275,6 +276,12 @@ class SettingsViewModel @Inject constructor(
 
     fun setCatalogRetention(retention: CatalogRetention) =
         update { settingsRepository.setCatalogRetention(retention) }
+
+    fun setDownloadHistoryLimit(limit: DownloadHistoryLimit) =
+        update { settingsRepository.setDownloadHistoryLimit(limit) }
+
+    fun setAutoInstallAfterDownload(auto: Boolean) =
+        update { settingsRepository.setAutoInstallAfterDownload(auto) }
 
     private val _reclaim = MutableStateFlow<ReclaimUiState>(ReclaimUiState.Idle)
     val reclaim: StateFlow<ReclaimUiState> = _reclaim.asStateFlow()

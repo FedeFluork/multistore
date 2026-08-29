@@ -9,6 +9,8 @@
     <string name="nav_home">Inicio</string>
     <string name="nav_search">Buscar</string>
     <string name="nav_myapps">Mis apps</string>
+    <string name="nav_downloads">Descargas</string>
+    <string name="nav_downloads_badge">Descargas en curso</string>
     <string name="nav_settings">Ajustes</string>
     <string name="nav_bar_content_description">Navegación principal</string>
 </resources>

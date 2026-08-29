@@ -26,9 +26,15 @@
     <string name="downloads_overlay_title_one">Scaricamento di %1$s</string>
     <string name="downloads_overlay_unknown_app">un\'app</string>
     <string name="downloads_overlay_dismiss">Nascondi il pannello dei download</string>
+    <string name="downloads_overlay_expand">Apri la schermata dei download</string>
     <plurals name="downloads_overlay_title_many">
         <item quantity="one">Scaricamento di %1$d app</item>
         <item quantity="many">Scaricamento di %1$d app</item>
         <item quantity="other">Scaricamento di %1$d app</item>
+    </plurals>
+    <plurals name="downloads_overlay_ready">
+        <item quantity="one">%1$d app pronta da installare</item>
+        <item quantity="many">%1$d app pronte da installare</item>
+        <item quantity="other">%1$d app pronte da installare</item>
     </plurals>
 </resources>

@@ -4,6 +4,7 @@ import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.CatalogRetention
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.DiagnosticsSettings
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.InstallSettings
 import com.multistore.core.model.InstallerPreference
@@ -153,4 +154,15 @@ interface SettingsRepository {
     suspend fun setImageCacheMaxMb(megabytes: Int)
 
     suspend fun setCatalogRetention(retention: CatalogRetention)
+
+    /** How many concluded downloads the Downloads screen's history keeps. */
+    suspend fun setDownloadHistoryLimit(limit: DownloadHistoryLimit)
+
+    /**
+     * Carries on to the installation when a download finishes with nobody on the listing.
+     *
+     * It sits next to [setInstallerPreference] and not among the notifications: it is a fact about
+     * **how installation happens**, and it is meaningful only where installing shows a prompt.
+     */
+    suspend fun setAutoInstallAfterDownload(auto: Boolean)
 }

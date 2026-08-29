@@ -7,6 +7,7 @@ import com.multistore.core.datastore.proto.Settings
 import com.multistore.core.model.CatalogRetention
 import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.ContentKind
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.InstallerPreference
 import com.multistore.core.model.SearchSettings
 import com.multistore.core.model.SearchSort
@@ -43,6 +44,33 @@ class SettingsDefaultsTest {
         // started `false` — with uptodown's and pdalife's downloads unreachable and nothing
         // saying why.
         assertThat(empty.toNetwork().blockUserAssistedChallenge).isFalse()
+    }
+
+    /**
+     * Nothing installs itself over what the user is doing.
+     *
+     * A positively-named field whose zero value is already the prudent one, like
+     * `allow_preview_channels`: here prudent means **not** putting a system dialog in front of
+     * somebody who has moved on. Flipping the name for uniformity with the `block_*` fields would
+     * have started the app interrupting everyone.
+     */
+    @Test
+    fun `the installation is not proposed by itself`() {
+        assertThat(empty.toInstallation().autoInstallAfterDownload).isFalse()
+    }
+
+    /**
+     * The history's ceiling is the last hundred, and it is an enum for the usual reason.
+     *
+     * On an `int32` zero means "never written", which works only while no legitimate choice would
+     * land there — and here two would, "keep none" and "keep them all". With an enum the
+     * declaration order decides, and at the head has to go what the app does for whoever chose
+     * nothing.
+     */
+    @Test
+    fun `the download history keeps the last hundred`() {
+        assertThat(empty.toStorage().downloadHistoryLimit).isEqualTo(DownloadHistoryLimit.LAST_100)
+        assertThat(empty.toStorage().downloadHistoryLimit.rows).isEqualTo(100)
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.multistore.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.multistore.core.data.repository.DownloadRepository
+import com.multistore.core.model.DownloadState
 import com.multistore.core.ui.component.DownloadProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -45,12 +46,55 @@ class DownloadOverlayViewModel @Inject constructor(
                 id = status.id,
                 title = status.title,
                 fraction = status.fraction,
+                // The **state**, not a full bar. Four stores out of nine do not declare the size, so
+                // a finished transfer among them has a `null` fraction; and one at 99.6% rounds to a
+                // full bar without having finished. Only the row knows, and this is the row.
+                ready = status.state == DownloadState.READY,
             )
         }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(SUBSCRIPTION_GRACE_MILLIS),
         initialValue = emptyList(),
+    )
+
+    /**
+     * Whether the bar's Downloads tab wears its dot.
+     *
+     * ### It is not filtered by [hidden], and that is the point
+     *
+     * Hiding the card is a statement about the card, not about the download: the struck-through eye
+     * says "get this out of my way", and a badge that vanished with it would turn that gesture into
+     * "forget this download" — the one reading the icon was chosen to rule out. The dot is also the
+     * only thing left saying anything at all once the card is gone, so tying the two together would
+     * make the app silent exactly when the user has stopped watching.
+     *
+     * ### Which rows count
+     *
+     * Three branches and not one, because [DownloadRepository.observeActive] has already excluded
+     * the two terminal states and what is left is not uniform:
+     *
+     * - a `READY` row counts **only while its file is really there**. A row that says ready with
+     *   nothing on disk should not exist — every deletion path closes the row — but if the two ever
+     *   disagreed, the badge would be the symptom: a dot nobody can clear, on a tab where nothing
+     *   explains it;
+     * - `PAUSED` does not count. The transfer stopped, in every case because somebody or something
+     *   said so, and a dot for it would be a notice about a decision already taken;
+     * - everything else — queued, running, ready-with-file, installing — is either moving or waiting
+     *   for a tap, which is the question the dot answers.
+     */
+    val badge: StateFlow<Boolean> = active.map { rows ->
+        rows.any { row ->
+            when (row.state) {
+                DownloadState.READY -> row.file != null
+                DownloadState.PAUSED -> false
+                else -> true
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(SUBSCRIPTION_GRACE_MILLIS),
+        initialValue = false,
     )
 
     /** Hides the transfers in progress right now. A new one brings the card back. */

@@ -15,6 +15,7 @@ import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.data.repository.InstalledAppUpdate
 import com.multistore.core.data.repository.UpdateChannel
 import com.multistore.core.domain.usecase.GetHomeContentUseCase
+import com.multistore.core.domain.usecase.ActiveInstallDrivers
 import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.ObserveUpdatesUseCase
 import com.multistore.core.domain.usecase.ResolveDownloadUseCase
@@ -129,6 +130,7 @@ class HomeViewModelTest {
             installs = installs,
             details = details,
             settings = settings,
+            drivers = ActiveInstallDrivers(),
         ),
         // The remote index is absent in these tests, and that is the normal state: with no document
         // the Home stays the local-catalogue one, which is exactly what is verified here.

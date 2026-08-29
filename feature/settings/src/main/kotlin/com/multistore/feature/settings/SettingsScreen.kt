@@ -63,6 +63,7 @@ import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.DiagnosticsSettings
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.InstallSettings
 import com.multistore.core.model.InstallerAvailability
 import com.multistore.core.model.InstallerKind
@@ -216,6 +217,8 @@ fun SettingsScreen(
         onKeepApkAfterInstallChange = viewModel::setKeepApkAfterInstall,
         onImageCacheMaxMbChange = viewModel::setImageCacheMaxMb,
         onCatalogRetentionChange = viewModel::setCatalogRetention,
+        onDownloadHistoryLimitChange = viewModel::setDownloadHistoryLimit,
+        onAutoInstallAfterDownloadChange = viewModel::setAutoInstallAfterDownload,
         onSearchTimeoutChange = viewModel::setSearchTimeout,
         onDefaultContentKindChange = viewModel::setDefaultContentKind,
         onDefaultSortChange = viewModel::setDefaultSort,
@@ -275,6 +278,8 @@ internal fun SettingsScreen(
     onKeepApkAfterInstallChange: (Boolean) -> Unit = {},
     onImageCacheMaxMbChange: (Int) -> Unit = {},
     onCatalogRetentionChange: (CatalogRetention) -> Unit = {},
+    onDownloadHistoryLimitChange: (DownloadHistoryLimit) -> Unit = {},
+    onAutoInstallAfterDownloadChange: (Boolean) -> Unit = {},
     onSearchTimeoutChange: (Duration) -> Unit = {},
     onDefaultContentKindChange: (ContentKind?) -> Unit = {},
     onDefaultSortChange: (SearchSort) -> Unit = {},
@@ -386,6 +391,7 @@ internal fun SettingsScreen(
                         filter = filter,
                         installers = installers,
                         onInstallerPreferenceChange = onInstallerPreferenceChange,
+                        onAutoInstallAfterDownloadChange = onAutoInstallAfterDownloadChange,
                     )
                     SecuritySection(
                         security = uiState.security,
@@ -419,6 +425,7 @@ internal fun SettingsScreen(
                         onKeepApkAfterInstallChange = onKeepApkAfterInstallChange,
                         onImageCacheMaxMbChange = onImageCacheMaxMbChange,
                         onCatalogRetentionChange = onCatalogRetentionChange,
+                        onDownloadHistoryLimitChange = onDownloadHistoryLimitChange,
                     )
                     DiagnosticsSection(
                         diagnostics = uiState.diagnostics,
@@ -894,9 +901,13 @@ internal fun InstallationSection(
     installers: InstallerAvailability,
     onInstallerPreferenceChange: (InstallerPreference) -> Unit,
     modifier: Modifier = Modifier,
+    onAutoInstallAfterDownloadChange: (Boolean) -> Unit = {},
 ) {
     if (!filter.shows(SettingsSection.INSTALLATION)) return
-    val rows = filter.rowsOf(SettingKey.INSTALLER_PREFERENCE)
+    val rows = filter.rowsOf(
+        SettingKey.INSTALLER_PREFERENCE,
+        SettingKey.AUTO_INSTALL_AFTER_DOWNLOAD,
+    )
     var showDialog by remember { mutableStateOf(false) }
     val unavailableFormat = stringResource(R.string.settings_installer_option_unavailable)
 
@@ -908,6 +919,22 @@ internal fun InstallationSection(
             rows = rows,
             value = stringResource(installation.preference.labelRes()),
             onClick = { showDialog = true },
+        )
+
+        // Disabled where there is no confirmation to propose: with root or Shizuku about to be
+        // chosen, an installation started on its own shows nothing anyway, so the switch would be a
+        // control over something that does not happen. The predicate is the installer that **would
+        // be chosen**, not the preference alone — with AUTOMATIC on a phone without a privileged
+        // channel the entry is live, which is the common case it exists for. Visible and marked
+        // rather than hidden: the same choice as "install updates by itself".
+        val silent = installers.installsSilently(installation.preference)
+        SettingsSwitchRow(
+            key = SettingKey.AUTO_INSTALL_AFTER_DOWNLOAD,
+            rows = rows,
+            descriptionRes = R.string.settings_auto_install_after_download_silent.takeIf { silent },
+            checked = installation.autoInstallAfterDownload && !silent,
+            enabled = !silent,
+            onCheckedChange = onAutoInstallAfterDownloadChange,
         )
 
         UnknownSourcesRow(filter = filter)
@@ -1427,6 +1454,7 @@ internal fun StorageSection(
     onKeepApkAfterInstallChange: (Boolean) -> Unit = {},
     onImageCacheMaxMbChange: (Int) -> Unit = {},
     onCatalogRetentionChange: (CatalogRetention) -> Unit = {},
+    onDownloadHistoryLimitChange: (DownloadHistoryLimit) -> Unit = {},
     filter: SettingsFilter = SettingsFilter.NONE,
     modifier: Modifier = Modifier,
 ) {
@@ -1434,16 +1462,24 @@ internal fun StorageSection(
     val rows = filter.rowsOf(
         SettingKey.KEEP_APK_AFTER_INSTALL,
         SettingKey.CATALOG_RETENTION,
+        SettingKey.DOWNLOAD_HISTORY_LIMIT,
         SettingKey.IMAGE_CACHE_MAX_MB,
     )
     val reclaimAction = actionOf(SettingsActionKey.RECLAIM_SPACE)
     val spacing = LocalSpacing.current
     var showRetentionDialog by remember { mutableStateOf(false) }
     var showImageCacheDialog by remember { mutableStateOf(false) }
+    var showHistoryDialog by remember { mutableStateOf(false) }
     // Only the catalogue asks for confirmation, and that is not caution sprinkled at random: it is
     // the only one of the four whose rebuild costs **traffic** — 18 MB compressed for F-Droid alone
     // — and the only one that can be pressed on a metered network with nothing saying so.
     var confirmCatalog by remember { mutableStateOf(false) }
+
+    // And the staged APKs ask too, since the day the button started actually deleting them. Until
+    // M5/7 it spared every finished download — the very files its description promises to remove —
+    // so pressing it cost nothing and asking would have been ceremony. Now it throws away whole,
+    // verified files, and putting one back costs the transfer again.
+    var confirmStaged by remember { mutableStateOf(false) }
 
     Column(modifier = modifier) {
         SectionHeader(text = stringResource(SettingsSection.STORAGE.titleRes))
@@ -1458,7 +1494,7 @@ internal fun StorageSection(
             action = SettingsActionKey.CLEAR_STAGED_APKS,
             filter = filter,
             storage = storage,
-            onClear = onClearStorage,
+            onClear = { confirmStaged = true },
         )
         StorageLevelRow(
             action = SettingsActionKey.CLEAR_IMAGES,
@@ -1486,6 +1522,13 @@ internal fun StorageSection(
             rows = rows,
             value = stringResource(storage.settings.catalogRetention.labelRes()),
             onClick = { showRetentionDialog = true },
+        )
+
+        SettingsRow(
+            key = SettingKey.DOWNLOAD_HISTORY_LIMIT,
+            rows = rows,
+            value = stringResource(storage.settings.downloadHistoryLimit.labelRes()),
+            onClick = { showHistoryDialog = true },
         )
 
         SettingsRow(
@@ -1567,6 +1610,20 @@ internal fun StorageSection(
         )
     }
 
+    if (showHistoryDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.settings_download_history_dialog_title),
+            options = DownloadHistoryLimit.entries.map { limit ->
+                ChoiceOption(
+                    label = stringResource(limit.labelRes()),
+                    selected = limit == storage.settings.downloadHistoryLimit,
+                    onSelect = { onDownloadHistoryLimitChange(limit) },
+                )
+            },
+            onDismiss = { showHistoryDialog = false },
+        )
+    }
+
     if (showImageCacheDialog) {
         val selected = storage.settings.imageCacheMaxBytes
         SingleChoiceDialog(
@@ -1579,6 +1636,46 @@ internal fun StorageSection(
                 )
             },
             onDismiss = { showImageCacheDialog = false },
+        )
+    }
+
+    if (confirmStaged) {
+        val waiting = storage.usage.stagedReadyToInstall
+        AlertDialog(
+            onDismissRequest = { confirmStaged = false },
+            title = { Text(text = stringResource(R.string.settings_storage_apks_confirm_title)) },
+            text = {
+                Text(
+                    // The number of finished downloads is what makes the cost legible **before** the
+                    // tap: megabytes come back on every one of these four buttons, but only here can
+                    // the thing deleted be a transfer that has already been paid for. With none
+                    // waiting the sentence would be about nothing, so it is not said.
+                    text = if (waiting > 0) {
+                        pluralStringResource(
+                            R.plurals.settings_storage_apks_confirm_ready,
+                            waiting,
+                            waiting,
+                        )
+                    } else {
+                        stringResource(R.string.settings_storage_apks_confirm_message)
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmStaged = false
+                        onClearStorage(StorageLevel.STAGED_APKS)
+                    },
+                ) {
+                    Text(text = stringResource(R.string.settings_storage_clear_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmStaged = false }) {
+                    Text(text = stringResource(R.string.settings_storage_confirm_cancel))
+                }
+            },
         )
     }
 
@@ -1710,6 +1807,20 @@ private fun megabytesLabel(bytes: Long): String =
  * An exhaustive `when` with no `else`, as for [storeDescriptionRes]: a fifth choice would not
  * compile until somebody decided what to call it in five languages.
  */
+/**
+ * A history ceiling's label.
+ *
+ * An exhaustive `when` for the same reason as everywhere else in this file: a fifth value must not
+ * be able to appear in the dialog without a name.
+ */
+@StringRes
+private fun DownloadHistoryLimit.labelRes(): Int = when (this) {
+    DownloadHistoryLimit.LAST_50 -> R.string.settings_download_history_50
+    DownloadHistoryLimit.LAST_100 -> R.string.settings_download_history_100
+    DownloadHistoryLimit.LAST_500 -> R.string.settings_download_history_500
+    DownloadHistoryLimit.KEEP_ALL -> R.string.settings_download_history_all
+}
+
 @StringRes
 private fun CatalogRetention.labelRes(): Int = when (this) {
     CatalogRetention.SEVEN_DAYS -> R.string.settings_catalog_retention_7_days

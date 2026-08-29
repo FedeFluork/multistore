@@ -220,4 +220,21 @@
     <string name="settings_donate_kofi_action">Ouvrir Ko-fi</string>
     <string name="settings_donate_paypal_label">Faire un don sur PayPal</string>
     <string name="settings_donate_paypal_action">Ouvrir PayPal</string>
+    <string name="settings_auto_install_after_download_label">Proposer l\'installation dès le téléchargement fini</string>
+    <string name="settings_auto_install_after_download_description">Quand un téléchargement se termine et que vous avez déjà quitté la fiche de l\'application, MultiStore ouvre lui-même la demande d\'installation du système. Désactivé, le fichier vous attend dans Téléchargements. Cela peut interrompre ce que vous faites dans l\'application, et ne s\'applique jamais aux fichiers récupérés par la vérification automatique des mises à jour lorsque l\'installation est désactivée.</string>
+    <string name="settings_auto_install_after_download_silent">Inutile avec la méthode d\'installation choisie : elle installe sans rien demander.</string>
+    <string name="settings_download_history_label">Téléchargements gardés dans l\'historique</string>
+    <string name="settings_download_history_description">Combien de téléchargements terminés l\'écran Téléchargements retient : installés, échoués et supprimés. Les transferts en cours et les fichiers en attente d\'installation ne comptent pas et ne sont jamais retirés.</string>
+    <string name="settings_download_history_dialog_title">Téléchargements gardés dans l\'historique</string>
+    <string name="settings_download_history_50">50 derniers</string>
+    <string name="settings_download_history_100">100 derniers</string>
+    <string name="settings_download_history_500">500 derniers</string>
+    <string name="settings_download_history_all">Tout garder</string>
+    <string name="settings_storage_apks_confirm_title">Supprimer les fichiers téléchargés ?</string>
+    <string name="settings_storage_apks_confirm_message">Cela retire les fichiers d\'installation encore présents sur cet appareil. Les transferts en cours ou en pause restent en place.</string>
+    <plurals name="settings_storage_apks_confirm_ready">
+        <item quantity="one">%1$d application est prête à installer et serait supprimée : la remettre signifie la retélécharger. Les transferts en cours ou en pause restent en place.</item>
+        <item quantity="many">%1$d applications sont prêtes à installer et seraient supprimées : les remettre signifie les retélécharger. Les transferts en cours ou en pause restent en place.</item>
+        <item quantity="other">%1$d applications sont prêtes à installer et seraient supprimées : les remettre signifie les retélécharger. Les transferts en cours ou en pause restent en place.</item>
+    </plurals>
 </resources>

@@ -21,6 +21,7 @@ import com.multistore.core.data.repository.InstalledAppUpdate
 import com.multistore.core.data.repository.UpdateChannel
 import com.multistore.core.data.repository.UpdateCheckReport
 import com.multistore.core.data.store.StoreRegistry
+import com.multistore.core.domain.usecase.ActiveInstallDrivers
 import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.ObserveUpdatesUseCase
 import com.multistore.core.domain.usecase.ResolveDownloadUseCase
@@ -417,6 +418,7 @@ class UpdateCheckWorkerTest {
                             installs = installRepository,
                             details = details,
                             settings = settings,
+                            drivers = ActiveInstallDrivers(),
                         ),
                         settings = settings,
                         notifications = UpdateNotifications(appContext),

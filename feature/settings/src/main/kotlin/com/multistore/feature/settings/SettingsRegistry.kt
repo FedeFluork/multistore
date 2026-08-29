@@ -26,6 +26,7 @@ enum class SettingKey(val protoField: String) {
     ALLOW_PREVIEW_CHANNELS("allow_preview_channels"),
     MUTE_UPDATE_NOTIFICATIONS("mute_update_notifications"),
     INSTALLER_PREFERENCE("installer_preference"),
+    AUTO_INSTALL_AFTER_DOWNLOAD("auto_install_after_download"),
     BLOCK_REMOTE_PARSERS("block_remote_parsers"),
     BLOCK_REMOTE_INDEX("block_remote_index"),
     BLOCK_SELF_UPDATE_CHECK("block_self_update_check"),
@@ -46,6 +47,7 @@ enum class SettingKey(val protoField: String) {
     KEEP_APK_AFTER_INSTALL("keep_apk_after_install"),
     IMAGE_CACHE_MAX_MB("image_cache_max_mb"),
     CATALOG_RETENTION("catalog_retention"),
+    DOWNLOAD_HISTORY_LIMIT("download_history_limit"),
 }
 
 /** The screen's sections, in the order they appear. */
@@ -231,6 +233,12 @@ val SETTINGS_REGISTRY: List<SettingsEntry> = listOf(
         descriptionRes = R.string.settings_installer_description,
     ),
     SettingsEntry(
+        key = SettingKey.AUTO_INSTALL_AFTER_DOWNLOAD,
+        section = SettingsSection.INSTALLATION,
+        labelRes = R.string.settings_auto_install_after_download_label,
+        descriptionRes = R.string.settings_auto_install_after_download_description,
+    ),
+    SettingsEntry(
         key = SettingKey.BLOCK_REMOTE_INDEX,
         section = SettingsSection.CONFIGURATION,
         labelRes = R.string.settings_block_remote_index_label,
@@ -319,6 +327,12 @@ val SETTINGS_REGISTRY: List<SettingsEntry> = listOf(
         section = SettingsSection.STORAGE,
         labelRes = R.string.settings_catalog_retention_label,
         descriptionRes = R.string.settings_catalog_retention_description,
+    ),
+    SettingsEntry(
+        key = SettingKey.DOWNLOAD_HISTORY_LIMIT,
+        section = SettingsSection.STORAGE,
+        labelRes = R.string.settings_download_history_label,
+        descriptionRes = R.string.settings_download_history_description,
     ),
     SettingsEntry(
         key = SettingKey.IMAGE_CACHE_MAX_MB,

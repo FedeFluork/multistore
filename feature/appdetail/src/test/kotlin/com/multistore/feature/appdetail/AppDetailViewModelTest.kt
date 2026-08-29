@@ -14,6 +14,7 @@ import com.multistore.core.data.repository.InstallStep
 import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.domain.usecase.GetAppDetailUseCase
 import com.multistore.core.domain.usecase.GetCrossStoreAvailabilityUseCase
+import com.multistore.core.domain.usecase.ActiveInstallDrivers
 import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.ResolveDownloadUseCase
 import com.multistore.core.domain.usecase.UninstallAppUseCase
@@ -122,6 +123,7 @@ class AppDetailViewModelTest {
                 installs = installs,
                 details = details,
                 settings = FakeSettingsRepository(),
+                drivers = ActiveInstallDrivers(),
             ),
             uninstallApp = UninstallAppUseCase(installs),
             registry = registry,

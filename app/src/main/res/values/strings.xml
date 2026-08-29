@@ -10,6 +10,8 @@
     <string name="nav_home">Home</string>
     <string name="nav_search">Search</string>
     <string name="nav_myapps">My apps</string>
+    <string name="nav_downloads">Downloads</string>
+    <string name="nav_downloads_badge">Downloads in progress</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_bar_content_description">Main navigation</string>
 </resources>

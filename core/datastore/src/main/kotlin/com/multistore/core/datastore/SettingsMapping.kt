@@ -4,6 +4,7 @@ import com.multistore.core.datastore.proto.Settings
 import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.CatalogRetention
 import com.multistore.core.model.ContentKind
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.DiagnosticsSettings
 import com.multistore.core.model.InstallSettings
 import com.multistore.core.model.NetworkSettings
@@ -21,6 +22,7 @@ import kotlin.time.Duration.Companion.seconds
 import com.multistore.core.datastore.proto.CatalogRetention as ProtoCatalogRetention
 import com.multistore.core.datastore.proto.ChallengeStrategy as ProtoChallengeStrategy
 import com.multistore.core.datastore.proto.ContentKindFilter as ProtoContentKindFilter
+import com.multistore.core.datastore.proto.DownloadHistoryLimit as ProtoDownloadHistoryLimit
 import com.multistore.core.datastore.proto.InstallerPreference as ProtoInstallerPreference
 import com.multistore.core.datastore.proto.SearchSort as ProtoSearchSort
 import com.multistore.core.datastore.proto.ThemeMode as ProtoThemeMode
@@ -109,6 +111,7 @@ internal fun DomainInstallerPreference.toProto(): ProtoInstallerPreference = whe
 
 internal fun Settings.toInstallation(): InstallSettings = InstallSettings(
     preference = installerPreference.toDomain(),
+    autoInstallAfterDownload = autoInstallAfterDownload,
 )
 
 internal fun Settings.toSecurity(): SecuritySettings = SecuritySettings(
@@ -233,6 +236,7 @@ internal fun Settings.toStorage(): StorageSettings = StorageSettings(
     keepApkAfterInstall = keepApkAfterInstall,
     imageCacheMaxBytes = imageCacheMaxMb.toImageCacheBytes(),
     catalogRetention = catalogRetention.toDomain(),
+    downloadHistoryLimit = downloadHistoryLimit.toDomain(),
 )
 
 /**
@@ -273,4 +277,22 @@ internal fun CatalogRetention.toProto(): ProtoCatalogRetention = when (this) {
     CatalogRetention.THIRTY_DAYS -> ProtoCatalogRetention.CATALOG_RETENTION_30_DAYS
     CatalogRetention.NINETY_DAYS -> ProtoCatalogRetention.CATALOG_RETENTION_90_DAYS
     CatalogRetention.KEEP -> ProtoCatalogRetention.CATALOG_RETENTION_KEEP
+}
+
+internal fun ProtoDownloadHistoryLimit.toDomain(): DownloadHistoryLimit = when (this) {
+    ProtoDownloadHistoryLimit.DOWNLOAD_HISTORY_LIMIT_50 -> DownloadHistoryLimit.LAST_50
+    ProtoDownloadHistoryLimit.DOWNLOAD_HISTORY_LIMIT_500 -> DownloadHistoryLimit.LAST_500
+    ProtoDownloadHistoryLimit.DOWNLOAD_HISTORY_LIMIT_ALL -> DownloadHistoryLimit.KEEP_ALL
+    // DOWNLOAD_HISTORY_LIMIT_100 and UNRECOGNIZED — a value written by a future version — both
+    // fall back to the default. The prudent fallback is again the one that does **not** delete
+    // more than the user asked for: a build that does not know the value must not read it as
+    // "keep fewer".
+    else -> DownloadHistoryLimit.LAST_100
+}
+
+internal fun DownloadHistoryLimit.toProto(): ProtoDownloadHistoryLimit = when (this) {
+    DownloadHistoryLimit.LAST_100 -> ProtoDownloadHistoryLimit.DOWNLOAD_HISTORY_LIMIT_100
+    DownloadHistoryLimit.LAST_50 -> ProtoDownloadHistoryLimit.DOWNLOAD_HISTORY_LIMIT_50
+    DownloadHistoryLimit.LAST_500 -> ProtoDownloadHistoryLimit.DOWNLOAD_HISTORY_LIMIT_500
+    DownloadHistoryLimit.KEEP_ALL -> ProtoDownloadHistoryLimit.DOWNLOAD_HISTORY_LIMIT_ALL
 }

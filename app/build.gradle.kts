@@ -15,8 +15,8 @@ android {
         // The applicationId, on the other hand, stays the bare domain: it is the app's identity
         // on the device, not a source package.
         applicationId = "com.multistore"
-        versionCode = 3
-        versionName = "0.5.1-BETA"
+        versionCode = 4
+        versionName = "0.6.0-BETA"
 
         /**
          * Where to download `parsers.json` from, when it is not the pinned address.
@@ -173,6 +173,7 @@ dependencies {
     implementation(projects.feature.appdetail)
     implementation(projects.feature.storelisting)
     implementation(projects.feature.myapps)
+    implementation(projects.feature.downloads)
     implementation(projects.feature.settings)
     implementation(projects.feature.webviewdownload)
 
@@ -221,6 +222,11 @@ dependencies {
     // one: which jumps push a back-stack entry and which do not. `navigation-testing` is what lets
     // that be tested without drawing a screen.
     testImplementation(libs.androidx.navigation.testing)
+    // The shell gained logic of its own beyond the graph: which finished download may be carried on
+    // to its installation by itself. The doubles it needs are the shared ones.
+    testImplementation(projects.core.testing)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.test.core)
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)

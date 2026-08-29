@@ -96,6 +96,42 @@ data class DownloadEntity(
     @ColumnInfo(name = "expected_sha256") val expectedSha256: Sha256? = null,
     @ColumnInfo(name = "actual_sha256") val actualSha256: Sha256? = null,
     @ColumnInfo(name = "error_code") val errorCode: String? = null,
+    /**
+     * When this download was actually installed, or `null` if it never was.
+     *
+     * It exists because after M5/7 the row **survives** the installation instead of being deleted,
+     * and without it three different histories would look the same. `DONE` with no file can mean
+     * "installed and the APK thrown away" — the normal case, `keep_apk_after_install` off — or
+     * "downloaded and then deleted without ever being installed", which is what the Downloads
+     * screen's Delete button and the storage cleanup produce. The state cannot tell them apart;
+     * this can, and it is also the date the history row shows.
+     *
+     * Nullable and without a `DEFAULT`, the same choice as migrations 1 → 2 and 2 → 3: `null`
+     * means "not installed", which is also true of every row written before this version.
+     */
+    @ColumnInfo(name = "installed_at") val installedAt: Instant? = null,
+    /**
+     * An installation was meant to follow this download, and has not happened yet.
+     *
+     * It is what separates "the user pressed Install and then walked away" from "the periodic
+     * check downloaded this to be installed later, because `auto_install_updates` is off". Both
+     * leave the row in `READY` with a whole file, and only the first may be carried on to the
+     * system's confirmation by `auto_install_after_download`: honouring that switch on the second
+     * would overrule a setting the user has already answered.
+     *
+     * It is also the **claim token** that stops the same file being installed twice. Whoever
+     * decides to carry on clears it atomically with `claimPendingInstall`, so of two racing
+     * candidates — the listing that is still on screen and the coordinator that watches from the
+     * shell — exactly one proceeds. Clearing it is also what stops a cancelled confirmation from
+     * being proposed again in a loop.
+     *
+     * `NOT NULL` with a default, which therefore has to be declared **twice** — here and in the
+     * migration — for the reason written on `store_listings.content_kind`: a default that exists
+     * in the database and not in the entity is the mismatch Room reports when opening, on the
+     * user's device. `false` is the prudent value for rows written before this version: an old
+     * `READY` row is not auto-installed.
+     */
+    @ColumnInfo(name = "pending_install", defaultValue = "0") val pendingInstall: Boolean = false,
     @ColumnInfo(name = "created_at") val createdAt: Instant,
     @ColumnInfo(name = "updated_at") val updatedAt: Instant,
 )

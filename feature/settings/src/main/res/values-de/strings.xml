@@ -216,4 +216,20 @@
     <string name="settings_donate_kofi_action">Ko-fi öffnen</string>
     <string name="settings_donate_paypal_label">Auf PayPal spenden</string>
     <string name="settings_donate_paypal_action">PayPal öffnen</string>
+    <string name="settings_auto_install_after_download_label">Installation anbieten, sobald geladen</string>
+    <string name="settings_auto_install_after_download_description">Wenn ein Download endet und du die App-Seite schon verlassen hast, öffnet MultiStore von selbst die Installationsabfrage des Systems. Aus wartet die Datei unter Downloads auf dich. Es kann unterbrechen, was du gerade in der App tust, und gilt nie für Dateien, die die automatische Update-Prüfung mit abgeschalteter Installation geholt hat.</string>
+    <string name="settings_auto_install_after_download_silent">Bei der gewählten Installationsmethode nicht nötig: sie installiert, ohne zu fragen.</string>
+    <string name="settings_download_history_label">Im Verlauf behaltene Downloads</string>
+    <string name="settings_download_history_description">Wie viele abgeschlossene Downloads der Download-Bildschirm behält: installierte, fehlgeschlagene und gelöschte. Laufende Übertragungen und Dateien, die auf die Installation warten, zählen nicht und werden nie entfernt.</string>
+    <string name="settings_download_history_dialog_title">Im Verlauf behaltene Downloads</string>
+    <string name="settings_download_history_50">Letzte 50</string>
+    <string name="settings_download_history_100">Letzte 100</string>
+    <string name="settings_download_history_500">Letzte 500</string>
+    <string name="settings_download_history_all">Alle behalten</string>
+    <string name="settings_storage_apks_confirm_title">Heruntergeladene Dateien löschen?</string>
+    <string name="settings_storage_apks_confirm_message">Entfernt die Installationsdateien, die noch auf diesem Gerät liegen. Laufende oder pausierte Übertragungen bleiben unangetastet.</string>
+    <plurals name="settings_storage_apks_confirm_ready">
+        <item quantity="one">%1$d App kann installiert werden und würde gelöscht: sie zurückzuholen heißt erneut herunterladen. Laufende oder pausierte Übertragungen bleiben unangetastet.</item>
+        <item quantity="other">%1$d Apps können installiert werden und würden gelöscht: sie zurückzuholen heißt erneut herunterladen. Laufende oder pausierte Übertragungen bleiben unangetastet.</item>
+    </plurals>
 </resources>

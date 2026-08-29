@@ -1,5 +1,6 @@
 package com.multistore.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,6 +20,7 @@ import com.multistore.core.designsystem.theme.MultiStoreTheme
 import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.SupportedLanguage
 import com.multistore.core.model.ThemeMode
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 
 /**
@@ -32,6 +34,16 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    /**
+     * The confirmation dialogs the shell has to launch, for downloads no screen was left to install.
+     *
+     * Injected into the Activity and not into a ViewModel, and that is the whole point: from API 34
+     * the system's installation confirmation **cannot be started from the background**, so the only
+     * thing allowed to launch it is something that knows it is in the foreground. A ViewModel does
+     * not know; `repeatOnLifecycle(STARTED)` does.
+     */
+    @Inject lateinit var autoInstall: AutoInstallCoordinator
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -40,6 +52,17 @@ class MainActivity : AppCompatActivity() {
         // wrong theme: the splash stays up until the settings are first read.
         var isLoading = true
         splashScreen.setKeepOnScreenCondition { isLoading }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                // The channel buffers while nothing is collecting, so a transfer that finished with
+                // the app in the background gets its dialog on the way back in — which is exactly
+                // when it can be shown, and not a moment earlier.
+                autoInstall.userActions.collect { intent ->
+                    startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

@@ -3,10 +3,12 @@ package com.multistore.app.navigation
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
@@ -23,10 +25,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object MyAppsRoute
 
+@Serializable data object DownloadsRoute
+
 @Serializable data object SettingsRoute
 
 /**
- * The bottom bar's four destinations.
+ * The bottom bar's five destinations.
  *
  * The filled icon marks the active destination and the outlined one the others: it is the signal
  * Material 3 expects, and it holds up even when the coloured indicator is not enough (colour blindness,
@@ -59,6 +63,19 @@ enum class TopLevelDestination(
         selectedIcon = Icons.Rounded.Apps,
         unselectedIcon = Icons.Outlined.Apps,
         labelRes = R.string.nav_myapps,
+    ),
+
+    /**
+     * Between "My apps" and "Settings", and the order is the reading order of the two questions
+     * around it: what is on the device, how it got there, how the app behaves. It is also where the
+     * progress card's arrow leads, so it has to be a place one can get back to by hand.
+     */
+    DOWNLOADS(
+        route = DownloadsRoute,
+        routeClass = DownloadsRoute::class,
+        selectedIcon = Icons.Rounded.Download,
+        unselectedIcon = Icons.Outlined.Download,
+        labelRes = R.string.nav_downloads,
     ),
     SETTINGS(
         route = SettingsRoute,

@@ -68,7 +68,7 @@ abstract class MultiStoreDatabase : RoomDatabase() {
     abstract fun downloadDao(): DownloadDao
 
     companion object {
-        const val VERSION: Int = 4
+        const val VERSION: Int = 5
         const val NAME: String = "multistore.db"
     }
 }

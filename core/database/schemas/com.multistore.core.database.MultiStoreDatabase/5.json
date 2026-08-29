@@ -1,0 +1,1152 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "1560e03e5b4e859681b8ed33753eb708",
+    "entities": [
+      {
+        "tableName": "stores",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`store_id` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `display_order` INTEGER NOT NULL, `health_state` TEXT NOT NULL, `health_open_until` INTEGER, `consecutive_open_cycles` INTEGER NOT NULL, `window_start` INTEGER, `window_calls` INTEGER NOT NULL, `window_failures` INTEGER NOT NULL, `parse_failure_selectors` TEXT NOT NULL, `last_success_at` INTEGER, `parser_version` INTEGER NOT NULL, `base_url_override` TEXT, PRIMARY KEY(`store_id`))",
+        "fields": [
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayOrder",
+            "columnName": "display_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "healthState",
+            "columnName": "health_state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "healthOpenUntil",
+            "columnName": "health_open_until",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "consecutiveOpenCycles",
+            "columnName": "consecutive_open_cycles",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowStart",
+            "columnName": "window_start",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "windowCalls",
+            "columnName": "window_calls",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowFailures",
+            "columnName": "window_failures",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parseFailureSelectors",
+            "columnName": "parse_failure_selectors",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSuccessAt",
+            "columnName": "last_success_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "parserVersion",
+            "columnName": "parser_version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseUrlOverride",
+            "columnName": "base_url_override",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "store_id"
+          ]
+        }
+      },
+      {
+        "tableName": "store_index_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`store_id` TEXT NOT NULL, `index_token` TEXT NOT NULL, `synced_at` INTEGER NOT NULL, `pruning_profile` TEXT NOT NULL, `entry_count` INTEGER NOT NULL, `catalog_payload` TEXT, PRIMARY KEY(`store_id`))",
+        "fields": [
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "indexToken",
+            "columnName": "index_token",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncedAt",
+            "columnName": "synced_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pruningProfile",
+            "columnName": "pruning_profile",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entryCount",
+            "columnName": "entry_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "catalogPayload",
+            "columnName": "catalog_payload",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "store_id"
+          ]
+        }
+      },
+      {
+        "tableName": "store_index_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`store_id` TEXT NOT NULL, `entry_id` TEXT NOT NULL, `payload` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`store_id`, `entry_id`))",
+        "fields": [
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entryId",
+            "columnName": "entry_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payload",
+            "columnName": "payload",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "store_id",
+            "entry_id"
+          ]
+        }
+      },
+      {
+        "tableName": "store_categories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`store_id` TEXT NOT NULL, `category_id` TEXT NOT NULL, `name_json` TEXT NOT NULL, `app_count` INTEGER NOT NULL, PRIMARY KEY(`store_id`, `category_id`))",
+        "fields": [
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "category_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appCount",
+            "columnName": "app_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "store_id",
+            "category_id"
+          ]
+        }
+      },
+      {
+        "tableName": "store_anti_features",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`store_id` TEXT NOT NULL, `anti_feature_id` TEXT NOT NULL, `name_json` TEXT NOT NULL, `description_json` TEXT NOT NULL, PRIMARY KEY(`store_id`, `anti_feature_id`))",
+        "fields": [
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "antiFeatureId",
+            "columnName": "anti_feature_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description_json",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "store_id",
+            "anti_feature_id"
+          ]
+        }
+      },
+      {
+        "tableName": "store_official_signers",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`store_id` TEXT NOT NULL, `package_name` TEXT NOT NULL, `signer_sha256` TEXT NOT NULL, PRIMARY KEY(`store_id`, `package_name`))",
+        "fields": [
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signerSha256",
+            "columnName": "signer_sha256",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "store_id",
+            "package_name"
+          ]
+        }
+      },
+      {
+        "tableName": "health_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `store_id` TEXT NOT NULL, `kind` TEXT NOT NULL, `selector` TEXT, `snippet_hash` TEXT, `resolver_tier` INTEGER, `detail` TEXT, `duration_ms` INTEGER, `at` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "selector",
+            "columnName": "selector",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "snippetHash",
+            "columnName": "snippet_hash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "resolverTier",
+            "columnName": "resolver_tier",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "detail",
+            "columnName": "detail",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "durationMillis",
+            "columnName": "duration_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "at",
+            "columnName": "at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "apps",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`app_key` TEXT NOT NULL, `package_name` TEXT, `title` TEXT NOT NULL, `title_norm` TEXT NOT NULL, `developer` TEXT, `developer_norm` TEXT, `icon_url` TEXT, `icon_dhash` TEXT, `content_kind` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`app_key`))",
+        "fields": [
+          {
+            "fieldPath": "appKey",
+            "columnName": "app_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titleNorm",
+            "columnName": "title_norm",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "developer",
+            "columnName": "developer",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "developerNorm",
+            "columnName": "developer_norm",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "iconUrl",
+            "columnName": "icon_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "iconDhash",
+            "columnName": "icon_dhash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "contentKind",
+            "columnName": "content_kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "app_key"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_apps_title_norm",
+            "unique": false,
+            "columnNames": [
+              "title_norm"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_apps_title_norm` ON `${TABLE_NAME}` (`title_norm`)"
+          },
+          {
+            "name": "index_apps_package_name",
+            "unique": false,
+            "columnNames": [
+              "package_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_apps_package_name` ON `${TABLE_NAME}` (`package_name`)"
+          }
+        ]
+      },
+      {
+        "tableName": "store_listings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `app_key` TEXT NOT NULL, `store_id` TEXT NOT NULL, `store_app_ref` TEXT NOT NULL, `detail_url` TEXT, `title` TEXT NOT NULL, `title_norm` TEXT NOT NULL, `summary` TEXT, `description` TEXT, `whats_new` TEXT, `rating` REAL, `rating_count` INTEGER, `downloads_label` TEXT, `categories` TEXT NOT NULL, `content_kind` TEXT NOT NULL DEFAULT 'UNKNOWN', `preferred_signer_sha256` TEXT, `license` TEXT, `source_code_url` TEXT, `issue_tracker_url` TEXT, `web_site_url` TEXT, `changelog_url` TEXT, `author_name` TEXT, `donate_urls` TEXT NOT NULL, `match_confidence` REAL NOT NULL, `match_method` TEXT NOT NULL, `added_at` INTEGER, `last_updated` INTEGER, `fetched_at` INTEGER NOT NULL, `ttl_seconds` INTEGER NOT NULL, FOREIGN KEY(`app_key`) REFERENCES `apps`(`app_key`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appKey",
+            "columnName": "app_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storeAppRef",
+            "columnName": "store_app_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detailUrl",
+            "columnName": "detail_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titleNorm",
+            "columnName": "title_norm",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "whatsNew",
+            "columnName": "whats_new",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "ratingCount",
+            "columnName": "rating_count",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "downloadsLabel",
+            "columnName": "downloads_label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categories",
+            "columnName": "categories",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentKind",
+            "columnName": "content_kind",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'UNKNOWN'"
+          },
+          {
+            "fieldPath": "preferredSignerSha256",
+            "columnName": "preferred_signer_sha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "license",
+            "columnName": "license",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceCodeUrl",
+            "columnName": "source_code_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "issueTrackerUrl",
+            "columnName": "issue_tracker_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "webSiteUrl",
+            "columnName": "web_site_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "changelogUrl",
+            "columnName": "changelog_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "authorName",
+            "columnName": "author_name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "donateUrls",
+            "columnName": "donate_urls",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "matchConfidence",
+            "columnName": "match_confidence",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "matchMethod",
+            "columnName": "match_method",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "added_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastUpdated",
+            "columnName": "last_updated",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "fetchedAt",
+            "columnName": "fetched_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ttlSeconds",
+            "columnName": "ttl_seconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_store_listings_store_id_store_app_ref",
+            "unique": true,
+            "columnNames": [
+              "store_id",
+              "store_app_ref"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_store_listings_store_id_store_app_ref` ON `${TABLE_NAME}` (`store_id`, `store_app_ref`)"
+          },
+          {
+            "name": "index_store_listings_app_key",
+            "unique": false,
+            "columnNames": [
+              "app_key"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_store_listings_app_key` ON `${TABLE_NAME}` (`app_key`)"
+          },
+          {
+            "name": "index_store_listings_store_id",
+            "unique": false,
+            "columnNames": [
+              "store_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_store_listings_store_id` ON `${TABLE_NAME}` (`store_id`)"
+          },
+          {
+            "name": "index_store_listings_title_norm",
+            "unique": false,
+            "columnNames": [
+              "title_norm"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_store_listings_title_norm` ON `${TABLE_NAME}` (`title_norm`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "apps",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "app_key"
+            ],
+            "referencedColumns": [
+              "app_key"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "listing_screenshots",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `listing_id` INTEGER NOT NULL, `url` TEXT NOT NULL, `kind` TEXT NOT NULL, `sort_order` INTEGER NOT NULL, FOREIGN KEY(`listing_id`) REFERENCES `store_listings`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listingId",
+            "columnName": "listing_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_listing_screenshots_listing_id",
+            "unique": false,
+            "columnNames": [
+              "listing_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_listing_screenshots_listing_id` ON `${TABLE_NAME}` (`listing_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "store_listings",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "listing_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "app_versions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `listing_id` INTEGER NOT NULL, `version_ref` TEXT NOT NULL, `version_name` TEXT NOT NULL, `version_code` INTEGER, `size_bytes` INTEGER, `min_sdk` INTEGER, `max_sdk` INTEGER, `target_sdk` INTEGER, `abis` TEXT NOT NULL, `artifact_type` TEXT NOT NULL, `changelog` TEXT, `sha256` TEXT, `signer_sha256` TEXT, `published_at` INTEGER, `release_channels` TEXT NOT NULL, `anti_features` TEXT NOT NULL, `fetched_at` INTEGER NOT NULL, FOREIGN KEY(`listing_id`) REFERENCES `store_listings`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listingId",
+            "columnName": "listing_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionRef",
+            "columnName": "version_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionName",
+            "columnName": "version_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionCode",
+            "columnName": "version_code",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "size_bytes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "minSdk",
+            "columnName": "min_sdk",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "maxSdk",
+            "columnName": "max_sdk",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "targetSdk",
+            "columnName": "target_sdk",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "abis",
+            "columnName": "abis",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artifactType",
+            "columnName": "artifact_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "changelog",
+            "columnName": "changelog",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sha256",
+            "columnName": "sha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "signerSha256",
+            "columnName": "signer_sha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "publishedAt",
+            "columnName": "published_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "releaseChannels",
+            "columnName": "release_channels",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "antiFeatures",
+            "columnName": "anti_features",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fetchedAt",
+            "columnName": "fetched_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_app_versions_listing_id_version_ref",
+            "unique": true,
+            "columnNames": [
+              "listing_id",
+              "version_ref"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_app_versions_listing_id_version_ref` ON `${TABLE_NAME}` (`listing_id`, `version_ref`)"
+          },
+          {
+            "name": "index_app_versions_listing_id",
+            "unique": false,
+            "columnNames": [
+              "listing_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_app_versions_listing_id` ON `${TABLE_NAME}` (`listing_id`)"
+          },
+          {
+            "name": "index_app_versions_version_code",
+            "unique": false,
+            "columnNames": [
+              "version_code"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_app_versions_version_code` ON `${TABLE_NAME}` (`version_code`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "store_listings",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "listing_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "identity_overrides",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`listing_id` INTEGER NOT NULL, `app_key` TEXT NOT NULL, `action` TEXT NOT NULL, PRIMARY KEY(`listing_id`))",
+        "fields": [
+          {
+            "fieldPath": "listingId",
+            "columnName": "listing_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appKey",
+            "columnName": "app_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "action",
+            "columnName": "action",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listing_id"
+          ]
+        }
+      },
+      {
+        "tableName": "installed_apps",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`package_name` TEXT NOT NULL, `app_key` TEXT, `label` TEXT NOT NULL, `source_store_id` TEXT, `source_ref` TEXT, `installed_version_name` TEXT NOT NULL, `installed_version_code` INTEGER NOT NULL, `installed_signer_sha256` TEXT, `installed_apk_sha256` TEXT, `installed_at` INTEGER NOT NULL, `installer_kind` TEXT NOT NULL, `update_channel_listing_id` INTEGER, `ignore_updates` INTEGER NOT NULL, `pinned_version_code` INTEGER, PRIMARY KEY(`package_name`))",
+        "fields": [
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appKey",
+            "columnName": "app_key",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceStoreId",
+            "columnName": "source_store_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceRef",
+            "columnName": "source_ref",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "installedVersionName",
+            "columnName": "installed_version_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "installedVersionCode",
+            "columnName": "installed_version_code",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "installedSignerSha256",
+            "columnName": "installed_signer_sha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "installedApkSha256",
+            "columnName": "installed_apk_sha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "installedAt",
+            "columnName": "installed_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "installerKind",
+            "columnName": "installer_kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updateChannelListingId",
+            "columnName": "update_channel_listing_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "ignoreUpdates",
+            "columnName": "ignore_updates",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pinnedVersionCode",
+            "columnName": "pinned_version_code",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "package_name"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_installed_apps_source_store_id",
+            "unique": false,
+            "columnNames": [
+              "source_store_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_installed_apps_source_store_id` ON `${TABLE_NAME}` (`source_store_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "downloads",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `listing_id` INTEGER NOT NULL, `store_id` TEXT NOT NULL, `store_app_ref` TEXT NOT NULL, `version_ref` TEXT NOT NULL, `package_name` TEXT, `state` TEXT NOT NULL, `bytes_downloaded` INTEGER NOT NULL, `bytes_total` INTEGER, `file_path` TEXT, `resolved_url` TEXT, `validator` TEXT, `request_headers` TEXT, `expected_sha256` TEXT, `actual_sha256` TEXT, `error_code` TEXT, `installed_at` INTEGER, `pending_install` INTEGER NOT NULL DEFAULT 0, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listingId",
+            "columnName": "listing_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storeId",
+            "columnName": "store_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storeAppRef",
+            "columnName": "store_app_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionRef",
+            "columnName": "version_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bytesDownloaded",
+            "columnName": "bytes_downloaded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bytesTotal",
+            "columnName": "bytes_total",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "filePath",
+            "columnName": "file_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "resolvedUrl",
+            "columnName": "resolved_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "validator",
+            "columnName": "validator",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "requestHeaders",
+            "columnName": "request_headers",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "expectedSha256",
+            "columnName": "expected_sha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "actualSha256",
+            "columnName": "actual_sha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "errorCode",
+            "columnName": "error_code",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "installedAt",
+            "columnName": "installed_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "pendingInstall",
+            "columnName": "pending_install",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_downloads_state",
+            "unique": false,
+            "columnNames": [
+              "state"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_downloads_state` ON `${TABLE_NAME}` (`state`)"
+          },
+          {
+            "name": "index_downloads_version_ref",
+            "unique": false,
+            "columnNames": [
+              "version_ref"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_downloads_version_ref` ON `${TABLE_NAME}` (`version_ref`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1560e03e5b4e859681b8ed33753eb708')"
+    ]
+  }
+}

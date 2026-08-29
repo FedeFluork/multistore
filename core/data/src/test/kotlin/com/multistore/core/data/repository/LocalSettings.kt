@@ -2,6 +2,7 @@ package com.multistore.core.data.repository
 
 import com.multistore.core.model.StorageSettings
 import com.multistore.core.model.CatalogRetention
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.AppearanceSettings
 import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.ContentKind
@@ -127,6 +128,14 @@ internal class LocalSettings(
 
     override suspend fun setCatalogRetention(retention: CatalogRetention) {
         storage.value = storage.value.copy(catalogRetention = retention)
+    }
+
+    override suspend fun setDownloadHistoryLimit(limit: DownloadHistoryLimit) {
+        storage.value = storage.value.copy(downloadHistoryLimit = limit)
+    }
+
+    override suspend fun setAutoInstallAfterDownload(auto: Boolean) {
+        installation.value = installation.value.copy(autoInstallAfterDownload = auto)
     }
 
 }

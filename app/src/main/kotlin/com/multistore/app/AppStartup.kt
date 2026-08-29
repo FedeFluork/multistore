@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /**
- * The six repairs that have to run once per process, plus one scheduling.
+ * The seven repairs that have to run once per process, plus one scheduling.
  *
  * They are not initialisations: they are **repairs**. Each exists because the process can die at
  * any moment, and what is left afterwards is not wrong but incomplete.
@@ -41,11 +41,15 @@ import kotlinx.coroutines.launch
  *     had no callers: the table grew forever, and diagnostics meant for reading what went wrong
  *     **recently** get worse the longer it gets.
  *  6. `purgeStale()` — listings expired beyond the chosen retention, and staged APKs no row claims
- *     any more. It is a repair like the other five and not generic hygiene: the case that made it
+ *     any more. It is a repair like the others and not generic hygiene: the case that made it
  *     necessary is **MultiStore's own APK**. `InstallSelfUpdateUseCase` writes it into
  *     `files/staging`, and after the commit the process is killed by the system — there is nobody
  *     who can ever delete it. Measured: 28.2 MB sitting there for a day, in a private folder no
  *     file manager can open. The right moment to notice is precisely this one, the next startup.
+ *  7. `pruneHistory()` — the download rows survive an installation since M5/7, so the table feeding
+ *     the Downloads screen's history is the one thing here that has no bound of its own. Each
+ *     settled download trims itself; what only this pass catches is the ceiling having been
+ *     **lowered** in Settings, which otherwise would take effect only at the next download.
  *
  * At the end of the same sequence, and not repairs: `refreshIfStale()` downloads `parsers.json` and
  * `index.json` if the cached copy is older than six hours. They are there because they need the
@@ -61,7 +65,7 @@ import kotlinx.coroutines.launch
  * They run in sequence and on the process scope, not an Activity's: the very reason they exist is
  * that no Activity is guaranteed.
  *
- * **The last two are not repairs**, and are not in the same sequence.
+ * **The last three are not repairs**, and are not in the same sequence.
  *
  * `UpdateScheduling.start()` repairs nothing: it makes the update-check scheduling observe the
  * settings, for the life of the process.
@@ -73,8 +77,14 @@ import kotlinx.coroutines.launch
  * whoever already observes it. [UpdateNotice] is hooked to the same event, for the same reason
  * applied to the notification.
  *
- * Both live here because the right scope is already here, and because this is the only point that
- * runs exactly once per launch regardless of which screen the user opens.
+ * [AutoInstallCoordinator] is the third, and its reason for being here is the sharpest of the
+ * three: it has to see the **first** list of transfers this process produces. What is already
+ * finished at that instant is a leftover from an earlier session and must never propose anything on
+ * its own; everything that reaches that state afterwards happened while the user was here. Started
+ * from an Activity it would see a first list that depends on which screen was opened.
+ *
+ * All three live here because the right scope is already here, and because this is the only point
+ * that runs exactly once per launch regardless of which screen the user opens.
  */
 @Singleton
 class AppStartup @Inject constructor(
@@ -88,6 +98,7 @@ class AppStartup @Inject constructor(
     private val packageEvents: PackageEvents,
     private val updateNotice: UpdateNotice,
     private val updateScheduling: UpdateScheduling,
+    private val autoInstall: AutoInstallCoordinator,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) {
 
@@ -96,6 +107,13 @@ class AppStartup @Inject constructor(
         // so putting it in that sequence would block everything after it. It has its own scope, and
         // it is the same one.
         updateScheduling.start()
+
+        // Third of the things that are not repairs, and the reason it starts **here** rather than
+        // in an Activity is the same as for the other two: it has to be watching before anything
+        // happens. It also has to be watching from the first emission — that first list is what
+        // tells apart a download that finished under the user's eyes from one left over from a
+        // previous session, and only the second must never produce a dialog by itself.
+        autoInstall.start()
 
         // This one too is outside the sequence, and for the same reason: it never finishes.
         scope.launch {
@@ -119,6 +137,16 @@ class AppStartup @Inject constructor(
             runCatching { installs.reconcileAbandonedSessions() }
             runCatching { storeHealth.pruneOldEvents() }
             runCatching { maintenance.purgeStale() }
+            // The history's ceiling, applied among the repairs and for the same reason they are
+            // repairs: the rows survive an installation since M5/7, so an unbounded table is what
+            // the process leaves behind. Each settled download also trims on its own, which covers
+            // growth; what only this pass covers is the ceiling being **lowered** — from 500 to 50 —
+            // where nothing would otherwise apply the new value until the next download.
+            //
+            // After `purgeStale` and not before: a pruned row can still own a file that
+            // `keep_apk_after_install` kept, and that file becomes an orphan for the **next**
+            // launch's sweep. Trimming first would leave it for a launch later still.
+            runCatching { downloads.pruneHistory() }
 
             // Not a repair, and last on purpose: **what it downloads does not apply to this
             // launch**. The adapters built by `registerKnownStores()` a few lines above already

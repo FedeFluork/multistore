@@ -219,4 +219,20 @@
     <string name="settings_donate_kofi_action">Open Ko-fi</string>
     <string name="settings_donate_paypal_label">Donate on PayPal</string>
     <string name="settings_donate_paypal_action">Open PayPal</string>
+    <string name="settings_auto_install_after_download_label">Offer to install as soon as it is downloaded</string>
+    <string name="settings_auto_install_after_download_description">When a download finishes and you have already left the app page, MultiStore opens the system\'s installation prompt on its own. Off, the file waits for you in Downloads. It can interrupt what you are doing in the app, and it never applies to files fetched by the automatic update check with installing turned off.</string>
+    <string name="settings_auto_install_after_download_silent">Not needed with the installer you chose: it installs without asking anything.</string>
+    <string name="settings_download_history_label">Downloads kept in the history</string>
+    <string name="settings_download_history_description">How many finished downloads the Downloads screen remembers: installed, failed, and deleted. Transfers in progress and files waiting to be installed are never counted, and never removed.</string>
+    <string name="settings_download_history_dialog_title">Downloads kept in the history</string>
+    <string name="settings_download_history_50">Last 50</string>
+    <string name="settings_download_history_100">Last 100</string>
+    <string name="settings_download_history_500">Last 500</string>
+    <string name="settings_download_history_all">Keep them all</string>
+    <string name="settings_storage_apks_confirm_title">Delete the downloaded files?</string>
+    <string name="settings_storage_apks_confirm_message">It removes the installer files still on this device. Transfers in progress or paused are left alone.</string>
+    <plurals name="settings_storage_apks_confirm_ready">
+        <item quantity="one">%1$d app is ready to install and would be deleted: putting it back means downloading it again. Transfers in progress or paused are left alone.</item>
+        <item quantity="other">%1$d apps are ready to install and would be deleted: putting them back means downloading them again. Transfers in progress or paused are left alone.</item>
+    </plurals>
 </resources>

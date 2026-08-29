@@ -2,6 +2,7 @@ package com.multistore.app.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -10,6 +11,7 @@ import com.multistore.core.model.StoreId
 import com.multistore.feature.appdetail.AppDetailRoute
 import com.multistore.feature.appdetail.AppDetailScreen
 import com.multistore.feature.appdetail.UserAssistedRequest
+import com.multistore.feature.downloads.DownloadsScreen
 import com.multistore.feature.home.HomeScreen
 import com.multistore.feature.myapps.MyAppsScreen
 import com.multistore.feature.search.SearchScreen
@@ -25,7 +27,7 @@ import com.multistore.feature.webviewdownload.WebViewDownloadScreen
  * It is the only place where the features meet: no `:feature:*` knows the others, so the link between
  * them can only live here.
  *
- * The four top-level routes live in `:app` because they take no arguments and are a fact of the
+ * The five top-level routes live in `:app` because they take no arguments and are a fact of the
  * navigation bar, not of the features. `AppDetailRoute`, by contrast, lives in its own feature: it
  * carries the arguments without which the screen cannot open, and it is the one that has to declare
  * them.
@@ -52,6 +54,7 @@ fun MultiStoreNavHost(
         composable<MyAppsRoute> {
             MyAppsScreen(onAppClick = navController::navigateToAppDetail)
         }
+        composable<DownloadsRoute> { DownloadsScreen() }
         composable<SettingsRoute> { SettingsScreen() }
         composable<AppDetailRoute> {
             AppDetailScreen(
@@ -75,6 +78,34 @@ fun MultiStoreNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
+    }
+}
+
+/**
+ * Goes to the Downloads tab, from wherever one is.
+ *
+ * It exists because the progress card above the screens leads there, and that card is drawn by the
+ * shell rather than by a screen: it has to reach a top-level destination the same way the bottom bar
+ * does, or the two would build different back stacks for the same place.
+ */
+internal fun NavHostController.navigateToDownloads() = navigateToTopLevel(TopLevelDestination.DOWNLOADS)
+
+/**
+ * Navigation between the top-level destinations.
+ *
+ * `launchSingleTop` and the `popUpTo` on the start destination ensure that tapping the bottom bar's
+ * entries repeatedly does not build a deep stack: the back button returns to the Home, it does not
+ * retrace every tab visited.
+ *
+ * It lives here rather than next to the bar because the bar is no longer its only caller: the
+ * progress card's arrow leads to the same destination, and two ways of reaching one tab would be two
+ * back stacks with nothing saying which one the user is in.
+ */
+internal fun NavHostController.navigateToTopLevel(destination: TopLevelDestination) {
+    navigate(destination.route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 

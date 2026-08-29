@@ -118,6 +118,56 @@ internal val MIGRATION_3_4: Migration = object : Migration(3, 4) {
     }
 }
 
+/**
+ * 4 → 5: `downloads.installed_at` and `downloads.pending_install`.
+ *
+ * ### Why the row now survives the installation
+ *
+ * Until this version `discard` deleted **row and file** on a successful install, so there was no
+ * history at all: the Downloads screen would have had nothing older than the transfer in flight to
+ * show. Keeping the row costs a few hundred bytes and is bounded by `download_history_limit`; what
+ * it buys is the answer to "did I already download this, and what happened to it".
+ *
+ * ### Why two columns and not one
+ *
+ * They answer different questions and neither implies the other.
+ *
+ * `installed_at` disambiguates a state that would otherwise be lossy. A `DONE` row with no file
+ * can mean "installed, and the APK deleted afterwards" — the normal case with
+ * `keep_apk_after_install` off — or "downloaded and then deleted without ever being installed",
+ * which is what the new Delete button and the storage cleanup produce. `DownloadState` has no way
+ * of telling the two apart, and the history row has to.
+ *
+ * `pending_install` records the **intent** the download was born with. A transfer started from a
+ * listing was meant to end in an installation; one started by the periodic check with
+ * `auto_install_updates` off was explicitly meant to stop at the file. Both end in `READY`, and
+ * only the first may be carried on by `auto_install_after_download`. It doubles as the claim token
+ * that keeps the listing and the shell's coordinator from installing the same file twice.
+ *
+ * ### `NOT NULL` on the second, and the default declared twice
+ *
+ * `installed_at` is nullable, like the columns added in 1 → 2 and 2 → 3: absent means "never
+ * installed", which is true of every row written before this version. `pending_install` cannot be,
+ * because "no installation was intended" is a value of the domain and not an absence — so
+ * `ALTER TABLE … ADD COLUMN` demands a `DEFAULT`, and `@ColumnInfo(defaultValue = "0")` has to
+ * repeat it, or Room reports the mismatch when opening the database.
+ *
+ * ### And the rows that were already there are left at `0` deliberately
+ *
+ * Unlike 3 → 4 there is nothing to back-fill, and back-filling would be wrong: an existing `READY`
+ * row is a download that finished at some unknown point in the past, possibly a week ago. Setting
+ * its intent to `1` would make the first launch after the update propose installing it — which is
+ * exactly the behaviour the switch exists to let the user *choose*.
+ */
+internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `downloads` ADD COLUMN `installed_at` INTEGER")
+        db.execSQL(
+            "ALTER TABLE `downloads` ADD COLUMN `pending_install` INTEGER NOT NULL DEFAULT 0",
+        )
+    }
+}
+
 /** Every migration, in the order Room would apply them. */
 internal val MULTISTORE_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)

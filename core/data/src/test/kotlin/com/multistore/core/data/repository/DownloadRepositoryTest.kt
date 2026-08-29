@@ -7,6 +7,7 @@ import com.google.common.truth.Truth.assertThat
 import com.multistore.core.common.result.AppError
 import com.multistore.core.common.result.Outcome
 import com.multistore.core.database.MultiStoreDatabase
+import com.multistore.core.database.entity.DownloadEntity
 import com.multistore.core.download.DownloadEngine
 import com.multistore.core.download.DownloadListener
 import com.multistore.core.download.DownloadOutcome
@@ -14,6 +15,7 @@ import com.multistore.core.download.DownloadRequest
 import com.multistore.core.download.DownloadScheduler
 import com.multistore.core.download.PartialDownload
 import com.multistore.core.model.ArtifactType
+import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.DownloadState
 import com.multistore.core.model.Sha256
 import com.multistore.core.model.StoreAppRef
@@ -22,6 +24,7 @@ import com.multistore.core.model.VersionRef
 import com.multistore.store.api.DownloadResolution
 import java.io.File
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -47,6 +50,7 @@ class DownloadRepositoryTest {
     private lateinit var repository: DownloadRepositoryImpl
 
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    private val settings = LocalSettings()
     private val clock = object : Clock {
         override fun now(): Instant = Instant.fromEpochMilliseconds(1_787_316_712_615L)
     }
@@ -103,6 +107,7 @@ class DownloadRepositoryTest {
             catalogDao = db.catalogDao(),
             engine = engine,
             scheduler = scheduler,
+            settings = settings,
             clock = clock,
             io = Dispatchers.Unconfined,
         )
@@ -125,6 +130,7 @@ class DownloadRepositoryTest {
             expectedSha256 = null,
             expectedSize = SIZE,
         ),
+        pendingInstall = true,
     )
 
     @Test
@@ -179,9 +185,147 @@ class DownloadRepositoryTest {
                 expectedSha256 = Sha256.parseOrNull("b".repeat(64)),
                 expectedSize = SIZE,
             ),
+            pendingInstall = true,
         )
 
         assertThat(other).isNotEqualTo(id)
+    }
+
+    // --- the row after the installation: history, not a deletion --------------------------------
+
+    @Test
+    fun `a successful installation deletes the file and keeps the row as history`() = runTest {
+        val id = enqueue()
+        repository.run(id)
+        val file = requireNotNull(repository.get(id)?.file)
+
+        repository.recordInstalled(id)
+
+        // The file goes: that is what the default of `keep_apk_after_install` promises. The row
+        // stays, and until M5/7 it did not — which made a history impossible, since nothing older
+        // than the transfer in flight existed to show.
+        assertThat(file.exists()).isFalse()
+        val row = requireNotNull(repository.get(id))
+        assertThat(row.file).isNull()
+        assertThat(row.state).isEqualTo(DownloadState.DONE)
+        // And it says **when**: without this, a closed row with no file would mean both "installed"
+        // and "deleted before it was ever installed".
+        assertThat(row.installedAt).isNotNull()
+    }
+
+    @Test
+    fun `deleting a staged APK leaves a history entry that was never installed`() = runTest {
+        val id = enqueue()
+        repository.run(id)
+        val file = requireNotNull(repository.get(id)?.file)
+
+        repository.deleteStaged(id)
+
+        assertThat(file.exists()).isFalse()
+        val row = requireNotNull(repository.get(id))
+        assertThat(row.file).isNull()
+        // The absence of a date is the entry's whole content: this download never became an
+        // installed app. The screen reads exactly that difference.
+        assertThat(row.installedAt).isNull()
+    }
+
+    @Test
+    fun `the right to carry on to the installation is handed over exactly once`() = runTest {
+        val id = enqueue()
+
+        // Two candidates for the same file at the same instant — the listing still on screen and the
+        // shell's coordinator — and two `PackageInstaller` sessions would be two confirmation
+        // dialogs for one app. A read followed by a write would not settle it; the `UPDATE … WHERE`
+        // does, because SQLite decides.
+        assertThat(repository.claimPendingInstall(id)).isTrue()
+        assertThat(repository.claimPendingInstall(id)).isFalse()
+    }
+
+    @Test
+    fun `the history is trimmed to the ceiling, and a live transfer is not history`() = runTest {
+        settings.storage.value = settings.storage.value.copy(
+            downloadHistoryLimit = DownloadHistoryLimit.LAST_50,
+        )
+        val dao = db.downloadDao()
+        // Fifty-two concluded downloads, oldest first, plus one that is still going.
+        repeat(52) { index ->
+            dao.upsert(
+                DownloadEntity(
+                    listingId = 0,
+                    storeId = StoreId.FDROID,
+                    storeAppRef = "app.$index",
+                    versionRef = "v$index",
+                    packageName = null,
+                    state = DownloadState.DONE,
+                    createdAt = clock.now() + index.seconds,
+                    updatedAt = clock.now() + index.seconds,
+                ),
+            )
+        }
+        val live = dao.upsert(
+            DownloadEntity(
+                listingId = 0,
+                storeId = StoreId.FDROID,
+                storeAppRef = "in-corso",
+                versionRef = "in-corso",
+                packageName = null,
+                state = DownloadState.READY,
+                filePath = "/tmp/in-corso.apk",
+                createdAt = clock.now(),
+                updatedAt = clock.now(),
+            ),
+        )
+
+        assertThat(repository.pruneHistory()).isEqualTo(2)
+
+        // The ready-to-install row is untouched, and it is not counted towards the ceiling either:
+        // pruning it would leave an APK on disk that no row claims and no button can install.
+        assertThat(repository.get(live)).isNotNull()
+        // The two dropped are the **oldest**, not an arbitrary pair.
+        assertThat(dao.get(1L)).isNull()
+        assertThat(dao.get(2L)).isNull()
+        assertThat(dao.get(3L)).isNotNull()
+    }
+
+    @Test
+    fun `keeping them all prunes nothing`() = runTest {
+        settings.storage.value = settings.storage.value.copy(
+            downloadHistoryLimit = DownloadHistoryLimit.KEEP_ALL,
+        )
+        val id = enqueue()
+        repository.run(id)
+        repository.recordInstalled(id)
+
+        assertThat(repository.pruneHistory()).isEqualTo(0)
+        assertThat(repository.get(id)).isNotNull()
+    }
+
+    @Test
+    fun `emptying the history spares what is still going`() = runTest {
+        val concluso = enqueue()
+        repository.run(concluso)
+        repository.recordInstalled(concluso)
+        val dao = db.downloadDao()
+        val vivo = dao.upsert(
+            DownloadEntity(
+                listingId = 0,
+                storeId = StoreId.FDROID,
+                storeAppRef = "in-corso",
+                versionRef = "in-corso",
+                packageName = null,
+                state = DownloadState.READY,
+                filePath = "/tmp/in-corso.apk",
+                createdAt = clock.now(),
+                updatedAt = clock.now(),
+            ),
+        )
+
+        assertThat(repository.clearHistory()).isEqualTo(1)
+
+        assertThat(repository.get(concluso)).isNull()
+        // Somebody emptying a list must not thereby lose the row saying an APK is waiting to be
+        // installed — nor cancel a transfer that is running.
+        assertThat(repository.get(vivo)).isNotNull()
     }
 
     @Test

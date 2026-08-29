@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertThat
 import com.multistore.core.common.version.VersionSelection
 import com.multistore.core.data.repository.AppDetail
 import com.multistore.core.data.store.StoreRegistry
+import com.multistore.core.domain.usecase.ActiveInstallDrivers
 import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.ResolveDownloadUseCase
 import com.multistore.core.model.AppVersion
@@ -73,6 +74,7 @@ class WebViewDownloadViewModelTest {
                 installs = installs,
                 details = details,
                 settings = FakeSettingsRepository(),
+                drivers = ActiveInstallDrivers(),
             ),
             details = details,
             settings = settings,

@@ -125,7 +125,14 @@ class InstallAppUseCaseTest {
         var startedUnmetered = 0
         var cancelled = mutableListOf<Long>()
 
+        /** Who was queued with an installation meant to follow, and who was not. */
+        var pendingInstalls = mutableListOf<Boolean>()
+
+        /** Who spent the claim token, and how many times. */
+        var claims = 0
+
         override fun observeActive(): Flow<List<DownloadStatus>> = flowOf(emptyList())
+        override fun observeAll(): Flow<List<DownloadStatus>> = flowOf(emptyList())
         override fun observe(id: Long): Flow<DownloadStatus?> = statuses
         override fun observeFor(storeId: StoreId, ref: StoreAppRef): Flow<DownloadStatus?> = statuses
         override suspend fun get(id: Long): DownloadStatus? = statuses.value
@@ -137,7 +144,11 @@ class InstallAppUseCaseTest {
             packageName: String?,
             listingId: Long?,
             resolution: DownloadResolution.Direct,
-        ): Long = DOWNLOAD_ID
+            pendingInstall: Boolean,
+        ): Long {
+            pendingInstalls += pendingInstall
+            return DOWNLOAD_ID
+        }
 
         override suspend fun run(id: Long): Outcome<File> = error("the worker does not go through here")
 
@@ -167,13 +178,24 @@ class InstallAppUseCaseTest {
             cancelled += id
         }
 
-        override suspend fun discard(id: Long) {
+        override suspend fun recordInstalled(id: Long) {
             discarded++
         }
 
         override suspend fun retire(id: Long) {
             retired++
         }
+
+        override suspend fun deleteStaged(id: Long) = Unit
+
+        override suspend fun claimPendingInstall(id: Long): Boolean {
+            claims++
+            return true
+        }
+
+        override suspend fun pruneHistory(): Int = 0
+
+        override suspend fun clearHistory(): Int = 0
 
         override suspend fun requeueInterrupted() = Unit
 
@@ -238,6 +260,7 @@ class InstallAppUseCaseTest {
             installs = installs,
             details = details,
             settings = settings,
+            drivers = ActiveInstallDrivers(),
         )
     }
 

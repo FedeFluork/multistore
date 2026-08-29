@@ -176,14 +176,19 @@ interface InstalledAppDao {
 }
 
 /**
- * An in-flight transfer, plus the title of the listing it came from.
+ * A transfer, plus the name and icon of the app it came from.
  *
- * `listingTitle` is nullable and that is not an oversight: the listing can have vanished from the
- * catalogue while the file was coming down. See the `LEFT JOIN` in [DownloadDao.observeActive].
+ * Both are nullable and that is not an oversight: the listing can have vanished from the catalogue
+ * while the file was coming down, and a download **outlives** the row that produced it. See the two
+ * `LEFT JOIN`s in [DownloadDao.observeActive].
+ *
+ * The icon does not come from `store_listings` — that table has no such column — but from `apps`,
+ * which is where the aggregated app keeps it. Hence two joins and not one.
  */
 data class ActiveDownloadRow(
     @Embedded val download: DownloadEntity,
     @ColumnInfo(name = "listing_title") val listingTitle: String?,
+    @ColumnInfo(name = "icon_url") val iconUrl: String?,
 )
 
 @Dao
@@ -203,14 +208,43 @@ interface DownloadDao {
      */
     @Query(
         """
-        SELECT d.*, l.title AS listing_title
+        SELECT d.*, l.title AS listing_title, a.icon_url AS icon_url
         FROM downloads d
         LEFT JOIN store_listings l ON l.id = d.listing_id
+        LEFT JOIN apps a ON a.app_key = l.app_key
         WHERE d.state NOT IN ('DONE', 'FAILED')
         ORDER BY d.created_at
         """,
     )
     fun observeActive(): Flow<List<ActiveDownloadRow>>
+
+    /**
+     * Every download the app remembers: what is moving, what is waiting, what has finished.
+     *
+     * One query and not three, because the Downloads screen has to draw the three groups at the
+     * same instant and a row moves between them **while it is being looked at** — a transfer ends
+     * and becomes "ready to install", an installation succeeds and becomes history. Three separate
+     * flows would emit at three different moments and the same app would briefly appear twice, or
+     * not at all.
+     *
+     * **Not capped**, and that is deliberate. What bounds this list is
+     * `download_history_limit`, a value the user chose and can set to "keep them all"; adding a
+     * `LIMIT` here would silently contradict that choice, and the screen would look as if the
+     * older rows had been pruned when they are still on disk.
+     *
+     * Newest first: unlike [observeActive] — whose consumer is a progress card where the order is
+     * the order transfers started — this list is read as a history.
+     */
+    @Query(
+        """
+        SELECT d.*, l.title AS listing_title, a.icon_url AS icon_url
+        FROM downloads d
+        LEFT JOIN store_listings l ON l.id = d.listing_id
+        LEFT JOIN apps a ON a.app_key = l.app_key
+        ORDER BY d.created_at DESC
+        """,
+    )
+    fun observeAll(): Flow<List<ActiveDownloadRow>>
 
     @Query("SELECT * FROM downloads WHERE id = :id")
     fun observe(id: Long): Flow<DownloadEntity?>
@@ -255,9 +289,6 @@ interface DownloadDao {
     @Query("UPDATE downloads SET validator = :validator, bytes_total = :total, updated_at = :now WHERE id = :id")
     suspend fun setValidator(id: Long, validator: String?, total: Long?, now: kotlin.time.Instant)
 
-    @Query("DELETE FROM downloads WHERE id = :id")
-    suspend fun delete(id: Long)
-
     /**
      * Downloads left halfway by the death of the process.
      *
@@ -293,16 +324,155 @@ interface DownloadDao {
     suspend fun claimedFilePaths(): List<String>
 
     /**
-     * The paths a **not yet completed** transfer claims.
+     * The paths a transfer that **is still going to move** claims.
      *
-     * This is the set the "delete downloaded APKs" button must spare: a download in progress or
-     * paused has a partial file the resume needs, and deleting it would turn a cleanup into
-     * eighteen megabytes to download again.
+     * This is the set the "delete downloaded APKs" button must spare, and the states listed are
+     * the whole of the definition: a queued, running, paused or verifying download has a partial
+     * file its resume needs, and an installing one is having its bytes written into a
+     * `PackageInstaller` session right now.
+     *
+     * ### `READY` is deliberately **not** here, and its absence is a fix
+     *
+     * This query used to read `state NOT IN ('DONE', 'FAILED')`, which spares `READY` — i.e. a
+     * download that has finished and that nobody installed. That is precisely what the button
+     * promises to delete ("downloads you never installed"), and precisely what its level's size
+     * counts: the observed symptom was a row reading "over 100 MB" above a button that answered
+     * "there was nothing to free", every time. The two halves disagreed because they were reading
+     * two different definitions of "in use".
      */
-    @Query("SELECT file_path FROM downloads WHERE file_path IS NOT NULL AND state NOT IN ('DONE', 'FAILED')")
-    suspend fun activeFilePaths(): List<String>
+    @Query(
+        """
+        SELECT file_path FROM downloads
+        WHERE file_path IS NOT NULL
+          AND state IN ('QUEUED', 'RUNNING', 'PAUSED', 'VERIFYING', 'INSTALLING')
+        """,
+    )
+    suspend fun transferringFilePaths(): List<String>
 
-    /** The rows waiting for nothing any more: the purge has just deleted their files. */
+    /**
+     * Forgets the files the sweep has just deleted, **keeping the rows**.
+     *
+     * The rows are history now, so deleting them would throw away the record of a download the
+     * user made — which is the thing the Downloads screen exists to show. What has to go is the
+     * pointer: a `READY` row whose file no longer exists would offer "Install" over nothing.
+     *
+     * `READY` becomes `DONE` because the row has finished its cycle: nothing will move it again.
+     * `installed_at` stays untouched, and it is what keeps the two readings apart — an installed
+     * app whose kept APK was deleted, and a download deleted before it was ever installed.
+     * `pending_install` is cleared for the same reason: there is no file left to carry on to.
+     */
+    @Query(
+        """
+        UPDATE downloads
+        SET file_path = NULL,
+            pending_install = 0,
+            state = CASE WHEN state = 'READY' THEN 'DONE' ELSE state END,
+            updated_at = :now
+        WHERE state IN ('READY', 'DONE', 'FAILED') AND file_path IS NOT NULL
+        """,
+    )
+    suspend fun forgetSettledFiles(now: kotlin.time.Instant): Int
+
+    /** How many concluded downloads still hold a file: what the "empty" button would delete. */
+    @Query(
+        "SELECT COUNT(*) FROM downloads WHERE state = 'READY' AND file_path IS NOT NULL",
+    )
+    suspend fun countReadyToInstall(): Int
+
+    /**
+     * Records that this download reached the device, and closes the row.
+     *
+     * The counterpart of the old `delete`: the row survives the installation and becomes the
+     * history entry. `file_path` goes to `NULL` because the caller has just thrown the APK away —
+     * with `keep_apk_after_install` on it is `retire` that runs instead, and that one keeps both.
+     */
+    @Query(
+        """
+        UPDATE downloads
+        SET state = 'DONE', file_path = NULL, pending_install = 0,
+            installed_at = :at, updated_at = :at
+        WHERE id = :id
+        """,
+    )
+    suspend fun markInstalled(id: Long, at: kotlin.time.Instant)
+
+    /**
+     * Forgets **one** row's file, at the user's request, without recording an installation.
+     *
+     * The row survives as history and `installed_at` stays `null`: that absence is what separates
+     * "deleted before it was ever installed" from "installed, and the APK deleted afterwards".
+     */
+    @Query(
+        """
+        UPDATE downloads
+        SET file_path = NULL, pending_install = 0, state = 'DONE', updated_at = :now
+        WHERE id = :id
+        """,
+    )
+    suspend fun forgetFile(id: Long, now: kotlin.time.Instant)
+
+    /** Records the installation without touching the file: `keep_apk_after_install` on. */
+    @Query(
+        """
+        UPDATE downloads
+        SET state = 'DONE', pending_install = 0, installed_at = :at, updated_at = :at
+        WHERE id = :id
+        """,
+    )
+    suspend fun markInstalledKeepingFile(id: Long, at: kotlin.time.Instant)
+
+    /**
+     * Takes the right to carry this download on to the installation, if it is still going.
+     *
+     * @return 1 if this caller won it, 0 if somebody already had.
+     *
+     * The atomicity is the whole point, and the case is real: when a download finishes there can
+     * be **two** candidates — the listing still on screen, which has been awaiting it, and the
+     * shell's coordinator, which watches every transfer. Both see the same row become `READY` in
+     * the same instant, and two `PackageInstaller` sessions on the same file are two confirmation
+     * dialogs for one app. A read followed by a write would not settle it; `UPDATE … WHERE
+     * pending_install = 1` does, because SQLite decides.
+     *
+     * It is also what stops a loop: a confirmation the user dismisses leaves the row in `READY`
+     * with the token spent, so nobody proposes it again by itself.
+     */
+    @Query("UPDATE downloads SET pending_install = 0 WHERE id = :id AND pending_install = 1")
+    suspend fun claimPendingInstall(id: Long): Int
+
+    /**
+     * Trims the history to the last [keep] concluded downloads.
+     *
+     * `state IN ('DONE', 'FAILED')` **on both sides** of the subquery, and that is the part that
+     * matters: a queued, running, paused or ready-to-install row is not history. Counting them
+     * towards the ceiling would let a burst of live transfers push real history out; deleting one
+     * would leave an APK on disk that no row claims and no button can install.
+     *
+     * A pruned row may still own a kept file (`keep_apk_after_install`). Its bytes are not lost:
+     * the file becomes an orphan, and the startup sweep in `MaintenanceRepository.purgeStale`
+     * deletes exactly those. The trade is deliberate — the alternative is teaching this query to
+     * touch the filesystem.
+     */
+    @Query(
+        """
+        DELETE FROM downloads
+        WHERE state IN ('DONE', 'FAILED')
+          AND id NOT IN (
+            SELECT id FROM downloads
+            WHERE state IN ('DONE', 'FAILED')
+            ORDER BY created_at DESC
+            LIMIT :keep
+          )
+        """,
+    )
+    suspend fun pruneHistory(keep: Int): Int
+
+    /**
+     * Empties the history at the user's request: the concluded rows, and nothing else.
+     *
+     * The same `state IN ('DONE', 'FAILED')` as [pruneHistory], for the same reason. Somebody
+     * clearing a list must not thereby cancel a download that is running, and must not lose the
+     * row that says an APK is waiting to be installed.
+     */
     @Query("DELETE FROM downloads WHERE state IN ('DONE', 'FAILED')")
-    suspend fun deleteSettled(): Int
+    suspend fun deleteHistory(): Int
 }

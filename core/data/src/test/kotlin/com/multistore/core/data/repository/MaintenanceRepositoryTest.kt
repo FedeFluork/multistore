@@ -274,6 +274,94 @@ class MaintenanceRepositoryTest {
         assertThat(db.downloadDao().claimedFilePaths()).containsExactly(inCorso.absolutePath)
     }
 
+    /**
+     * The reported bug, in one test: a finished download the button used to spare.
+     *
+     * `READY` means the APK is whole on disk and **nobody installed it** — which is precisely what
+     * the entry's own description promises to delete ("downloads you never installed") and precisely
+     * what the size next to it counts. The query behind the button used to spare
+     * `state NOT IN ('DONE', 'FAILED')`, and `READY` is in neither, so the observed behaviour was a
+     * row reading "over 100 MB" above a button answering "there was nothing to free", every time.
+     *
+     * The assertion on the freed bytes is the one that fails without the fix; the two after it say
+     * what has to be left behind — a history entry with no file, rather than no row at all.
+     */
+    @Test
+    fun `the button throws away a download that finished and was never installed`() = runTest {
+        val id = insertListing(StoreId.APKMIRROR, ref = "pronta", expiredDaysAgo = 0)
+        val pronta = File(Staging.dir(context), "pronta.apk").apply { writeBytes(ByteArray(8192)) }
+        db.downloadDao().upsert(
+            download(
+                listingId = id,
+                path = pronta.absolutePath,
+                ref = "pronta",
+                state = com.multistore.core.model.DownloadState.READY,
+            ),
+        )
+
+        val reclaimed = repository.clear(StorageLevel.STAGED_APKS)
+
+        assertThat(pronta.exists()).isFalse()
+        assertThat(reclaimed.freedBytes).isEqualTo(8192)
+        // The row stays — it is the history entry for that download — but it stops claiming a file
+        // that is no longer there, or the Downloads screen would offer "Install" over nothing.
+        val row = requireNotNull(db.downloadDao().get(1L))
+        assertThat(row.filePath).isNull()
+        assertThat(row.state).isEqualTo(com.multistore.core.model.DownloadState.DONE)
+        // And it is **not** recorded as installed: that absence is the whole difference between
+        // this entry and one whose APK was deleted after being installed.
+        assertThat(row.installedAt).isNull()
+    }
+
+    /**
+     * The size the row shows and what the button deletes are the same number.
+     *
+     * The measurement used to count only the top-level **files**, so an opened container — a folder
+     * with base and splits inside, 250 MB on Firefox — read as zero while the sweep deleted it. The
+     * entry would have announced a saving of nothing and then produced one.
+     */
+    @Test
+    fun `the size counts what has been unpacked, not only the downloaded files`() = runTest {
+        File(Staging.dir(context), "scaricato.apk").writeBytes(ByteArray(1024))
+        val opened = File(Staging.dir(context), "scaricato.split").apply { mkdirs() }
+        File(opened, "base.apk").writeBytes(ByteArray(4096))
+        File(opened, "config.arm64_v8a.apk").writeBytes(ByteArray(2048))
+
+        assertThat(repository.usage().stagedApkBytes).isEqualTo(1024 + 4096 + 2048)
+    }
+
+    /**
+     * How many finished downloads the confirmation is about to throw away.
+     *
+     * The number is what makes the cost legible before the tap: megabytes come back on every one of
+     * the four buttons, and only this one can delete a transfer that has already been paid for.
+     */
+    @Test
+    fun `the usage says how many apps are waiting to be installed`() = runTest {
+        val id = insertListing(StoreId.APKMIRROR, ref = "pronta", expiredDaysAgo = 0)
+        val pronta = File(Staging.dir(context), "pronta.apk").apply { writeBytes(ByteArray(2048)) }
+        db.downloadDao().upsert(
+            download(
+                listingId = id,
+                path = pronta.absolutePath,
+                ref = "pronta",
+                state = com.multistore.core.model.DownloadState.READY,
+            ),
+        )
+        // A paused transfer is not waiting to be installed: it has a partial file.
+        db.downloadDao().upsert(
+            download(
+                listingId = id,
+                path = File(Staging.dir(context), "mezza.apk").apply { writeBytes(ByteArray(64)) }
+                    .absolutePath,
+                ref = "mezza",
+                state = com.multistore.core.model.DownloadState.PAUSED,
+            ),
+        )
+
+        assertThat(repository.usage().stagedReadyToInstall).isEqualTo(1)
+    }
+
     // --- the "empty the catalogue" button ------------------------------------------------------
 
     @Test
