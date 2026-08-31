@@ -75,16 +75,50 @@ class ApkComboCanaryTest {
     }
 
     @Test
-    fun `an app with several variants keeps more than one`() = runTest {
+    fun `an app with several variants keeps one entry per variant`() = runTest {
         val detail = apkcombo.getAppDetails(StoreAppRef(MULTI_VARIANT_PATH)).orFail("detail")
 
-        // One app publishes five APKs and an XAPK on apkcombo, **all with the same version
-        // code**. While the version ref was based on that, the unique constraint saved only one —
-        // and that one was the XAPK, which the app could not install: the listing said "no
-        // installable package" in front of a page offering five. The defect passed every
-        // fixture-based test and was found by the device.
-        assertThat(detail.versions.size).isGreaterThan(1)
+        // The regression this guards: one app publishes several APKs and an XAPK **all with the
+        // same version code**. While the version ref was derived from that code, the unique
+        // constraint on `(listing_id, version_ref)` kept a single row — and the survivor was the
+        // XAPK, which at the time the app could not install: the listing said "no installable
+        // package" in front of a page offering five. It passed every fixture-based test and was
+        // found by the device.
+        //
+        // The premise is a fact about the **store**, and it expires. Measured 31/08/2026: the
+        // previous anchor, `com.duckduckgo.mobile.android`, shipped 5.294.0 as a single universal
+        // APK where 5.292.x still offered three variants — so `isGreaterThan(1)` reddened the
+        // nightly with "expected to be greater than: 1", which names none of the three jobs this
+        // class exists to tell apart and sent the reader hunting a selector that had not moved.
+        // Hence the premise is checked apart from the invariant, and says which of the two it is.
+        val codes = detail.versions.map { it.versionCode }.toSet()
+        if (detail.versions.size < 2) {
+            error(
+                "several variants: **the reference app now publishes a single variant**. Not a " +
+                    "markup change, not a block, not a fault — apkcombo is serving " +
+                    "'$MULTI_VARIANT_PATH' as one artifact, so this guard has lost its subject " +
+                    "and proves nothing. Re-anchor `MULTI_VARIANT_PATH` to an app whose latest " +
+                    "release still offers several variants sharing one version code. Note that " +
+                    "**zero** variants is a different case and not this one: it is covered by the " +
+                    "version-list fallback in `getAppDetails`, and on 31/08/2026 it was the shape " +
+                    "of both `com.zhiliaoapp.musically` and `com.instagram.android`.",
+            )
+        }
+        if (codes.size != 1 || codes.single() == null) {
+            error(
+                "several variants: **the variants no longer share one version code** " +
+                    "(codes: $codes). The collapse this test guards needed refs derived from a " +
+                    "code that repeats; with one code per variant they cannot collide whatever " +
+                    "we derive them from, so a green here would be green for the wrong reason. " +
+                    "Re-anchor `MULTI_VARIANT_PATH`.",
+            )
+        }
+
+        // The invariant: as many distinct refs as there are variants. This is what the collapse
+        // broke, and the only assertion here that is about us rather than about the store.
         assertThat(detail.versions.map { it.ref }.toSet()).hasSize(detail.versions.size)
+        // And at least one installable without opening a container: the survivor of the original
+        // defect was the XAPK, so an all-XAPK answer would hide the same symptom again.
         assertThat(detail.versions.any { it.artifactType == ArtifactType.APK }).isTrue()
     }
 
@@ -157,7 +191,22 @@ class ApkComboCanaryTest {
         const val APP_PATH = "telegram/org.telegram.messenger"
         const val PACKAGE_NAME = "org.telegram.messenger"
 
-        /** Five APKs and one XAPK, **all with the same version code**: see the test above. */
-        const val MULTI_VARIANT_PATH = "duckduckgo-privacy-browser/com.duckduckgo.mobile.android"
+        /**
+         * Several variants sharing **one version code**: the test above says why that shape is the
+         * point, and why it belongs to the store rather than to us.
+         *
+         * Measured 31/08/2026, canonical slug — no redirect. The page carries **three**
+         * `a.variant` anchors and the adapter keeps **two**: one `apk` and one `xapk`, both
+         * version code 145505446, from `#variants-tab`. The third is the `#best-variant-tab`
+         * duplicate of the recommended file, which `downloadBestTab` scopes out — so a count read
+         * off the raw HTML is one higher than the version list, and that is not a dropped variant.
+         *
+         * Two is therefore the premise's exact margin: should spotify drop to a single artifact,
+         * the test says so in those words rather than failing on a bare count.
+         *
+         * It is deliberately **not** [APP_PATH]: keeping the two anchors on different apps means
+         * one app changing shape reddens one test, with a message about that app, not three.
+         */
+        const val MULTI_VARIANT_PATH = "spotify/com.spotify.music"
     }
 }
