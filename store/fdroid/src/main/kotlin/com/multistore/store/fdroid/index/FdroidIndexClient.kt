@@ -193,7 +193,17 @@ class FdroidIndexClient(
     private fun transferCap(plainSizeBytes: Long): Long =
         plainSizeBytes + plainSizeBytes / 100 + 1024
 
-    private companion object {
+    /**
+     * `internal` and not `private` because the **canary branches on these selectors**.
+     *
+     * A rotated pin arrives as `ParseFailure(SELECTOR_SIGNER, "expected=… found=…")`, and telling
+     * that apart from a changed index schema is the difference between "confirm the rotation
+     * outside this channel before widening the pin" and "teach the projection a new field". The
+     * alternative was copies of these strings in the test source set, which would drift silently:
+     * a renamed selector would fall through to the generic branch and the pin message would simply
+     * stop appearing, with nothing going red. See `FdroidFailureDiagnosis`.
+     */
+    internal companion object {
         const val SELECTOR_ENTRY_JAR = "entry.jar"
         const val SELECTOR_SIGNER = "entry.jar/signer"
         const val SELECTOR_SIGNATURE = "entry.jar/signature"

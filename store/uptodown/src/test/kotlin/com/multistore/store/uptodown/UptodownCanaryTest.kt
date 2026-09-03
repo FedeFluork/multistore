@@ -10,6 +10,7 @@ import com.multistore.store.api.StoreResult
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assumptions.abort
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -25,6 +26,20 @@ import org.junit.jupiter.api.Test
  * a Turnstile, and obtaining it without running the challenge would be pretending to have solved
  * it. What is checked here is that the **metadata** are still readable — and they are what makes
  * the download verifiable when a person is the one pressing.
+ *
+ * **And what it cannot do on its own, which is newer:** it runs from a datacentre, and this project
+ * measures reachability from a consumer connection precisely because the two do not agree. On
+ * 31/08/2026 all five checks here went red with a 404 while the same adapter, the same
+ * User-Agent and the same URLs answered 200 with every assertion green from a consumer connection.
+ * A red canary is therefore a claim about **this egress**, and the 404 branch of [orFail] is the
+ * one place that has to say so instead of naming a cause it cannot know — see
+ * [uptodownNotFoundMessage].
+ *
+ * Saying it is not enough, though, and that is what changed on 03/09/2026: the message was right and
+ * the pipeline still opened an issue every night, which is a nightly request to repair a store that
+ * works. When the language root 404s too, the check therefore **aborts rather than fails** — see
+ * [uptodownIsEgressRefusal] for the one reading that covers and the three it must not. A moved URL
+ * scheme still fails here, loudly, because that one is ours.
  */
 @Tag("canary")
 @DisplayName("Canary — uptodown (real network)")
@@ -110,7 +125,19 @@ class UptodownCanaryTest {
         assertThat(page.items).isNotEmpty()
     }
 
-    private fun <T> StoreResult<T>.orFail(what: String): T = when (this) {
+    /**
+     * The value, or a message naming **which** of the failures happened.
+     *
+     * That is the whole value of a canary: "the markup changed", "uptodown is blocking us" and
+     * "uptodown is rate-limiting us" lead to different jobs, and a bare success assertion tells
+     * none of them apart.
+     *
+     * It is `suspend` for one branch only. A 404 does not name its own cause and
+     * `StoreError.NotFound` carries neither the code, nor the URL, nor how many other addresses
+     * answered the same — so that branch asks the store **one more question** before naming a job.
+     * See [uptodownNotFoundMessage], which also records what that cost on 31/08/2026.
+     */
+    private suspend fun <T> StoreResult<T>.orFail(what: String): T = when (this) {
         is StoreResult.Success -> value
         StoreResult.Unsupported -> error("$what: the adapter now declares it unsupported")
         is StoreResult.Failure -> when (val e = error) {
@@ -131,11 +158,24 @@ class UptodownCanaryTest {
                     "). Their ToS forbid automated access: rather than raising " +
                     "`permitsPerSecond`, it is better to lower it.",
             )
-            StoreError.NotFound -> error(
-                "$what: **NotFound**. On this store that nearly always means the URL scheme has " +
-                    "changed: the listing lives at `{slug}.en.uptodown.com/android`, and a " +
-                    "different subdomain gives a 404 without any selector failing.",
-            )
+            // The one branch that cannot be read off the error alone: one address gone and every
+            // address gone are opposite jobs, and only the language root's answer separates them —
+            // and they are not even both *jobs*. The second is this pipeline's egress being
+            // refused, which is nothing for anyone here to repair, so it **aborts** the check
+            // instead of failing it: a failure opens an issue, and an issue about that is an issue
+            // asking someone to fix a store that works. See [uptodownIsEgressRefusal] for why
+            // skipped is the honest outcome and for the one reading it is allowed to cover.
+            StoreError.NotFound -> {
+                // Asked twice, and the second time only where it can change the outcome. A single
+                // unretried `HEAD` is one bad edge node away from converting a genuinely moved
+                // address into a silent skip, and nothing else retries it: `NotFound` is not a
+                // challenge, so `ChallengeEscalator` walks no rung for it. The decisive answer is
+                // the one the message is built from, so the words and the outcome cannot disagree.
+                val first = uptodown.healthCheck()
+                val decisive = if (uptodownIsEgressRefusal(first)) uptodown.healthCheck() else first
+                val message = uptodownNotFoundMessage(what, decisive)
+                if (uptodownIsEgressRefusal(decisive)) abort(message) else error(message)
+            }
             else -> error("$what: network or site fault ($e). If it recurs, investigate.")
         }
     }

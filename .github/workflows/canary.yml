@@ -60,7 +60,7 @@ jobs:
       #
       # It is also the only canary that can compare a **published** hash with the downloaded bytes:
       # on the other eight either there is no hash, or there is one sometimes, or the file sits
-      # behind a human gesture. It downloads the index once for the whole class (57 MB) and one
+      # behind a human gesture. It downloads the index once for the whole class (58 MB) and one
       # artifact chosen because it is the smallest in the index (~9 KB).
       - name: f-droid
         id: fdroid
@@ -107,6 +107,14 @@ jobs:
       # the reason that store is `USER_ASSISTED_ONLY`, and if it disappeared the download would become
       # automatically resolvable again — an improvement nobody would ever notice, because everything
       # would keep working as before.
+      #
+      # From 03/09/2026 that test does not fail on the good news, and the distinction is the point:
+      # what it asserts is the **gate** (`recaptcha/api.js` is loaded), and the site key and the
+      # button's CSS class — both facts about `mobdisc.com`, a third party no production code parses
+      # — are premises that **skip** with an explanation. Before, all three were bare assertions, so
+      # a rotated reCAPTCHA registration produced `expected to contain …` under a heading about a
+      # broken adapter, and the reader was invited by the file's own docstring to set `downloadMode`
+      # back to `DIRECT` — i.e. to make the download automatic on a page that still has a human gate.
       - name: pdalife
         id: pdalife
         continue-on-error: true
@@ -117,22 +125,127 @@ jobs:
       # adding a useless parameter to every download URL. The second verifies the "XAPKS Installer"
       # advert is still there, that is that the container defence on the Google Play link still has a
       # reason to exist.
+      #
+      # Both were split on 03/09/2026 for the same reason as pdalife's: the **invariant** fails (a
+      # gate exists; the container isolates exactly one Play link) and the **premise** skips (which
+      # CDN the file lands on, which app is being advertised). Both premises belong to liteapks —
+      # the host is a per-upload choice, and the committed fixtures already show both outcomes —
+      # so pinning them made the nightly red for an adapter that was right, with an invitation to
+      # delete a working defence.
       - name: liteapks
         id: liteapks
         continue-on-error: true
         run: ./gradlew :store:liteapks:canaryTest
 
+      # Both trees, and the second one is not redundant: the HTML is what a person reads, but the
+      # **message of an aborted check** lives only in the XML — and from 03/09/2026 a check can
+      # abort on purpose. Uploading just the HTML would publish a report whose index says
+      # "100% successful" and whose reason for skipping is nowhere in the artifact.
       - name: Report dei test
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: canary-reports
-          path: store/*/build/reports/tests/canaryTest/
+          path: |
+            store/*/build/reports/tests/canaryTest/
+            store/*/build/test-results/canaryTest/
           retention-days: 14
           if-no-files-found: ignore
 
-      # The issue carries the tests' message, which is written precisely to tell the three cases
-      # apart — markup changed / blocked / rate limited — because they lead to three different jobs.
+      # A skipped check is the one outcome that looks like nothing happened. It does not fail, so it
+      # opens no issue — that is the point of it — and the Gradle HTML index still reads
+      # "100% successful" with the reason two pages in. Without this step every deliberate skip
+      # would be silence dressed as success, and **while a check skips, nothing is verifying what
+      # it covers**.
+      #
+      # **Any store can skip, and the rule is the same everywhere**: a check aborts when the
+      # *premise* of the measurement has expired rather than the *invariant* having broken — that
+      # is, when nothing in this repository could make it pass again. Written out, because the
+      # distinction is the whole design and not a per-store quirk:
+      #
+      #   - the store is unreachable from this egress (uptodown's 404-on-everything, modyolo's root);
+      #   - a third party's quota refused us (liteapks' `down.appsupload.com`, an1's shared CDN budget);
+      #   - the reference app changed shape — one variant instead of several, a file that is no
+      #     longer on the CDN, a package that is no longer published, a catalogue that no longer
+      #     spans two pages;
+      #   - a "hopes to fail" premise came true: a gate's site key rotated, an advertiser changed,
+      #     F-Droid stopped serving in one hop, its search stopped being capped at ten.
+      #
+      # What must **never** skip is the invariant: a selector that stopped matching, a container
+      # defence that let the advert through, a pin that no longer matches, pagination that returns
+      # page 1 twice. Those are ours, and they fail loudly.
+      #
+      # It is also how the question left open on 31/08/2026 gets settled. Nobody knew whether
+      # uptodown's language root 404s from this egress, because `healthCheck` had no caller then: if
+      # it does, the occurrence appears here as a skip; if it does not, the run fails as before and
+      # names the other cause. Either way the answer arrives in one line instead of another night
+      # of guessing.
+      - name: Scrive nel sommario i controlli saltati
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob, xml.etree.ElementTree as ET
+          from collections import OrderedDict
+
+          # Grouped by store and by the body of the message, listing the checks that share it.
+          # The five uptodown checks abort with the same explanation and five different subjects,
+          # and both halves matter: printing one row each repeats nine hundred characters five
+          # times and truncates it, printing only the body loses which checks went unmeasured.
+          groups = OrderedDict()
+          for path in sorted(glob.glob("store/*/build/test-results/canaryTest/*.xml")):
+              store = path.split("/")[1]
+              for case in ET.parse(path).getroot().iter("testcase"):
+                  skipped = case.find("skipped")
+                  if skipped is None:
+                      continue
+                  text = " ".join((skipped.get("message") or "no message given").split())
+                  # "org.opentest4j.TestAbortedException: search: **the rest**" -> subject, body.
+                  parts = text.split(": ", 2)
+                  subject, body = (parts[1], parts[2]) if len(parts) == 3 else ("", text)
+                  groups.setdefault((store, body), []).append((case.get("name"), subject))
+
+          if not groups:
+              raise SystemExit
+
+          print("## Checks skipped: no measurement, not a fault")
+          print()
+          print("A skipped check verified **nothing** — its premise had expired, so there was")
+          print("nothing to conclude in either direction. It deliberately opens no issue, which")
+          print("is exactly why it has to be readable here. Read each one: some name a premise to")
+          print("re-anchor, and some are the good news a test was written hoping for.")
+          print()
+          for (store, body), checks in groups.items():
+              print(f"### {store} - {len(checks)} check(s) skipped")
+              print()
+              for name, subject in checks:
+                  print(f"- `{name}`" + (f" ({subject})" if subject else ""))
+              print()
+              print(f"> {body}")
+              print()
+          PY
+
+      # The issue carries the tests' message, which is written precisely to tell the cases apart —
+      # markup changed / blocked / rate limited / 404 on every address — because they lead to
+      # different jobs. The fourth was added after 31/08/2026, when a 404 from this pipeline's
+      # egress was reported as a changed URL scheme on a store whose scheme had not moved.
+      #
+      # On uptodown and modyolo that fourth case no longer arrives here at all, and the difference
+      # is worth knowing before reading a red: their canaries now **abort** the check instead of
+      # failing it when the store's own root is unreachable too, so the step stays green and this
+      # step does not run. What still reaches here from them is a 404 whose root *answers* — a
+      # moved URL scheme or path, or a reference app that has left the store — which is the half
+      # that is ours to fix.
+      #
+      # The other seven do not skip on a 404, and for three of them that is a measurement rather
+      # than an omission: apkmirror and liteapks refuse an unwelcome egress with a **403**, which
+      # lands in the `Blocked` bullet instead, and f-droid's two hosts are plain nginx with no bot
+      # management at all — porting the abort there would suppress a real signal. apkmody asks its
+      # root for the opposite reason: a root answering from another domain is that store's
+      # demonstrated failure mode, so it fails **louder** and names the new host.
+      #
+      # What every one of the nine does now is separate the invariant from the premise, so a red
+      # here means an invariant broke. Expired premises are in the run summary as skips.
+      #
       # `update_existing` avoids thirty identical issues if a store stays broken for a month.
       - name: Apre una issue se un adapter si e' rotto
         if: >-
@@ -174,9 +287,34 @@ jobs:
               '  and recapture the matching fixture;',
               '- **blocked** — there is nothing to fix in the parsers: reassess the tier, the',
               '  User-Agent and the escalation rung, and update the store table in `REFERENCE.md`;',
-              '- **rate limited** — look at `permitsPerSecond` before touching the adapter.',
+              '- **rate limited** — look at `permitsPerSecond` before touching the adapter;',
+              '- **404 on every address** — not a moved URL and not a markup change: the store is',
+              '  refusing this egress with a 404 in place of a 403, so nothing ever became',
+              '  `Blocked` and no rung of the escalation ladder was offered it. Re-measure the same',
+              '  URLs from a consumer connection before changing anything — this pipeline runs from',
+              '  a datacentre, and reachability in this project is measured from a consumer',
+              '  connection. Seen once, on uptodown, on 31/08/2026. **uptodown and modyolo ask',
+              '  their own root before naming a cause** and **skip** rather than failing when it is',
+              '  unreachable too, so if either is named above its root answered and this is not the',
+              '  case you are reading. **apkmody asks as well**, and there it is louder rather than',
+              '  quieter: a root answering from a different domain is that store\'s demonstrated',
+              '  failure mode, so it fails and names the new host. On apkmirror and liteapks this',
+              '  reading cannot arrive as a 404 at all — both refuse an unwelcome egress with a 403,',
+              '  which lands in the `Blocked` branch above, and liteapks\' says so explicitly. On',
+              '  f-droid it is measured not to happen: plain nginx, no bot management.',
               '',
-              'Five cases that apply to one store each:',
+              'And a fourth thing a red does **not** mean any more: that a premise about the store',
+              'held. Each canary now separates the invariant it defends from the facts about the',
+              'store it depends on — which app, which CDN, which advertiser, how many variants,',
+              'how many pages. A premise that expires **skips** with an explanation instead of',
+              'failing, so if a store is named here, an invariant broke. See the run summary for',
+              'what skipped.',
+              '',
+              'And one thing a green step no longer means, since 03/09/2026: look at this run\'s',
+              'summary for **skipped** checks. A store that skipped verified nothing that night —',
+              'it opens no issue by design, so the summary is the only place it is visible.',
+              '',
+              'Six cases that apply to one store each:',
               '',
               '- **f-droid, "the index signature is not the pinned one"** — the most serious of the',
               '  five, and it is not fixed by updating a selector. The certificate the repo signs',
@@ -190,20 +328,38 @@ jobs:
               '  adult category ids have changed. Update `ModyoloConfig.nsfwCategoryIds` (or publish',
               '  a `parsers.json` that does): while it stays like this, the "Show NSFW content"',
               '  switch is on and does nothing;',
-              '- **an1, "the hash is gone"** — `x-amz-meta-checksum-sha256` is on only some of the',
-              '  objects. If it disappeared from the reference file, an1 becomes a store with no',
-              '  integrity verification and the capability must go back to `NONE`;',
+              '- **an1, "the CDN answered and published no checksum"** — `x-amz-meta-checksum-sha256`',
+              '  is on only some objects, and an1 has two uploader paths of which the older',
+              '  publishes nothing. So do **not** conclude the capability from one file: check',
+              '  another recent listing first. If those still carry it, re-anchor the reference; if',
+              '  none do, an1 becomes a store with no integrity verification and `providesHash` must',
+              '  go back to `NONE`. Note the message distinguishes this from "the `HEAD` did not',
+              '  answer", which says nothing about hashes and used to arrive under this same heading;',
               '- **liteapks, "without a token the CDN no longer refuses"** — not a fault either: the',
               '  transit permission is gone and the adapter is adding a `?token=` that is no longer',
               '  needed. Remove it, together with `tokenizedFileHosts`. If instead what is missing is',
-              '  the **package** on the reference listing, it is the opposite: the `.app-stats`',
-              '  container has been renamed, and a naive read would return the advert package —',
-              '  which on that store is on 31 listings out of 31;',
+              '  the **package** on the reference listing, that is now a **skip** and not this: a',
+              '  null package is the `.app-stats` container working, since liteapks publishes a real',
+              '  Play link on only 26 listings of 31. What would fail is a package that is present',
+              '  and *wrong*, which is the container having been breached and a naive read returning',
+              '  the advert;',
               '- **pdalife, "the reCAPTCHA is gone"** — not a fault, good news: the download would',
-              '  become resolvable in one request and `downloadMode` should go back to `DIRECT`. If',
-              '  instead what is missing is the **package** on the reference listing, it is the',
-              '  opposite: the `.game-download__stores` container has been renamed and the assisted',
-              '  path has just lost its only defence.',
+              '  become resolvable in one request and `downloadMode` should go back to `DIRECT`.',
+              '  Read the message before acting: only `recaptcha/api.js` disappearing means that. A',
+              '  rotated site key or a restyled button now **skip**, because both are facts about',
+              '  `mobdisc.com` that no production code reads. If instead what is missing is the',
+              '  **package** on the reference listing, it is the opposite: the',
+              '  `.game-download__stores` container has been renamed and the assisted path has just',
+              '  lost its only defence;',
+              '- **f-droid, and it is the one to read most carefully**, because this canary had no',
+              '  branching at all until 03/09/2026 and printed one sentence for every failure. It',
+              '  now distinguishes the pin (`entry.jar/signer`) from an unverifiable signature',
+              '  (`entry.jar/signature`), from a mirror\'s hash mismatch, from an index-schema',
+              '  change — and, separately, the **two hosts**: `f-droid.org` and',
+              '  `search.f-droid.org`, the latter self-hosted with no mirror and no fallback, which',
+              '  three of the six checks depend on alone. A search outage there says nothing about',
+              '  the catalogue. And ignore the "recapture the fixture" line above for this store: it',
+              '  has no selectors and no page fixtures.',
               '',
               `Full reports in the [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) artifacts.`,
             ].join('\n');

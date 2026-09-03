@@ -236,13 +236,13 @@ Cloudflare gives false results.
 | Store | Host | Risk | Download | Binding operational notes |
 |---|---|---|---|---|
 | **f-droid** | `f-droid.org` | 🟢 low | direct, 1 hop | Certificate pinned. **108 categories** published (not ~17 top-level) and `app_count` never declared: the sync does the counting. Search comes from the **local index**; the remote API is on a *separate host*, capped at 10 results, ignores paging and gives neither packageName nor version — useful only before the first sync. Three `.zip` entries must be filtered out. `antiFeatures` lives **only** under `versions.<sha>`. `suggestedVersionCode` ignores the signer, so it is **not** an update oracle. |
-| **apkcombo** | `apkcombo.com` | 🟡 medium-low | direct | No anti-bot over ~40 requests: `/download/apk` is byte-identical with a Chrome UA, with curl's, and with none. **301s must be followed** (non-canonical slug). **Search pagination does not exist:** `?page=2` and `?page=3` return the same 20 results. Matches by substring, so "no results" is rare. No published hash. XAPKs exist and **the extension lies**: the R2 object is `….apks`, the `content-disposition` calls it `.xapk`, and inside is an XAPK with `manifest.json` `xapk_version` 2 whose base is `<packageName>.apk`, not `base.apk`. The link is `/r2?u=<signed url>`: decode the query rather than following the redirect. R2 signature valid 4 h. `versionCode` only in the info table, inside `span.blur`. |
-| **apkmirror** | `www.apkmirror.com` | 🟡 medium | direct | The second-best data quality after F-Droid. `okhttp/*` and `curl/*` → **403 from 153 B**; a Chrome mobile UA → 200: the UA is everything. **`Crawl-delay: 3` is real — it answers 429.** Three-level chain: app → release → variant → interstitial → `download.php` → 302 to R2 (1 h). The variant page gives **the file's SHA-256** *and* **the certificate's SHA-256** in two distinct sections of the `#safeDownload` modal: swapping them is the easy mistake. The `versionCode` is **per variant, not per release**. Bundles are `.apkm`. The RSS feed is the only new-releases source publishing the **developer**, and it carries the icon as the first `<img>` inside `<content:encoded>`'s CDATA — not in an `<enclosure>`, which does not exist. |
+| **apkcombo** | `apkcombo.com` | 🟡 medium-low | direct | No anti-bot over ~40 requests: `/download/apk` is byte-identical with a Chrome UA, with curl's, and with none. **301s must be followed** (non-canonical slug). **Search pagination does not exist:** `?page=2` and `?page=3` return the same 20 results. Matches by substring, so "no results" is rare. No published hash. XAPKs exist and **the extension lies**: the R2 object is `….apks`, the `content-disposition` calls it `.xapk`, and inside is an XAPK with `manifest.json` `xapk_version` 2 whose base is `<packageName>.apk`, not `base.apk`. The link is `/r2?u=<signed url>`: decode the query rather than following the redirect. R2 signature valid 4 h — and **every anchor carries its own signature**, so the same file in the download page's two panels arrives as two different URLs: measured 03/09/2026 on Spotify, `X-Amz-Expires=14399` against `14400`, because the two panels are signed a moment apart. A signed URL is **not an identity**: deduplication goes on the `objectKey`, and doing it on the URL published two versions sharing one `VersionRef`. `versionCode` only in the info table, inside `span.blur`. The `/latest-updates/feed` entries all begin `[apk_updated]` (96 of 96 on 03/09/2026) and the parser strips it — but **apkcombo also publishes app names that genuinely start with a bracket** (`[Official] Atomy shop` and three more from the same publisher, read off the listing and out of search, neither of which passes through the strip): a bracket in a title is **not** a symptom of a broken strip, and believing it was cost a red canary on 01/09/2026. |
+| **apkmirror** | `www.apkmirror.com` | 🟡 medium | direct | The second-best data quality after F-Droid. `okhttp/*` and `curl/*` → **403 from 153 B**; a Chrome mobile UA → 200: the UA is everything. **`Crawl-delay: 3` is real — it answers 429.** Three-level chain: app → release → variant → interstitial → `download.php` → 302 to R2 (1 h). The variant page gives **the file's SHA-256** *and* **the certificate's SHA-256** in two distinct sections of the `#safeDownload` modal: swapping them is the easy mistake. The `versionCode` is **per variant, not per release**. Bundles are `.apkm`. The RSS feed is the only new-releases source publishing the **developer**, and it carries the icon as the first `<img>` inside `<content:encoded>`'s CDATA — not in an `<enclosure>`, which does not exist. **Bundle-only releases happen, and the canary used to forbid them** (03/09/2026): Firefox 155.0 came back through the adapter as **one variant, an APKM** — `signer`, size and `versionCode` all present, `sha256` null — which is exactly what `providesHash = SOMETIMES` declares ("ALWAYS on single APKs, never on bundles": there is no single file to hash). Two bare Truth assertions requiring a file hash therefore reddened the nightly for a correct adapter, with the issue reading `expected to be true`. The file hash is now conditional on the hydrated variant being an `APK`; what carries the modal-parse invariant unconditionally is the **certificate** fingerprint, which is published on bundles too and comes from the same `#safeDownload .modal-body` through the same label-driven helper. Also worth knowing before reaching for it: `DownloadResolution.artifactType` is **always `APK`** on this store, because it is inferred from the resolved URL's file name and that name is `download.php` — harmless only because `ContainerReader` decides by looking inside the file. |
 | **apkmody** | `apkmody.mobi` | 🟡 medium | direct | The first store here that redistributes modified APKs. `apkmody.com` is on the **blocklist, not a fallback**: deep paths 301 elsewhere. Search is **fuzzy, not substring**, and has **no pagination**. **The `.rating` block shows 4 of 5 stars on every app measured: it is decoration, not a rating.** The search-card image is a *cover*, often a placeholder — never an icon; the real icons are on `/popular`. `versionCode` lives **only** in the CDN file name, verified with `aapt2` against the downloaded APK. The file sits on a specific CDN host: **the host is the only thing distinguishing it from the advert** sitting next to it in the same list with the same markup. The declared size is rounded, so `expectedSize` is null. |
 | **modyolo** | `modyolo.com` | 🔴 very high | direct + **preflight** | **The only store that labels adult content**, with six WordPress categories and server-side `categories_exclude` — but the three most recent posts on the site were adult visual novels filed under "Role Playing": **the filter hides what the store declares, not everything**. **Dead binaries ~22%** (measured over 120 posts) → a HEAD preflight, where a 500 is `Success(false)` and not a store fault. Half of an early estimate was skewed by encoding: the CDN URLs carry raw spaces, and without conditional normalisation 28 of 40 looked dead. Two APIs: `wp/v2/posts` searches and really paginates; `v1/posts/{id}` gives the detail. **`data: null` with HTTP 200 = NotFound.** The file is on no page: it comes from a `POST` to `admin-ajax.php` **with the variant's Referer**. packageName from the Play link, **verified on 8 APKs (7 of them MOD): 8/8**. |
 | **an1** | `an1.com` | 🔴 very high | direct, 2 hops | DataLife Engine, not WordPress. **0 packageName site-wide** and **0 versionCode** → identity by title + developer only, and `UpToDate(comparable = false)`. **But a hash exists on some objects**: `x-amz-meta-checksum-sha256` on the CDN HEAD, verified by downloading 83,757,788 bytes and recomputing. The ETag is multipart and is not the MD5. Search really paginates, with **two** parameters, 10 per page. MOD entries carry `class="item_app mod"`: an exact attribute match loses half of them. Next to the real download sits `an1store.apk` **on the same host** — the host alone does not tell them apart. **`x-ratelimit-*` is a shared budget, not ours** (see below). |
 | **pdalife** | `pdalife.com` | 🔴 very high | user-assisted only | The only store publishing iOS, PSP and Android in the same list. Cloudflare in **passive CDN** mode: no challenge on reads. **Search is not `/suggest/`**: that endpoint exists, is JSON and robots-allowed — and returns **ten results for every query, including ones with no matches**. The HTML search is used instead: 20 per page, declared `data-max_page`, zero results when zero. Queries must be slugified first. packageName **exists** but only inside `.game-download__stores`: the page's first `play.google.com` link is an advert **17 times out of 17**. No hash, no versionCode — `data-version_id` is not a versionCode, it grows site-wide. **Never positional selectors** (advert slot order is randomised server-side). reCAPTCHA v3 on hop 2, where **two of the three buttons are adverts and one is a real `.apk`**. The RSS feed has **5 entries out of 100 dated in the future**, up to 2029. |
-| **uptodown** | `en.uptodown.com` | 🟡 medium | user-assisted (download only) | Third for data quality, and the only assisted store publishing a hash. Use the **language subdomain**: `www` serves Spanish. Search returns **one page only**: `?page=2` gives the same 36 apps in a server-randomised order. Listings carry **SHA-256 per file**, packageName, size, date, ABI and a `minSdk` written **`Android + 5.0`** — with the sign *before* the number. **No `versionCode` anywhere on the site**: `data-version-id` is the file's id. "**Certificate signature**" is **MD5** (32 hex) despite the `icon-40-sha256` icon. Info rows have **three cells** and the first is the icon: a bare `td` reads empty and silently drops the row. An empty search has **no `#content-list`** and 12 recommendation cards with identical markup in its place. Download: a `<button>` plus an interaction-only Turnstile. Their ToS forbid automated access, which makes the user-driven path also the most defensible one. |
+| **uptodown** | `en.uptodown.com` | 🟡 medium | user-assisted (download only) | Third for data quality, and the only assisted store publishing a hash. Use the **language subdomain**: `www` serves Spanish. Search returns **one page only**: `?page=2` gives the same 36 apps in a server-randomised order. Listings carry **SHA-256 per file**, packageName, size, date, ABI and a `minSdk` written **`Android + 5.0`** — with the sign *before* the number. **No `versionCode` anywhere on the site**: `data-version-id` is the file's id. "**Certificate signature**" is **MD5** (32 hex) despite the `icon-40-sha256` icon. Info rows have **three cells** and the first is the icon: a bare `td` reads empty and silently drops the row. An empty search has **no `#content-list`** and 12 recommendation cards with identical markup in its place. Download: a `<button>` plus an interaction-only Turnstile. Their ToS forbid automated access, which makes the user-driven path also the most defensible one. **Seen once, 31/08/2026: every address answering 404 from the nightly runner's egress** — search, chart, latest updates, listing and download page together — with the same adapter, UA and URLs answering 200 on all five from a consumer connection minutes later, and the same pipeline green the two previous nights. Cause unconfirmed and **not reproduced from a consumer IP**, so nothing in the adapter was changed. Worth knowing because of its shape: a refusal wearing a 404 never becomes `StoreError.Blocked`, so no rung of the escalation ladder is offered it and `NotFound` counts as `FailureKind.NOT_FOUND` — deliberately not a store fault, so the breaker stays shut. **From 03/09/2026 the canary asks the language root twice and, when it 404s too, skips the checks instead of failing them**: that egress refusal no longer opens an issue, and skipped checks are written into the run's step summary — while it skips, nothing is checking its parsers. Measured the same day, and it is what decides where the probe points: on a subdomain that does not exist `/` and `/android` both 404, but `/android/search?query=…` answers **200**, so a probe aimed at search would report "alive" from a host that is not there. |
 | **liteapks** | `liteapks.com` | 🔴 very high | direct (+ token) | With the real client — OkHttp, HTTP/2, Chrome mobile UA — the listing answers **200**; `curl` on HTTP/2 gets 403 `cf-mitigated: challenge`, and **OkHttp forced to HTTP/1.1 does too**. With a `curl/8.7.1` UA even OkHttp on HTTP/2 gets 403 — **the UA decides on its own**. Search: 18 per page with `paged` honoured; the declared total **saturates at 60**. Half the listing is read from the `SoftwareApplication` **JSON-LD** (31/31), not from the Tailwind classes. **packageName on 26 listings out of 31**, and only inside `.app-stats`: an advert Play link is on **31 out of 31** and on 5 it is the only one, so "the first link" gives **another app's package** one time in six. No hash, no versionCode. The file page comes in **two** markup shapes, and the version sits in two places. The file is behind a `?token=` plus a Referer (see below). |
 
 ### A measurement taken with one client is not a measurement of your client
@@ -276,6 +276,21 @@ networking:** a measurement taken at the wrong moment is not a measurement. A pr
 `Android/obb` answered *yes* on a process forked before the system restricted its mount namespace —
 and that was the answer one hoped for; repeated after a device reboot, every combination answers no.
 *A measurement that confirms what you wanted to hear gets repeated before being believed.*
+
+**Fifth formulation, and it is the one this section itself was breaking:** a measurement taken from
+the wrong **network** is not a measurement of your users' network. This page opens the store section
+by saying reachability was measured from a consumer connection rather than a datacentre — and the
+nightly canary, the one thing that keeps measuring after release, runs from a datacentre.
+
+It came due on uptodown on 31/08/2026. All five checks went red on a 404, the canary printed *"on
+this store that nearly always means the URL scheme has changed"*, and the scheme had not changed:
+minutes later the same adapter, the same User-Agent and the same URLs answered 200 with every
+assertion green from a consumer connection, and the same pipeline had been green the two
+previous nights. Nothing in the adapter was wrong; the diagnosis was, and it was the only one of the
+five branches that named a single cause with no alternative.
+
+So a red canary is a claim about **that egress** until a consumer connection says otherwise, and the
+404 branch is the one that has to admit it — see [Testing](#testing) for the shape the fix took.
 
 ### A published number is not necessarily a number about you
 
@@ -1387,6 +1402,217 @@ Recording goldens after adding or changing a screen: `./gradlew recordRoborazziD
 **real** sites, so it is neither offline nor deterministic and cannot block anything. It runs nightly and opens
 an issue. The task exists only on `:store:*` modules and its tests are tagged `@Tag("canary")`, which `test`
 excludes — a unit test never touches the network.
+
+**A canary's whole value is its message, so a message that names the wrong job is the same defect as a broken
+parser.** Three readings of a failure were provided for from the start — markup changed, blocked, rate limited —
+and a fourth was not: **a 404 does not name its own cause**. `StoreError.NotFound` carries no code, no URL and no
+breadth, and its own contract says "the app or version does not (or no longer) exist on this store", which is a
+claim a refusal dressed as a 404 quietly violates. On 31/08/2026 uptodown answered 404 to *every* address from
+the runner's egress and the canary reported, five times, that the URL scheme had changed. It had not.
+
+The fix is one extra question asked of the store before a cause is named — **does the language root still
+answer?** — through the adapter's own `healthCheck`, and three things about it generalise to any canary:
+
+- **the question has to be one the failure cannot already have answered.** "Is this address there?" was answered
+  by the 404; "does the root answer?" separates *one address gone* from *every address gone*, which are opposite
+  jobs — rewrite an address, or touch nothing at all;
+- **the probe goes through the adapter**, because a canary that measured with a second client would be measuring
+  that client;
+- **the choice of message is a pure function with an offline test of its own**
+  (`UptodownNotFoundDiagnosisTest`). A diagnostic exercised only by the failure it describes is a diagnostic
+  nobody ever checks — and its sharpest assertion is not about wording but about *difference*: the four readings
+  of a 404 must be four different messages, so any later collapse back to one sentence reddens whatever the words
+  are.
+
+What was deliberately **not** done: widening `StoreError.NotFound` to carry the code and the URL. That would grow
+`:store:api` for a diagnostic want rather than because an adapter does not fit, and the root's answer settles the
+question without it.
+
+**That gap is now closed on all nine, and closing it took nine different answers rather than one.** Every canary
+branches on `NotFound`, and the shape of each branch is a measurement about that store, not a template:
+
+- **modyolo** got the uptodown remedy proper, and it fits better there than anywhere: `healthCheck` fetches the bare
+  `modyolo.com` while every surface the canary touches lives under `/wp-json/`, so a root that answers while an
+  address 404s points at the REST layer and nothing else. It also had the *mirror* of uptodown's defect — its message
+  asserted "the post is gone. **Not an adapter fault**", wrongly exonerating us, and three of the four checks sharing
+  it are searches that never mention a post. What actually answers 404 there is an unregistered REST route
+  (`wp/v2/postz` → `rest_no_route`), whose repair is a path in `ModyoloConfig`: the one job the old sentence ruled out;
+- **apkmody** asks its root too, and there the probe is *louder*, not quieter: a root answering from another domain is
+  that store's demonstrated failure mode (`apkmody.com` already 301s to `wokogames.com`, `.fun` to an IPTV site), so
+  it fails and names the new host. Its own `healthCheck` cannot see that — `resolveRedirect(baseUrl).map { }` discards
+  the URL it resolved to — so the canary resolves the root itself, through the adapter's client. `healthCheck` is left
+  blind on purpose: it has no production caller, and widening production for a diagnostic want is what this project
+  declines to do;
+- **apkmirror and liteapks get no probe at all**, and that is the measurement: both refuse an unwelcome egress with a
+  **403**, which already lands in the `Blocked` branch. An abort on 404 there would silence the one cause a 404 does
+  indicate — a re-slug, or a withdrawn listing. Their `Blocked` branches gained the reading that was missing instead:
+  *this egress may be being refused while a consumer connection gets 200*;
+- **f-droid must not have it**, measured: both hosts are plain nginx with no bot management and no `cf-*` headers, so
+  the shape cannot occur and an abort would suppress a real signal;
+- **an1's branch was missing a cause it actively foreclosed.** `An1DownloadParser` returns `NotFound` when the anchor
+  points *off* an1's hosts — a deliberate refusal of a link shortener, and 2 of 10 minecraft listings resolve to
+  `bit.ly`. The old message named two listing causes and closed with "opening the page by hand says which of the two",
+  so on the third the reader sees a working green button and concludes the canary is broken;
+- **apkcombo, apkmirror and pdalife** had 404s falling through to a catch-all that called them "network or site
+  fault" — the only message in those classes naming neither a job nor a next step, for an error that is not a network
+  fault. With `update_existing` that issue was then reopened nightly.
+
+### Separate the invariant from the premise
+
+The generalisation of all of it, and the rule to apply before writing any canary assertion. A canary
+assertion is one of two things, and mixing them is what produces a red nobody can act on:
+
+- an **invariant** is a claim about *our* code — this selector still matches, this container still isolates the real
+  link from the advert, page 2 is not page 1, the pinned certificate is the one signing the index. It must **fail**;
+- a **premise** is a claim about *the store* — which app is at this ref, which CDN a file lands on, which package a
+  repackaged build declares, how many variants a release has, whether a catalogue still spans two pages, which company
+  is being advertised. Nothing in this repository can make a premise true again, so it must **skip** (`Assumptions.abort`)
+  with a message saying so and what to re-anchor.
+
+The audit that produced this pass found 32 findings across the seven canaries nobody had complained about, and on
+**every one of the seven** the highest-likelihood finding was a premise asserted as an invariant. Four shapes recur,
+and they are worth checking a new assertion against one at a time:
+
+1. **an assertion that forbids a shape the store legitimately publishes.** Ask: *is the forbidden shape genuinely
+   impossible, or merely unusual?* apkcombo's `title.startsWith("[")` against the real app name `[Official] Atomy
+   shop`; apkmirror's `title.contains(" by ")` against `Words by Post`, which that store's **own parser test requires
+   to survive**;
+2. **an expiring premise** anchored to one app, version, package or file. Ask: *is this a fact about our parser, or
+   about their catalogue?*;
+3. **an intermittent assertion over a rotating window** — a feed, a chart, a two-page fetch. Ask: *would this be
+   reproducible tomorrow morning?* These are the expensive ones: green for weeks, red for one night, green again
+   before anyone looks, which is exactly what teaches people to ignore red;
+4. **a diagnosis that names one cause it cannot know.** Ask: *is there a question the failure has not already
+   answered?*
+
+A fifth pattern is not a false red and so is not counted, but it changes the risk picture and has to be named where
+it occurs: **an assertion that cannot fail** — a caption. Where the assertions that *can* fail are concentrated in
+the fragile ones, a class looks far better covered than it is. Four were found in pdalife's canary alone (a regex
+asserted against itself, `substringBefore` asserted against itself, and two `PdalifeConfig` constants compared with
+themselves), so that class's RSS test had one live claim: "the feed parses".
+
+Two captions were worse than decorative, because they were green through the exact regression their comment
+described:
+
+- **apkmirror's feed check.** The comment promised "the version number must not stay in the title" and the line
+  underneath forbade `" by "`. Proven by injection: with version-stripping removed, ten titles came back carrying
+  their versions and **the old assertion stayed green** — none of them contains `" by "`. It was red on legitimate
+  names and blind to the defect it named. Both halves wrong;
+- **an1's `MIN_RESULTS = 5`**, justified as the guard against an exact-attribute selector "silently losing the
+  modified half". Measured: 10 rows, 4 titled `(MOD …)`, so that regression leaves 5 or 6 and the assertion passes.
+  It is now 8. Asserting a MOD/non-MOD mix was considered and rejected: `StoreListingSummary` carries no such flag,
+  so the only signal is the store's own naming — which is shape 1.
+
+The per-store diagnoses are pure functions in each module's test source set with **offline** tests of their own, for
+the reason `UptodownNotFoundDiagnosisTest` exists: on a healthy night none of those branches runs, so a green canary
+never exercises a line of them. Their sharpest assertion is never the wording but the **difference** — the readings
+must stay distinct, so a later collapse into one sentence reddens whatever the words are. That is the defect f-droid's
+`orFail` had for as long as it existed: one line for every failure, under a comment claiming it separated three cases.
+
+A shared helper for the control flow was considered and rejected. The flow is genuinely identical — ask the adapter,
+then choose between failing and aborting — but the messages are long, store-specific and the whole point, `:store:api`
+must not grow for a diagnostic want, and a shared abstraction would invite exactly the porting-by-template that the
+403-versus-404 measurements above show to be wrong three times out of nine.
+
+**Saying the right thing was not enough, and the sequel is dated 03/09/2026.** The message was correct and the
+pipeline went on opening an issue every night — a nightly request to repair a store that works, which is the fastest
+way to teach people to ignore red. When the language root 404s too, uptodown's canary now **skips** the check instead
+of failing it (`Assumptions.abort`, i.e. `skipped` and not `failure`), the Gradle task stays green and the issue step
+never runs. The distinction is not a convenience: a failing test is a claim about the **adapter**, and this is a claim
+about the **network the measurement was taken from**.
+
+Four things keep it honest, and the third is the price:
+
+- **the width is a single reading.** `uptodownIsEgressRefusal` is true *only* when the root answers `NotFound`. A root
+  that **answers** while one address 404s still fails, because that is the real thing — a moved URL scheme, or a
+  reference app that has left the store — and it is ours. Widening the predicate by one reading would start hiding the
+  failure the canary exists to find, so the test asserts the whole **set** of readings allowed to skip, not the case;
+- **the root is asked twice**, the second time only where the answer could change the outcome. An unretried `HEAD` is
+  one bad edge node away from turning a genuinely moved address into a silent skip, and nothing else retries it: a 404
+  is not a challenge, so the escalation ladder offers it no rung. The message is built from the **decisive** answer, so
+  the words and the outcome cannot disagree;
+- **skipped is not green, and the difference has to be made visible rather than asserted.** A skipped test sits two
+  pages inside an HTML report whose index still reads "100% successful", and the XML carrying the abort message was not
+  even among the uploaded artifacts. `canary.yml` now uploads `build/test-results/` as well and writes every skipped
+  check, with its message, into the run's step summary. The price belongs in the open: **while uptodown skips, nothing
+  is checking its parsers.** That is acceptable only because this pipeline blocks nothing, and the alternative is a
+  nightly issue about a store that answers 200 from where the app actually runs;
+- **what has never been measured.** Whether the root 404s from the runner's egress at all is unknown: on 31/08
+  `healthCheck` had no caller, and the five surfaces recorded in the store table do not include the root. A WAF rule
+  scoped to deep paths, which would leave `/` at 200, fits the observation as well as a host-level refusal — and in
+  that case this branch does not fire and the night fails as before. The summary will say which of the two, in one
+  line, on the next occurrence.
+
+Two limits are declared rather than left to be discovered as though a guarantee had been read: the root is **not** "the
+address every URL in the adapter is built from" — `baseUrl` governs search, the chart and the recent list,
+`appUrlTemplate` governs the listing and the download page, and they are independent fields; and a **410**, the code a
+site uses to retire an address deliberately, `StoreErrors` folds onto the same `NotFound`, so nothing here tells it
+from a 404.
+
+### A signed URL is not an identity
+
+The third case, dated 03/09/2026, and the only one of the three where the canary was **right**: the
+defect was in the adapter. `ApkComboDownloadParser` deduplicated the download page's two panels with
+`distinctBy { it.url }`, and on Spotify the same `.apks` appeared twice with URLs differing by **one
+character** — `X-Amz-Expires=14399` against `14400` — because each anchor carries its own signature
+and the two panels are signed a moment apart. The result was two `AppVersion`s sharing one
+`VersionRef`: the invariant that test guards ("as many distinct refs as variants") broken, and
+downstream the same family of fault as "a domain key is not a list key" — two rows with one key.
+
+Three things worth keeping:
+
+- **the right key was already there and already documented.** `ApkComboVariant.objectKey` describes
+  itself as the variant's identity, and `ApkComboRefs.versionRef` builds the ref from exactly that.
+  The deduplication was looking at the one field in the structure that is *not* an identity;
+- **the intermittence is the expensive part.** Whether the two signatures land on the same second
+  decides the outcome, so the real page is fine almost always: on 31/08 the defect was not there and
+  on 03/09 it was, with nothing changed on either side;
+- **the committed fixture cannot express the case**, because there both panels carry byte-identical
+  URLs. The offline test therefore uses a **constructed** document and says so — the same choice
+  already made for apkmody's `ItemList` and apkmirror's " by ".
+
+### An assertion that forbids a shape the store publishes
+
+The second defect of the same family — a canary going red with nothing broken — and this time it was not the message
+but the **assertion**. On apkcombo's feed the line was `page.items.filter { it.title.startsWith("[") }.isEmpty()`,
+there to verify that `ApkComboFeedParser.stripPrefix` still removes the marker the feed puts on every entry. On
+01/09/2026 it went red over **one** entry out of ninety-six: `[Official] Atomy shop`.
+
+The marker had been stripped exactly as it should be. What remained was **the app's own name**, and neither of the two
+surfaces that prove it passes through `stripPrefix`: the listing page calls it `[Official] Atomy shop`, search calls it
+`[Official] Atomy shop`, and that publisher ships four of them (`[Official] Atomy Mobile`, `[Official] CH.ATOMY`,
+`[Official] Atomy Ticket`).
+
+Four things, and the fourth is the general rule:
+
+- **the worst part was the intermittence.** The feed is a ninety-six-entry window that rotates, so the identical line
+  was green the night before and green again as soon as that entry scrolled out. A red nobody can reproduce is the
+  worst thing a canary can emit, because it is precisely what teaches people to ignore red;
+- **the property that separates the two worlds is breadth, not brackets.** A surviving marker is the *same* token
+  leading *every* row — that is what a marker is for; an app that brackets its own name is a handful of rows with a
+  token of their own. Measured 03/09/2026 through the adapter: `[apk_updated]` on 96 raw titles out of 96 before
+  stripping, and zero bracketed titles after;
+- **two details were decided by mutating the code, not by thinking about it.** Rows group by the **leading word**
+  inside the brackets rather than by the token verbatim, because a marker with a varying payload —
+  `[apk_updated 3.1.4]`, or a date — escapes `FEED_PREFIX` (which can match neither a digit nor a space) and so
+  survives on *every* row without any two rows sharing a token: counted literally the maximum is one and the check
+  stays green, i.e. weaker than the line it replaced. And the threshold has an **absolute floor** as well as a share,
+  because `MIN_FEED_ITEMS` is 10 and a quarter of ten is two: the four Atomy names clear that on their own, reproducing
+  the very false positive the fix was written for;
+- **the decision is a pure function with an offline test** (`ApkComboFeedMarkerTest`), for the same reason
+  `UptodownNotFoundDiagnosisTest` exists above: on a healthy night the feed contains *neither* of the two cases that
+  logic exists to tell apart, so a green canary never exercises it. Without the offline test it would be a caption.
+
+**The rule: before asserting anything about what a store publishes, ask whether the forbidden shape is genuinely
+impossible — or merely unusual.** `startsWith("[")` was not a property of our parser; it was an assumption about other
+people's app names.
+
+And a limit that remains, so nobody discovers it believing the opposite: `FEED_PREFIX` is `IGNORE_CASE` over
+`[a-z_]+`, so it matches `[Official]` as readily as `[apk_updated]`. The only thing keeping `[Official] Atomy shop`
+intact today is that the feed's own marker precedes it, on 96 rows of 96 — **a measured fact about the feed, not a
+property of the regex.** Were apkcombo to emit a title without the marker, the parser would amputate a real name to
+`Atomy shop`, which no longer matches the listing's; and with nothing bracketed left to count, neither the old
+assertion nor the new one would notice.
 
 **All nine canaries exist, including F-Droid's**, and that one arrived last for a plausible, wrong reason: "it is
 not a scraped store, there is no markup to change". True, and beside the point: what can break silently there is

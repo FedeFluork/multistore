@@ -147,13 +147,35 @@ class ApkComboCanaryTest {
         // `/{slug}/{packageName}/`. If its shape changed, the entries would remain but without the
         // package — and step 4 of pre-install verification would lose its comparison.
         assertThat(page.items.count { it.packageName != null }).isEqualTo(page.items.size)
-        // The bracketed prefix belongs to the feed: were it to appear in the titles, every app on
-        // Home would be a new app to the identity matcher.
-        assertThat(page.items.filter { it.title.startsWith("[") }).isEmpty()
+        // `stripPrefix` must go on removing the feed's **own** marker: were it to survive, every
+        // row would carry it, every title would differ from the one on the listing, and to the
+        // identity matcher Home would be ninety-six apps nobody has ever seen.
+        //
+        // The reading is **breadth, not brackets**, and it deliberately is not `startsWith("[")` —
+        // that line reddened this nightly on 01/09/2026 over an app legitimately called
+        // `[Official] Atomy shop`. Why, and why the decision is a function with an offline test
+        // rather than four lines here, is in `survivingFeedMarker`: on a healthy day the live feed
+        // contains neither of the two cases it exists to tell apart, so this call is the one thing
+        // in the class that a green run cannot vouch for.
+        survivingFeedMarker(page.items.map { it.title })?.let { marker ->
+            error(
+                "new-releases feed: **the feed's marker is no longer being stripped**. " +
+                    "${marker.count} of ${marker.of} titles begin with a bracketed token keyed " +
+                    "'${marker.key}' (for example '${marker.token}'). At that ratio it is a " +
+                    "marker and not a name: apkcombo has changed the shape of the prefix and " +
+                    "`ApkComboFeedParser.FEED_PREFIX` no longer matches it. This is not a " +
+                    "selector, and nothing else in this class will go red — the entries are all " +
+                    "there with their refs and their packages, and only their titles are wrong. " +
+                    "Read the raw `<title>` of `latest-updates/feed` and widen that regex. If " +
+                    "instead the ratio looks like a publisher that brackets its own app names, " +
+                    "the threshold is what is wrong: see `MARKER_SHARE` and `MARKER_FLOOR`, and " +
+                    "the 01/09/2026 note above.",
+            )
+        }
     }
 
     /**
-     * The value, or a message saying **which of the two failures** happened.
+     * The value, or a message saying **which** of the failures happened.
      *
      * This is what makes a canary useful: whoever reads the issue opened overnight must be able to
      * tell from the first line whether to rewrite a selector or just retry tomorrow.
@@ -178,6 +200,32 @@ class ApkComboCanaryTest {
                     "). Not a fault and not a markup change: it is the canary asking too much, or " +
                     "another client from the same egress. Before touching the adapter, look at " +
                     "`permitsPerSecond`.",
+            )
+            // Until 03/09/2026 a 404 fell through to the catch-all below, which called it a
+            // "network or site fault" — the one message in this class naming neither a job nor a
+            // next step, for an error that is not a network fault at all. And with
+            // `update_existing`, `canary.yml` reopens that same issue every night.
+            //
+            // Three producers, and on this store the **middle one is the interesting one**,
+            // because apkcombo searches by substring: a query returning nothing is rare here, so a
+            // 404 is far more likely to be a listing than a bad search term.
+            StoreError.NotFound -> error(
+                "$what: **404, and on this store that is not a network fault.** Three causes, " +
+                    "and which to check depends on `$what`. (1) **The listing is gone or has " +
+                    "moved**: refs are `{slug}/{package}`, and apkcombo answers **301** for a " +
+                    "non-canonical slug — which the adapter follows — so a 404 means the app has " +
+                    "left the store rather than been renamed. Re-anchor the constant. (2) **The " +
+                    "page contradicted itself about the package**: `ApkComboDetailParser` " +
+                    "returns this error, and not a `ParseFailure`, when the package declared on " +
+                    "the page is not the one the ref asked for — a deliberate refusal, since the " +
+                    "ref's second segment *is* the package on this store and a mismatch would " +
+                    "mean serving another app's file. That one is not repaired by re-anchoring: " +
+                    "check the listing by hand first. (3) **On `download`: no variant was " +
+                    "left to choose.** The adapter returns this when the variants list is empty " +
+                    "after parsing, which is the vicious-circle shape already documented for " +
+                    "`com.iMe.android` — and the fallback that saves it reads the version list " +
+                    "off the very page that had no `/r2?` anchors, so if that fallback stopped " +
+                    "working this is what it would look like.",
             )
             else -> error("$what: network or site fault ($e). If it recurs, investigate.")
         }

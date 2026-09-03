@@ -236,6 +236,61 @@ class ApkComboParsersTest {
             assertThat(best.expiresAt).isEqualTo(Instant.parse("2026-08-24T19:00:04Z"))
         }
 
+        /**
+         * **The two panels are deduplicated by object key, not by URL**, and this is the only place
+         * that proves it.
+         *
+         * The document is **constructed**, and the reason is worth stating rather than hiding: the
+         * committed fixture happens to carry byte-identical signed URLs in both panels, so
+         * deduplicating on either field gives the same answer there and the case cannot be
+         * expressed. It is not hypothetical. On 03/09/2026 the live Spotify page served the
+         * recommended `.apks` twice with URLs differing in one character — `X-Amz-Expires=14399`
+         * against `14400`, because each anchor carries its own signature and the two panels were
+         * signed a moment apart. Keyed on the URL both survived, `getAppDetails` published two
+         * versions with the **same** `VersionRef` (which comes from the object key), and the canary
+         * went red on the one invariant in that class that is about us and not about the store.
+         *
+         * The intermittence is the point: whether the two signatures land on the same second
+         * decides it, so the real page is usually fine and this defect would return as an
+         * unreproducible red. `ApkComboVariant.objectKey` is documented as the variant's identity,
+         * and a signed URL is exactly what is not one.
+         */
+        @Test
+        fun `the same file in both panels is one variant, however it was signed`() {
+            fun signed(expires: Int) = (
+                "https%3A%2F%2Fapks.r2.cloudflarestorage.com%2Fcom.spotify.music%2F9.1%2F" +
+                    "145505446.d42fec1a.apks%3Fresponse-content-disposition%3Dattachment%253B" +
+                    "%2520filename%253D%2522Spotify_9.1_apkcombo.com.xapk%2522%26" +
+                    "X-Amz-Date%3D20260903T093608Z%26X-Amz-Expires%3D$expires"
+                )
+
+            fun panel(id: String, expires: Int) = """
+                <div id="$id"><div class="tree"><ul><li><code>arm64-v8a</code>
+                  <a class="variant" href="/r2?u=${signed(expires)}">
+                    <span class="vername">9.1</span><span class="vercode">(145505446)</span>
+                    <span class="vtype"><span class="type-xapk">XAPK</span></span>
+                    <span class="description"><span class="spec">224 MB</span></span>
+                  </a>
+                </li></ul></div></div>
+            """.trimIndent()
+
+            // The same object key in both panels, signed one second apart.
+            val html = "<html><body>" +
+                panel("best-variant-tab", 14400) +
+                panel("variants-tab", 14399) +
+                "</body></html>"
+
+            val variants = parser.parse(html, DOWNLOAD_URL, Fixtures.APP_TITLE).expect()
+
+            assertThat(variants).hasSize(1)
+            // And the survivor is the one apkcombo marked as recommended, which is what the
+            // ordering of the two panels in `parse` is for.
+            assertThat(variants.single().recommended).isTrue()
+            // The invariant the canary states, asserted here where it can be reached offline: as
+            // many distinct refs as there are variants.
+            assertThat(variants.map { it.objectKey }.toSet()).hasSize(variants.size)
+        }
+
         @Test
         fun `an older version's page has the same structure`() {
             val variants = parser.parse(

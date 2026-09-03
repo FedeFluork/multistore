@@ -57,8 +57,21 @@ internal class ApkComboDownloadParser(private val config: ApkComboConfig) {
             val recommended = variantsIn(document, config.selectors.downloadBestTab, appTitle, true)
             val all = variantsIn(document, config.selectors.downloadVariantsTab, appTitle, false)
             // The page's two panels show the same set, with the recommended one repeated at the
-            // top. One entry per URL is kept, preferring the marked one.
-            (recommended + all).distinctBy { it.url }
+            // top. One entry per **object key** is kept, preferring the marked one.
+            //
+            // Not per URL, and that distinction cost a red canary on 03/09/2026. Each anchor wraps
+            // its **own** signature, and the two panels are signed a moment apart: on Spotify the
+            // recommended `.apks` appeared twice with URLs differing in one character —
+            // `X-Amz-Expires=14399` against `14400`. Deduplicating on the URL therefore kept both,
+            // `getAppDetails` published two versions with the **same** `VersionRef` (which is
+            // derived from the object key, not the URL), and the invariant the canary guards — as
+            // many distinct refs as variants — broke.
+            //
+            // It is also the worst shape of intermittence: whether the two signatures land on the
+            // same second decides it, so the same page is fine most of the time. `objectKey` is
+            // documented on `ApkComboVariant` as the variant's identity, and a signed URL is
+            // precisely what is *not* one.
+            (recommended + all).distinctBy { it.objectKey }
         }
 
     private fun variantsIn(
