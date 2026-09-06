@@ -45,6 +45,18 @@ data class DownloadStatus(
      */
     val installedAt: Instant? = null,
     /**
+     * The SHA-256 **computed over the bytes that landed on disk**, not the one the store published.
+     *
+     * The distinction is the whole point of the field. `expected_sha256` is a claim by a third
+     * party; this is a measurement made by us, in streaming, while the file was arriving — and it
+     * is what makes a sentence like "SHA-256 verified: a1b2…" true rather than a repetition of what
+     * someone else said. It is `null` on a transfer that has not finished.
+     *
+     * The column has been written since M1 and had **no reader**: the same shape as
+     * `ArtifactType`, `versionHistory` and `translationUrl` before this release.
+     */
+    val sha256: Sha256? = null,
+    /**
      * An installation was meant to follow, and has not happened yet.
      *
      * `false` on a transfer the periodic check started to leave ready for later: that one was asked

@@ -34,4 +34,10 @@
     <string name="downloads_status_failed">Il download non è riuscito.</string>
     <string name="downloads_status_installed">Da %1$s · installata</string>
     <string name="downloads_status_removed">Da %1$s · file eliminato</string>
+
+    <!-- Passare ad altri quello che è già sul dispositivo, e avviare quello che si è installato. -->
+    <string name="downloads_share">Condividi il file</string>
+    <string name="downloads_open">Apri</string>
+    <string name="downloads_share_text">%1$s, scaricata da %2$s con MultiStore.</string>
+    <string name="downloads_share_hash">SHA-256 verificato allo scaricamento: %1$s</string>
 </resources>

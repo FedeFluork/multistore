@@ -1,6 +1,8 @@
 package com.multistore.core.data.repository
 
 import android.content.Context
+import android.net.Uri
+import androidx.core.content.FileProvider
 import java.io.File
 
 /**
@@ -56,6 +58,9 @@ object Staging {
      */
     const val SPLIT_SUFFIX = ".split"
 
+    /** The authority's suffix, the other half of `${applicationId}.staging` in the manifest. */
+    private const val PROVIDER_SUFFIX = "staging"
+
     fun dir(context: Context): File = File(context.filesDir, DIRECTORY).apply { mkdirs() }
 
     /** Where the pieces of the [download] container are opened. */
@@ -66,6 +71,30 @@ object Staging {
         splits.name.takeIf { it.endsWith(SPLIT_SUFFIX) }
             ?.removeSuffix(SPLIT_SUFFIX)
             ?.let { File(splits.parentFile, "$it.apk") }
+
+    /**
+     * The authority of the `FileProvider` that lets one of these files leave the app.
+     *
+     * Derived from the package name rather than written out, because the three variants that live
+     * side by side on the same device — `com.multistore.debug`, `.minified` and the release — need
+     * three different authorities, and two providers claiming the same one make the second install
+     * fail with `INSTALL_FAILED_CONFLICTING_PROVIDER`. `${applicationId}.staging` in the manifest and
+     * this suffix are the two halves of the same string, which is why they sit next to the constant
+     * naming the directory they both point at.
+     */
+    fun authority(context: Context): String = "${context.packageName}.$PROVIDER_SUFFIX"
+
+    /**
+     * A `content://` URI for a staged file, or `null` if that file is not in staging.
+     *
+     * The `null` branch is the point. `FileProvider.getUriForFile` throws
+     * `IllegalArgumentException` for a path outside the declared subtree, and the caller here is a
+     * screen holding a `File` that came out of a database row — a row whose path was written by a
+     * previous version of the app, or by a code path that put the file somewhere else. A share
+     * button that closes the app is worse than a share button that is not drawn.
+     */
+    fun shareableUri(context: Context, file: File): Uri? =
+        runCatching { FileProvider.getUriForFile(context, authority(context), file) }.getOrNull()
 
     /**
      * Top-level files **and directories**: what whoever cleans up, and whoever measures, has to

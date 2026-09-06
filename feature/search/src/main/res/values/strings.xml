@@ -71,4 +71,6 @@
         <item quantity="one">%1$s does not publish %2$s in its results, so it was not queried.</item>
         <item quantity="other">%1$s do not publish %2$s in their results, so they were not queried.</item>
     </plurals>
+    <string name="search_rating_count">\u2605 %1$s (%2$s)</string>
+    <string name="search_downloads">%1$s downloads</string>
 </resources>

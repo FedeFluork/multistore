@@ -73,6 +73,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import com.multistore.core.model.MyAppsSort
+import com.multistore.core.model.MyAppsSettings
 
 /**
  * The repositories' test doubles, in one place.
@@ -323,6 +325,13 @@ class FakeSettingsRepository(
     override val security = MutableStateFlow(SecuritySettings())
     override val remoteConfig = MutableStateFlow(RemoteConfigSettings())
     override val search = MutableStateFlow(SearchSettings())
+
+    /**
+     * Mutable and not a constant: "My apps" reads it to arrange the list, so a test about the order
+     * has to be able to say what the order is — and, since [setMyAppsSort] writes here, a test about
+     * the control changing it can assert on the same flow the screen reads.
+     */
+    override val myApps = MutableStateFlow(MyAppsSettings())
     override val notifications = MutableStateFlow(NotificationSettings())
     override val diagnostics = MutableStateFlow(DiagnosticsSettings())
     override val network = MutableStateFlow(
@@ -365,6 +374,10 @@ class FakeSettingsRepository(
 
     override suspend fun setInstallerPreference(preference: InstallerPreference) {
         installation.value = InstallSettings(preference)
+    }
+
+    override suspend fun setMyAppsSort(sort: MyAppsSort) {
+        myApps.value = myApps.value.copy(sort = sort)
     }
 
     override suspend fun setAllowUnverifiedHash(allow: Boolean) = Unit

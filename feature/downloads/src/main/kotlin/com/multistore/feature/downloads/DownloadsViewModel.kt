@@ -12,8 +12,10 @@ import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.InstallProgressStep
 import com.multistore.core.model.DownloadState
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.Sha256
 import com.multistore.core.model.StoreId
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
 import javax.inject.Inject
 import kotlin.time.Instant
 import kotlinx.coroutines.Job
@@ -46,13 +48,34 @@ data class DownloadItem(
     val bytesTotal: Long?,
     val fraction: Float?,
     /**
-     * The staged file is on disk.
+     * The staged file, when there is one.
      *
-     * A field on its own and not folded into [readyToInstall], because the file outlives that
+     * A field of its own and not folded into [readyToInstall], because the file outlives that
      * state: a cancelled transfer leaves a **partial** one, which is worth exactly as much — the
      * megabytes are paid for either way — and is what gives a paused row something to delete.
+     *
+     * It carries the `File` rather than a `Boolean` because sharing means handing a `content://` URI
+     * to another app, and only `Staging` knows how to build one from a path under `filesDir`. It
+     * replaced a `hasFile` flag held next to it: two fields answering "is there a file" are two
+     * fields that can disagree, and the one that would have been wrong is the one the Install button
+     * reads.
      */
-    val hasFile: Boolean,
+    val file: File?,
+    /**
+     * The package this download installs, when the store told us.
+     *
+     * Four stores out of nine do not publish it, so it is `null` on a real quarter of the rows — and
+     * that is what decides whether "Open" can be offered at all: with no package name there is
+     * nothing to ask `PackageManager` about.
+     */
+    val packageName: String?,
+    /**
+     * The SHA-256 **measured while the bytes were arriving**, not the one the store published.
+     *
+     * It is what makes the share text say something true: the digest of the file being handed over,
+     * computed by us. The column has existed since M1 with no reader.
+     */
+    val sha256: Sha256?,
     /** When it was installed, or `null` if it never was. */
     val installedAt: Instant?,
     val createdAt: Instant,
@@ -60,6 +83,9 @@ data class DownloadItem(
     /** What this screen is doing to this row right now. */
     val install: RowInstallState = RowInstallState.Idle,
 ) {
+    /** `true` if something is actually on disk for this row. */
+    val hasFile: Boolean get() = file != null
+
     /** The APK is whole and nobody has installed it: the row that offers Install and Delete. */
     val readyToInstall: Boolean get() = state == DownloadState.READY && hasFile
 
@@ -334,7 +360,9 @@ class DownloadsViewModel @Inject constructor(
         // button both clear `file_path` and close the row, so a `READY` row with no file should not
         // exist. This is the guard for the day the two disagree anyway, and what it buys is an
         // Install button that is never over nothing.
-        hasFile = file != null,
+        file = file,
+        packageName = packageName,
+        sha256 = sha256,
         installedAt = installedAt,
         createdAt = createdAt,
         error = error,

@@ -16,6 +16,7 @@ import com.multistore.core.model.UpdateSettings
 import com.multistore.core.remoteconfig.RemoteConfigStatus
 import com.multistore.core.testing.ScreenshotTest
 import org.junit.Test
+import com.multistore.core.model.MyAppsSettings
 
 /**
  * Screenshots of [SettingsScreen] in both themes.
@@ -72,6 +73,9 @@ class SettingsScreenScreenshotTest : ScreenshotTest() {
                 // Off, which is the default and the safe value: the golden photographs the
                 // configuration the app starts with.
                 search = SearchSettings(),
+                // Alphabetical, which is the proto zero value: the golden photographs the order the
+                // installed list comes out in for whoever chose nothing.
+                myApps = MyAppsSettings(),
                 // The four notices at their default, that is all on: the golden photographs the app
                 // that speaks, which is the one whoever never opens Settings gets.
                 notifications = NotificationSettings(),

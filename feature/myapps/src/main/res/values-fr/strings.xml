@@ -48,4 +48,13 @@
         <item quantity="many">%1$d logithèques n’ont pas répondu</item>
         <item quantity="other">%1$d logithèques n’ont pas répondu</item>
     </plurals>
+
+    <!-- Rechercher et ordonner dans la liste. -->
+    <string name="myapps_action_sort">Changer l\u2019ordre</string>
+    <string name="myapps_sort_dialog_title">Ordre de la liste</string>
+    <string name="myapps_sort_dialog_close">Fermer</string>
+    <string name="myapps_search_label">Rechercher dans vos applications</string>
+    <string name="myapps_search_clear">Effacer la recherche</string>
+    <string name="myapps_no_matches_title">Aucune correspondance</string>
+    <string name="myapps_no_matches_message">Aucune application install\u00e9e ne s\u2019appelle \u00ab\u00a0%1$s\u00a0\u00bb. Vos applications sont toujours l\u00e0\u00a0: effacez la recherche pour les revoir.</string>
 </resources>

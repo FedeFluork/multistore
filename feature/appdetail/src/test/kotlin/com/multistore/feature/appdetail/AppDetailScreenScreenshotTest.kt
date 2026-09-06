@@ -56,6 +56,32 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
     @Test
     fun crossStoreDark() = capture(CROSS_STORE_SCREEN_NAME, ThemeMode.DARK) { CrossStore() }
 
+    @Test
+    fun installedLight() = capture(INSTALLED_SCREEN_NAME, ThemeMode.LIGHT) { Installed() }
+
+    @Test
+    fun installedDark() = capture(INSTALLED_SCREEN_NAME, ThemeMode.DARK) { Installed() }
+
+    /**
+     * The app is here, it is current, and the page has an **Open** button.
+     *
+     * It is the branch that had nothing in it before: up to date meant a sentence and an "Uninstall",
+     * i.e. a page whose only offer was to undo the thing the user had come to do. The golden is worth
+     * a pair of its own because the button is drawn only where three conditions hold at once —
+     * installed, up to date, and a package with a launcher activity — and none of the other goldens
+     * has all three.
+     */
+    @Composable
+    private fun Installed() {
+        Content(
+            installedVersionCode = 1_023_052,
+            upToDate = true,
+            // `null` here would be the case of a package with no launcher activity — an input method,
+            // a wallpaper — which is common enough on F-Droid to be the reason the parameter exists.
+            onOpenApp = {},
+        )
+    }
+
     /**
      * "Available on 2 stores" **and** a possible match, in the same golden.
      *
@@ -138,6 +164,8 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
         crossStore: CrossStoreAvailability = CrossStoreAvailability(),
         versions: List<AppVersion>? = null,
         installedVersionCode: Long? = null,
+        upToDate: Boolean = false,
+        onOpenApp: (() -> Unit)? = null,
         versionHistorySupported: Boolean = false,
         versionHistory: VersionHistoryUiState = VersionHistoryUiState(),
     ) {
@@ -168,6 +196,12 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
                             // on six stores out of nine: without it here the golden would photograph
                             // the incomplete row and nobody would ever see the complete one.
                             rating = 4.6f,
+                            // The same argument one field further: the count is published by five
+                            // stores and the downloads label by three, and both were being collected
+                            // and thrown away. A six-figure count is deliberate — it is what shows
+                            // that the number goes through `NumberFormat` and not `toString`.
+                            ratingCount = 128_461,
+                            downloadsLabel = "10M+",
                         ),
                         description = LocalizedText(
                             mapOf(
@@ -186,7 +220,11 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
                             signerSha256 = null,
                         )
                     },
-                    selection = VersionSelection.Outcome.Offer(version, isUpdate = false),
+                    selection = if (upToDate) {
+                        VersionSelection.Outcome.UpToDate(version)
+                    } else {
+                        VersionSelection.Outcome.Offer(version, isUpdate = false)
+                    },
                     stale = false,
                     // The same verdicts the repository computes: the golden photographs the screen,
                     // not a simplified version of the rule.
@@ -221,10 +259,12 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
             ),
             preferredLanguageTags = listOf("en"),
             canInstallPackages = false,
-            // Not `null`: the golden must photograph the "open in browser" action too, which is the
-            // only interactive element of the top bar besides the back button — and therefore the only
-            // one the accessibility check can say anything about.
+            // Not `null`: the golden must photograph the top bar's two actions as well. They are the
+            // only interactive elements up there besides Back, and therefore the only ones the
+            // accessibility check hooked to every capture can say anything about.
             onOpenInBrowser = {},
+            onShareListing = {},
+            onOpenApp = onOpenApp,
             onBack = {},
             onInstall = {},
             onUninstall = {},
@@ -249,5 +289,6 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
         const val SCREEN_NAME = "AppDetailScreen"
         const val VERIFIED_SCREEN_NAME = "AppDetailScreen_verification"
         const val CROSS_STORE_SCREEN_NAME = "AppDetailScreen_store"
+        const val INSTALLED_SCREEN_NAME = "AppDetailScreen_installed"
     }
 }

@@ -37,4 +37,26 @@
         <item quantity="many">%1$d applications prêtes à installer</item>
         <item quantity="other">%1$d applications prêtes à installer</item>
     </plurals>
+
+    <!-- La bande d\'images et sa visionneuse plein écran. -->
+    <string name="gallery_screenshot_position">Capture %1$d sur %2$d</string>
+    <string name="gallery_close">Fermer la capture</string>
+    <string name="gallery_position">%1$d / %2$d</string>
+
+    <!-- Le panneau « tout mettre à jour », affiché sur l’accueil et dans « Mes applications ». -->
+    <string name="update_all_action">Tout mettre à jour</string>
+    <string name="update_all_applying">Mise à jour %1$d sur %2$d</string>
+    <string name="update_all_finished">%1$d mises à jour, %2$d non effectuées</string>
+    <string name="update_all_dismiss">OK</string>
+    <plurals name="update_all_title">
+        <item quantity="one">%1$d mise à jour disponible</item>
+        <item quantity="many">%1$d mises à jour disponibles</item>
+        <item quantity="other">%1$d mises à jour disponibles</item>
+    </plurals>
+
+    <!-- L’ordre de la liste des applications installées. Partagé par les réglages et par la liste. -->
+    <string name="myapps_sort_name">Nom</string>
+    <string name="myapps_sort_updatable">Mises à jour en premier</string>
+    <string name="myapps_sort_recent">Installées récemment</string>
+    <string name="myapps_sort_store">Magasin d’origine</string>
 </resources>

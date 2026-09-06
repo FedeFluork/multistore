@@ -22,6 +22,9 @@ import com.multistore.core.domain.usecase.SelfUpdateStep
 import com.multistore.core.domain.usecase.ObserveUpdatesUseCase
 import com.multistore.core.domain.usecase.SyncIndexUseCase
 import com.multistore.core.domain.usecase.SyncRequestOutcome
+import com.multistore.core.domain.usecase.UpdateAllAppsUseCase
+import com.multistore.core.domain.usecase.UpdateAllStep
+import com.multistore.core.model.UpdateAllUiState
 import com.multistore.core.model.Category
 import com.multistore.core.model.OwnPackage
 import com.multistore.core.model.StoreId
@@ -64,23 +67,6 @@ sealed interface IndexStatus {
     data class Synced(val entryCount: Int, val syncedAt: Instant) : IndexStatus
 
     data class Failed(val error: AppError, val previous: Synced?) : IndexStatus
-}
-
-/**
- * How far an "update all" has got.
- *
- * It is not an atomic operation and must not be told as one: with only `SessionInstaller` every app
- * asks for its own system confirmation, so five updates are five dialogs in a row. Saying where we are
- * is the only thing that makes that queue understandable rather than exhausting.
- */
-sealed interface UpdateAllUiState {
-
-    data object Idle : UpdateAllUiState
-
-    data class Running(val done: Int, val total: Int, val label: String) : UpdateAllUiState
-
-    /** [failed] includes cancellations: whoever said no to the system dialog. */
-    data class Finished(val installed: Int, val failed: Int) : UpdateAllUiState
 }
 
 /**
@@ -168,6 +154,7 @@ class HomeViewModel @Inject constructor(
     private val homeContent: GetHomeContentUseCase,
     private val updates: ObserveUpdatesUseCase,
     private val installApp: InstallAppUseCase,
+    private val updateAllApps: UpdateAllAppsUseCase,
     private val remoteIndex: RemoteIndexRepository,
     private val selfUpdates: SelfUpdateRepository,
     private val installSelfUpdate: InstallSelfUpdateUseCase,
@@ -347,39 +334,27 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Updates everything that has something newer, one app at a time.
+     * Updates everything that has something newer.
      *
-     * In sequence rather than together because with only `SessionInstaller` every installation opens
-     * the system confirmation screen, and two such screens at once do not exist. The loop therefore
-     * waits for each to finish — the wait is inside `collect`, because the install flow closes when the
-     * system reports the outcome.
-     *
-     * MultiStore goes last: updating itself kills the process halfway through the commit, and with it
-     * the loop — the apps after it would never be touched, and the user would have no way of knowing
-     * which. Putting it at the end costs a `sortedBy` and removes that case. No store publishes
-     * MultiStore today, so the line is never walked — but the day one does, the normal path will take
-     * it without anybody having to remember.
+     * The loop itself is **not** here any more: it is `UpdateAllAppsUseCase`, in `:core:domain`,
+     * because "My apps" offers the same gesture and a `:feature:*` may not depend on another. What
+     * stays here is what belongs to a screen — turning the steps into something to draw, and handing
+     * the system's confirmation intent to whoever is in the foreground.
      */
     fun updateAll() {
         if (updateAllJob?.isActive == true) return
         updateAllJob = viewModelScope.launch {
-            val targets = updates.available()
-                .first()
-                .sortedBy { it.app.packageName == ownPackage.name }
-            if (targets.isEmpty()) return@launch
+            updateAllApps().collect { step ->
+                when (step) {
+                    is UpdateAllStep.Progress -> updateAll.value =
+                        UpdateAllUiState.Running(step.done, step.total, step.label)
 
-            var installed = 0
-            var failed = 0
-            targets.forEachIndexed { index, update ->
-                val channel = update.channel ?: return@forEachIndexed
-                updateAll.value = UpdateAllUiState.Running(
-                    done = index,
-                    total = targets.size,
-                    label = channel.title,
-                )
-                if (install(update, channel)) installed++ else failed++
+                    is UpdateAllStep.UserAction -> _userActions.emit(step.intent)
+
+                    is UpdateAllStep.Finished -> updateAll.value =
+                        UpdateAllUiState.Finished(step.installed, step.failed)
+                }
             }
-            updateAll.value = UpdateAllUiState.Finished(installed = installed, failed = failed)
         }
     }
 
@@ -429,36 +404,6 @@ class HomeViewModel @Inject constructor(
 
     fun dismissUpdateAllResult() {
         if (updateAll.value is UpdateAllUiState.Finished) updateAll.value = UpdateAllUiState.Idle
-    }
-
-    /**
-     * A single app, from the registered channel.
-     *
-     * `explicitVersion` is the one the check found, not "the one the rule would pick now": between the
-     * check and the tap the store may have published something else, and the user pressed a button that
-     * stated a precise number.
-     */
-    private suspend fun install(update: InstalledAppUpdate, channel: UpdateChannel): Boolean {
-        var installed = false
-        installApp(
-            storeId = channel.storeId,
-            ref = channel.ref,
-            explicitVersion = update.available,
-        ).collect { step ->
-            when (step) {
-                is InstallProgressStep.Install -> when (val inner = step.step) {
-                    is InstallStep.UserActionRequired -> _userActions.emit(inner.intent)
-                    is InstallStep.Installed -> installed = true
-                    else -> Unit
-                }
-
-                // An assisted path cannot be carried forward from here: it needs a WebView and a
-                // gesture on the store page. It counts as unsuccessful, and the user finds it on the
-                // detail page with its own button.
-                else -> Unit
-            }
-        }
-        return installed
     }
 
     private data class UpdatesSnapshot(

@@ -123,4 +123,27 @@
     <string name="appdetail_container_expansion_failed">Los datos del juego no se han podido copiar: %1$s</string>
     <string name="appdetail_rejected_foreign_split">La pieza %1$s no pertenece a esta aplicación: %2$s.</string>
     <string name="appdetail_unknown_sources_unreachable">Este dispositivo no tiene una pantalla para ese ajuste: el software de %1$s puede haberla movido o quitado. Busca «instalar apps desconocidas» en los ajustes del sistema.</string>
+
+    <!-- Compartir y abrir: los dos extremos del recorrido que terminaba fuera de la aplicaci\u00f3n. -->
+    <string name="appdetail_action_share">Compartir</string>
+    <string name="appdetail_action_open">Abrir</string>
+    <string name="appdetail_share_listing_text">%1$s en %2$s\n%3$s</string>
+
+    <!-- Datos de la cabecera que seis tiendas de nueve no publican. -->
+    <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>
+    <string name="appdetail_meta_downloads">%1$s descargas</string>
+
+    <!-- Lo que la tienda ya publicaba y nadie mostraba. -->
+    <string name="appdetail_section_screenshots">Capturas de pantalla</string>
+    <string name="appdetail_section_whats_new">Novedades</string>
+    <string name="appdetail_whats_new_version">en la versi\u00f3n %1$s</string>
+    <string name="appdetail_read_more">Leer m\u00e1s</string>
+    <string name="appdetail_read_less">Mostrar menos</string>
+    <string name="appdetail_section_links">Enlaces</string>
+    <string name="appdetail_link_source_code">C\u00f3digo fuente</string>
+    <string name="appdetail_link_website">Sitio web</string>
+    <string name="appdetail_link_issue_tracker">Informar de un problema</string>
+    <string name="appdetail_link_changelog">Registro de cambios</string>
+    <string name="appdetail_link_translation">Ayuda a traducir</string>
+    <string name="appdetail_link_donate">Hacer una donaci\u00f3n</string>
 </resources>

@@ -7,11 +7,16 @@ import com.multistore.core.common.result.AppError
 import com.multistore.core.common.version.VersionSelection
 import com.multistore.core.data.repository.InstallStep
 import com.multistore.core.data.repository.InstalledAppUpdate
+import com.multistore.core.data.repository.SettingsRepository
 import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.domain.usecase.ObserveInstalledAppsUseCase
 import com.multistore.core.domain.usecase.ObserveUpdatesUseCase
 import com.multistore.core.domain.usecase.UninstallAppUseCase
+import com.multistore.core.domain.usecase.UpdateAllAppsUseCase
+import com.multistore.core.domain.usecase.UpdateAllStep
+import com.multistore.core.model.UpdateAllUiState
 import com.multistore.core.model.InstalledApp
+import com.multistore.core.model.MyAppsSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -21,6 +26,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -109,15 +115,34 @@ sealed interface MyAppsUiState {
 
     data object Loading : MyAppsUiState
 
+    /** Nothing was ever installed through MultiStore. Not the same as "the search found nothing". */
     data object Empty : MyAppsUiState
 
     data class Ready(
+        /**
+         * The rows to draw: **filtered and sorted**, which is not the whole list.
+         *
+         * It can be empty while apps are installed — that is a search that matched nothing — and the
+         * screen has to say so differently from [Empty]. Collapsing the two would also take the
+         * search field off screen at the exact moment the user needs it to clear the query.
+         */
         val apps: List<InstalledAppItem>,
         val uninstall: UninstallUiState,
         val check: UpdateCheckUiState = UpdateCheckUiState.Idle,
-    ) : MyAppsUiState {
-        val updatable: Int get() = apps.count { it.update is UpdateState.Available }
-    }
+        /** What is in the field, so the screen can tell "no apps" from "no matches". */
+        val query: String = "",
+        val sort: MyAppsSort = MyAppsSort.NAME,
+        val updateAll: UpdateAllUiState = UpdateAllUiState.Idle,
+        /**
+         * How many apps have an update, **across the whole list and not the visible one**.
+         *
+         * "Update all" acts on everything the update check found, because that is what the shared
+         * use case does; counting the filtered rows would put a number next to a button that then
+         * updated a different set. Naming the number in the button is what keeps the two from being
+         * read as the same thing while a search narrows the list to two rows.
+         */
+        val updatable: Int = 0,
+    ) : MyAppsUiState
 }
 
 /**
@@ -136,12 +161,35 @@ class MyAppsViewModel @Inject constructor(
     private val installedApps: ObserveInstalledAppsUseCase,
     private val updates: ObserveUpdatesUseCase,
     private val uninstallApp: UninstallAppUseCase,
+    private val updateAllApps: UpdateAllAppsUseCase,
+    private val settings: SettingsRepository,
     registry: StoreRegistry,
 ) : ViewModel() {
 
     private val uninstall = MutableStateFlow<UninstallUiState>(UninstallUiState.Idle)
     private val check = MutableStateFlow<UpdateCheckUiState>(UpdateCheckUiState.Idle)
+    private val updateAll = MutableStateFlow<UpdateAllUiState>(UpdateAllUiState.Idle)
     private var checkJob: Job? = null
+    private var updateAllJob: Job? = null
+
+    private val _query = MutableStateFlow("")
+
+    /**
+     * The text **in the field**, and the only state here with a single writer.
+     *
+     * It is deliberately not a member of [MyAppsUiState.Ready]. That state is rebuilt by a `combine`
+     * over four asynchronous sources — the update list, an uninstall, a check, the settings — and
+     * binding an editor to something rebuilt by producers that cannot know what has been typed since
+     * they started is what made the search screen's caret jump backwards: the `String` overload of
+     * `BasicTextField` keeps the selection privately and recombines it as `copy(text = value)`, so a
+     * value that did not come from the last keystroke arrives with the old offset coerced into a
+     * shorter string.
+     *
+     * `Ready.query` exists as well and answers a different question — *which query are these rows
+     * for?* — which is what lets the screen say "nothing matched" instead of "nothing installed".
+     * The two coincide on a still screen and diverge exactly while somebody types.
+     */
+    val queryText: StateFlow<String> = _query.asStateFlow()
 
     /**
      * The `Intent`s the UI has to launch: here, the system uninstall confirmation.
@@ -162,22 +210,52 @@ class MyAppsViewModel @Inject constructor(
      * two lists that can be one emission out of step, with a row saying "update available" next to an
      * already-updated version.
      */
+    /**
+     * What the screen is doing to the list right now: the text typed and the criterion chosen.
+     *
+     * A private group rather than two more positional arguments to `combine`, which takes at most
+     * five typed flows and already has four sources of its own.
+     */
+    private data class Arrangement(val query: String, val sort: MyAppsSort)
+
+    private val arrangement = combine(_query, settings.myApps) { query, myApps ->
+        Arrangement(query = query, sort = myApps.sort)
+    }
+
     val uiState: StateFlow<MyAppsUiState> =
-        combine(updates(), uninstall, check) { apps, uninstallState, checkState ->
+        combine(
+            updates(),
+            uninstall,
+            check,
+            updateAll,
+            arrangement,
+        ) { apps, uninstallState, checkState, updateAllState, view ->
             when {
+                // Empty is about the **device**, not about the query: with nothing installed there is
+                // nothing to search, so the field would have nothing to do either.
                 apps.isEmpty() -> MyAppsUiState.Empty
-                else -> MyAppsUiState.Ready(
-                    apps = apps.map { update ->
+                else -> {
+                    val items = apps.map { update ->
                         InstalledAppItem(
                             app = update.app,
                             storeName = update.app.sourceStoreId
                                 ?.let { registry.adapter(it)?.metadata?.displayName },
                             update = update.toUiState(),
                         )
-                    },
-                    uninstall = uninstallState,
-                    check = checkState,
-                )
+                    }
+                    MyAppsUiState.Ready(
+                        apps = items.matching(view.query).arrangedBy(view.sort),
+                        uninstall = uninstallState,
+                        check = checkState,
+                        query = view.query,
+                        sort = view.sort,
+                        updateAll = updateAllState,
+                        // Counted over `items` and not over the visible rows: see the doc on the
+                        // field. "Update all" acts on everything, so the number next to it has to be
+                        // everything too.
+                        updatable = items.count { it.update is UpdateState.Available },
+                    )
+                }
             }
         }.stateIn(
             scope = viewModelScope,
@@ -220,6 +298,53 @@ class MyAppsViewModel @Inject constructor(
 
     fun dismissCheckResult() {
         if (check.value is UpdateCheckUiState.Incomplete) check.value = UpdateCheckUiState.Idle
+    }
+
+    /** Nothing is debounced and nothing is asked of the network: the list is already in memory. */
+    fun onQueryChange(value: String) {
+        _query.value = value
+    }
+
+    /**
+     * Changes the order, **and remembers it**.
+     *
+     * It writes the setting rather than keeping a copy here, so there is one answer to "how is this
+     * list arranged" and not two. That is also what makes the Settings entry and this control agree:
+     * a transient override next to a persisted default is the classic pair of values that diverge,
+     * with the screen showing one and Settings the other.
+     */
+    fun setSort(sort: MyAppsSort) {
+        viewModelScope.launch { settings.setMyAppsSort(sort) }
+    }
+
+    /**
+     * Updates everything that has something newer.
+     *
+     * The loop is `UpdateAllAppsUseCase`, shared with the Home: the gesture has to mean exactly the
+     * same thing on both screens — same order, MultiStore last, same definition of "failed" — and two
+     * copies of it would be two things to keep in step. What stays here is what belongs to a screen:
+     * turning the steps into something to draw, and handing the system's confirmation intent to
+     * whoever is in the foreground.
+     */
+    fun updateAll() {
+        if (updateAllJob?.isActive == true) return
+        updateAllJob = viewModelScope.launch {
+            updateAllApps().collect { step ->
+                when (step) {
+                    is UpdateAllStep.Progress -> updateAll.value =
+                        UpdateAllUiState.Running(step.done, step.total, step.label)
+
+                    is UpdateAllStep.UserAction -> _userActions.emit(step.intent)
+
+                    is UpdateAllStep.Finished -> updateAll.value =
+                        UpdateAllUiState.Finished(step.installed, step.failed)
+                }
+            }
+        }
+    }
+
+    fun dismissUpdateAllResult() {
+        if (updateAll.value is UpdateAllUiState.Finished) updateAll.value = UpdateAllUiState.Idle
     }
 
     /**
@@ -320,3 +445,59 @@ class MyAppsViewModel @Inject constructor(
         const val SUBSCRIPTION_GRACE_MILLIS = 5_000L
     }
 }
+
+/**
+ * The rows whose name or package contains [query], ignoring case.
+ *
+ * Two fields and not one: the label is what somebody looks for, the package name is what somebody
+ * looking for `org.mozilla` is after — and on this screen, unlike in a store's catalogue, the package
+ * is a thing the user has seen, because it is written on every listing they installed from.
+ *
+ * No normalisation beyond case, and that is deliberate rather than unfinished. Stripping accents
+ * would need `:core:common`, which `:core:data` does not re-export, and would buy a match the user
+ * cannot predict: this list is a few dozen names one already knows how to spell.
+ */
+internal fun List<InstalledAppItem>.matching(query: String): List<InstalledAppItem> {
+    val needle = query.trim()
+    if (needle.isEmpty()) return this
+    return filter { item ->
+        item.app.label.contains(needle, ignoreCase = true) ||
+            item.app.packageName.contains(needle, ignoreCase = true)
+    }
+}
+
+/**
+ * The four criteria, applied.
+ *
+ * Every one of them falls back to the name, and that is what makes the list **stable**: with ties
+ * broken arbitrarily, two apps installed in the same second — which is what restoring a phone does to
+ * all of them — would swap places between two recompositions, and the row under the finger would
+ * move. It also makes "recently installed" readable: within a day the names are still in order.
+ */
+internal fun List<InstalledAppItem>.arrangedBy(sort: MyAppsSort): List<InstalledAppItem> = when (sort) {
+    MyAppsSort.NAME -> sortedWith(BY_NAME)
+
+    // Updatable first, and only "there is something newer" counts as updatable: a paused app or a
+    // pinned one is a decision the user already took, and hoisting it to the top would be the screen
+    // insisting on something that was declined.
+    MyAppsSort.UPDATABLE_FIRST -> sortedWith(
+        compareByDescending<InstalledAppItem> { it.update is UpdateState.Available }.then(BY_NAME),
+    )
+
+    MyAppsSort.RECENTLY_INSTALLED -> sortedWith(
+        compareByDescending<InstalledAppItem> { it.app.installedAt }.then(BY_NAME),
+    )
+
+    // The store's display name and not its id: the id is `f-droid` and `apkmody`, which would put the
+    // list in an order the screen shows nowhere. Rows from a store this build no longer wires have no
+    // name, and they go last rather than sorting as an empty string in the middle.
+    MyAppsSort.STORE -> sortedWith(
+        compareBy<InstalledAppItem> { it.storeName == null }
+            .thenBy { it.storeName.orEmpty().lowercase() }
+            .then(BY_NAME),
+    )
+}
+
+/** Case-insensitive, because a list half in capitals is a list nobody can scan. */
+private val BY_NAME: Comparator<InstalledAppItem> =
+    compareBy<InstalledAppItem> { it.app.label.lowercase() }.thenBy { it.app.packageName }

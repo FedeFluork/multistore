@@ -37,4 +37,26 @@
         <item quantity="many">%1$d app pronte da installare</item>
         <item quantity="other">%1$d app pronte da installare</item>
     </plurals>
+
+    <!-- La striscia di immagini e il suo lettore a tutto schermo. -->
+    <string name="gallery_screenshot_position">Immagine %1$d di %2$d</string>
+    <string name="gallery_close">Chiudi l\'immagine</string>
+    <string name="gallery_position">%1$d / %2$d</string>
+
+    <!-- Il pannello «aggiorna tutto», disegnato sulla Home e in «Le mie app». -->
+    <string name="update_all_action">Aggiorna tutto</string>
+    <string name="update_all_applying">Aggiornamento %1$d di %2$d</string>
+    <string name="update_all_finished">%1$d aggiornate, %2$d non fatte</string>
+    <string name="update_all_dismiss">OK</string>
+    <plurals name="update_all_title">
+        <item quantity="one">%1$d aggiornamento disponibile</item>
+        <item quantity="many">%1$d aggiornamenti disponibili</item>
+        <item quantity="other">%1$d aggiornamenti disponibili</item>
+    </plurals>
+
+    <!-- L’ordine dell’elenco delle installate. Condiviso da Impostazioni e dall’elenco stesso. -->
+    <string name="myapps_sort_name">Nome</string>
+    <string name="myapps_sort_updatable">Prima le aggiornabili</string>
+    <string name="myapps_sort_recent">Installate di recente</string>
+    <string name="myapps_sort_store">Store di provenienza</string>
 </resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The **only** directory this provider can hand out, and it is not `filesDir`.
+
+  `<files-path path="staging/">` is a subtree, not the whole private storage: a `path` of `.` would
+  expose the Room database, the DataStore and the parsers cache to any app that ever received one
+  share intent and kept the URI. The one directory named here is the one `Staging.DIRECTORY` writes.
+-->
+<paths>
+    <files-path
+        name="staging"
+        path="staging/" />
+</paths>

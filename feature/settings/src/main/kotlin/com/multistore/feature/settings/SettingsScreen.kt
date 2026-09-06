@@ -72,6 +72,8 @@ import com.multistore.core.model.NetworkSettings
 import com.multistore.core.model.NotificationSettings
 import com.multistore.core.model.RemoteConfigSettings
 import com.multistore.core.model.SearchSettings
+import com.multistore.core.model.MyAppsSettings
+import com.multistore.core.model.MyAppsSort
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.SecuritySettings
 import com.multistore.core.model.StoreHealthState
@@ -92,6 +94,7 @@ import com.multistore.core.model.UpdateSettings
 import com.multistore.core.model.VersionSettings
 import com.multistore.core.ui.component.EmptyState
 import com.multistore.core.ui.component.MultiStoreTopAppBar
+import com.multistore.core.ui.component.myAppsSortLabel
 import kotlin.time.Duration
 
 /**
@@ -222,6 +225,7 @@ fun SettingsScreen(
         onSearchTimeoutChange = viewModel::setSearchTimeout,
         onDefaultContentKindChange = viewModel::setDefaultContentKind,
         onDefaultSortChange = viewModel::setDefaultSort,
+        onMyAppsSortChange = viewModel::setMyAppsSort,
         onMuteDownloadNotificationsChange = viewModel::setMuteDownloadNotifications,
         onMuteInstallNotificationsChange = viewModel::setMuteInstallNotifications,
         onMuteStoreAlertsChange = viewModel::setMuteStoreAlerts,
@@ -283,6 +287,7 @@ internal fun SettingsScreen(
     onSearchTimeoutChange: (Duration) -> Unit = {},
     onDefaultContentKindChange: (ContentKind?) -> Unit = {},
     onDefaultSortChange: (SearchSort) -> Unit = {},
+    onMyAppsSortChange: (MyAppsSort) -> Unit = {},
     onMuteDownloadNotificationsChange: (Boolean) -> Unit = {},
     onMuteInstallNotificationsChange: (Boolean) -> Unit = {},
     onMuteStoreAlertsChange: (Boolean) -> Unit = {},
@@ -363,6 +368,11 @@ internal fun SettingsScreen(
                         onSearchTimeoutChange = onSearchTimeoutChange,
                         onDefaultContentKindChange = onDefaultContentKindChange,
                         onDefaultSortChange = onDefaultSortChange,
+                    )
+                    MyAppsSection(
+                        myApps = uiState.myApps,
+                        filter = filter,
+                        onMyAppsSortChange = onMyAppsSortChange,
                     )
                     NotificationsSection(
                         updates = uiState.updates,
@@ -1154,6 +1164,58 @@ private fun contentKindLabel(kind: ContentKind?): Int = when (kind) {
     // `UNKNOWN` is not a possible choice here — it means "the store does not say", which is a
     // row's answer and not a user's question — and counts as "everything".
     else -> R.string.settings_search_content_kind_all
+}
+
+/**
+ * "My apps": the order the installed list comes out in.
+ *
+ * A section with one entry, like Search was when it had only the timeout, and for the same reason:
+ * the alternative was filing it under Updates, which answers a different question — *when do we
+ * look* rather than *how is this arranged*. The internal search of this screen matches the section's
+ * words as well, so a heading that does not describe the row is also a search that does not find it.
+ *
+ * The value shown is always one of the four criteria and never "default": the default **is** one of
+ * them, so there is no state in which the user has to work out what the app is currently doing.
+ */
+@Composable
+internal fun MyAppsSection(
+    myApps: MyAppsSettings,
+    filter: SettingsFilter,
+    onMyAppsSortChange: (MyAppsSort) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (!filter.shows(SettingsSection.MY_APPS)) return
+    val rows = filter.rowsOf(SettingKey.MY_APPS_SORT)
+    var dialog by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        SectionHeader(text = stringResource(SettingsSection.MY_APPS.titleRes))
+
+        SettingsRow(
+            key = SettingKey.MY_APPS_SORT,
+            rows = rows,
+            value = myAppsSortLabel(myApps.sort),
+            onClick = { dialog = true },
+        )
+    }
+
+    if (dialog) {
+        SingleChoiceDialog(
+            title = stringResource(entryOf(SettingKey.MY_APPS_SORT).labelRes),
+            // `entries` and not a hand-written subset: unlike the search's sort, all four criteria
+            // are computable here — the list is local, and every field they read is on the row.
+            options = MyAppsSort.entries.map { choice ->
+                ChoiceOption(
+                    // The shared label: the same criterion has to be called the same thing here
+                    // and on the control in "My apps" that changes it.
+                    label = myAppsSortLabel(choice),
+                    selected = choice == myApps.sort,
+                    onSelect = { onMyAppsSortChange(choice) },
+                )
+            },
+            onDismiss = { dialog = false },
+        )
+    }
 }
 
 @StringRes
@@ -2398,6 +2460,7 @@ private val PreviewState = SettingsUiState.Ready(
     network = NetworkSettings(),
     remoteConfig = RemoteConfigSettings(),
     search = SearchSettings(),
+    myApps = MyAppsSettings(),
     notifications = NotificationSettings(),
     diagnostics = DiagnosticsSettings(),
 )

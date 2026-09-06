@@ -78,6 +78,12 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
                                 "",
                                 ResultOrigin.REMOTE,
                                 rating = 4.3f,
+                                // Both are new readers of fields adapters were already filling —
+                                // the count on five stores, the label on three. A six-figure count
+                                // is what shows the number goes through `NumberFormat` and not
+                                // `toString`, and the label is shown as the store wrote it.
+                                ratingCount = 128_461,
+                                downloadsLabel = "10M+",
                             ),
                         ),
                     ),
@@ -151,6 +157,8 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
         text: String,
         origin: ResultOrigin = ResultOrigin.LOCAL_INDEX,
         rating: Float? = null,
+        ratingCount: Int? = null,
+        downloadsLabel: String? = null,
     ) = AggregatedListing(
         summary = StoreListingSummary(
             storeId = storeId,
@@ -159,6 +167,8 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
             packageName = ref.substringAfterLast('/'),
             summary = if (text.isEmpty()) LocalizedText.EMPTY else LocalizedText(mapOf("en" to text)),
             rating = rating,
+            ratingCount = ratingCount,
+            downloadsLabel = downloadsLabel,
         ),
         origin = origin,
     )

@@ -78,6 +78,25 @@ enum class SearchSort {
     }
 }
 
+/**
+ * How to order the list of apps installed through MultiStore.
+ *
+ * Four criteria, and each is a question somebody actually asks of that screen: what is it called,
+ * what needs my attention, what did I install recently, and where did it come from. The last only
+ * exists in an app like this one — with nine sources, "which of these came from apkmirror" is a real
+ * question and no other screen answers it.
+ *
+ * [NAME] is first and is also the proto zero value: it is the only one of the four that does not
+ * **rearrange itself while it is being read**. With [UPDATABLE_FIRST] a row jumps to the top the
+ * moment a check finds something, in a list somebody is halfway down.
+ */
+enum class MyAppsSort {
+    NAME,
+    UPDATABLE_FIRST,
+    RECENTLY_INSTALLED,
+    STORE,
+}
+
 /** The three `Installer` implementations. */
 enum class InstallerKind(val wireName: String) {
     SESSION("session"),

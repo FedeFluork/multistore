@@ -383,6 +383,229 @@ class MigrationTest {
         }
     }
 
+    /**
+     * 5 → 6: the listing already in the catalogue stays, and comes out **without** a translation link.
+     *
+     * For `translation_url`, `null` is the right value and there is nothing to back-fill: no version
+     * of this app has ever persisted that field, so there is no byte to copy from, and it fills in as
+     * the row is re-read.
+     *
+     * The screenshot here carries the other half of the rule, from the opposite side: its URL is
+     * **not** shaped like an F-Droid repo path, so the back-fill must leave it alone rather than
+     * hand it whatever segment happens to sit in that position. An untagged screenshot is shown to
+     * everybody, which is the right answer for the eight stores that publish no tag.
+     */
+    @Test
+    fun `from 5 to 6 the listing stays, and has no translation link yet`() = runTest {
+        createVersion(5) { db ->
+            db.insertOrThrow(
+                "apps",
+                null,
+                ContentValues().apply {
+                    put("app_key", "pkg:org.fdroid.fdroid")
+                    put("title", "F-Droid")
+                    put("title_norm", "f-droid")
+                    put("content_kind", "APP")
+                    put("updated_at", 1_700_000_000_000L)
+                },
+            )
+            db.insertOrThrow(
+                "store_listings",
+                null,
+                ContentValues().apply {
+                    put("app_key", "pkg:org.fdroid.fdroid")
+                    put("store_id", "f-droid")
+                    put("store_app_ref", "org.fdroid.fdroid")
+                    put("title", "F-Droid")
+                    put("title_norm", "f-droid")
+                    put("content_kind", "APP")
+                    put("categories", "[]")
+                    put("donate_urls", "[\"https://f-droid.org/donate\"]")
+                    put("source_code_url", "https://gitlab.com/fdroid/fdroidclient")
+                    put("match_confidence", 1.0)
+                    put("match_method", "PACKAGE_NAME")
+                    put("fetched_at", 1_700_000_000_000L)
+                    put("ttl_seconds", 604_800L)
+                },
+            )
+            db.insertOrThrow(
+                "listing_screenshots",
+                null,
+                ContentValues().apply {
+                    put("listing_id", 1L)
+                    put("url", "https://f-droid.org/shot-1.png")
+                    put("kind", "PHONE")
+                    put("sort_order", 0)
+                },
+            )
+        }
+
+        val database = openWithMigrations()
+        try {
+            val row = database.catalogDao().search(
+                storeId = com.multistore.core.model.StoreId.FDROID,
+                query = "f-droid",
+                limit = 10,
+                offset = 0,
+            ).single()
+            // The row survived: a migration recreating the table would detach every installed app
+            // from its update channel, which points at precisely this id.
+            assertThat(row.listing.sourceCodeUrl).isEqualTo("https://gitlab.com/fdroid/fdroidclient")
+            assertThat(row.listing.donateUrls).containsExactly("https://f-droid.org/donate")
+            assertThat(row.listing.translationUrl).isNull()
+
+            // And the image written at version 5 survives with no language: its URL has no
+            // `/<locale>/<kind>Screenshots/` in it, so there is nothing to recover and the back-fill
+            // must not invent one.
+            val shot = database.catalogDao()
+                .listing(com.multistore.core.model.StoreId.FDROID, "org.fdroid.fdroid")
+                ?.screenshots
+                ?.single()
+            assertThat(shot?.url).isEqualTo("https://f-droid.org/shot-1.png")
+            assertThat(shot?.locale).isNull()
+        } finally {
+            database.close()
+        }
+    }
+
+    /**
+     * 5 → 6 recovers the language of a screenshot already in the catalogue, from its own URL.
+     *
+     * ### Why the column cannot simply be left to fill in
+     *
+     * The first draft of this migration left it `NULL` and said the rows would "fill in at the next
+     * index sync". On an indexed store they do not: `AppDetailRepositoryImpl.refresh` returns
+     * `Success` without asking anything, and only a **full** sync re-projects — a diff sync touches
+     * just the entries that changed, so a stable app can keep pre-upgrade rows indefinitely.
+     * Measured on the device before this back-fill existed: after upgrading, AntennaPod's strip
+     * showed every language at once, in German to an English reader, and a refresh did not move it.
+     *
+     * ### Where the value already was
+     *
+     * In the URL. F-Droid lays its repo out as `/repo/<package>/<locale>/<kind>Screenshots/<file>`,
+     * which makes this the same remedy as 3 → 4 rather than a guess: erasing every locale in a real
+     * 66 MB catalogue and rebuilding it with these statements returns 32,353 of 32,397 rows
+     * byte-identical to the projection's own output, with **zero** differing.
+     *
+     * The two rows below are the two halves of that measurement — one recoverable, one that must be
+     * left alone — and they are asserted together because a back-fill that is too eager and one that
+     * is too timid are different defects with the same symptom of "the strip looks wrong".
+     */
+    @Test
+    fun `from 5 to 6 a screenshot gets its language back from its URL`() = runTest {
+        createVersion(5) { db ->
+            db.insertOrThrow(
+                "apps",
+                null,
+                ContentValues().apply {
+                    put("app_key", "pkg:de.danoeh.antennapod")
+                    put("title", "AntennaPod")
+                    put("title_norm", "antennapod")
+                    put("content_kind", "APP")
+                    put("updated_at", 1_700_000_000_000L)
+                },
+            )
+            db.insertOrThrow(
+                "store_listings",
+                null,
+                ContentValues().apply {
+                    put("app_key", "pkg:de.danoeh.antennapod")
+                    put("store_id", "f-droid")
+                    put("store_app_ref", "de.danoeh.antennapod")
+                    put("title", "AntennaPod")
+                    put("title_norm", "antennapod")
+                    put("content_kind", "APP")
+                    put("categories", "[]")
+                    put("donate_urls", "[]")
+                    put("match_confidence", 1.0)
+                    put("match_method", "PACKAGE_NAME")
+                    put("fetched_at", 1_700_000_000_000L)
+                    put("ttl_seconds", 604_800L)
+                },
+            )
+            // The same screen, filed twice by F-Droid — which is exactly what made the strip 95
+            // images long — plus one kind that is not `phone`, because the directory name is part of
+            // what the statements match on.
+            val shots = listOf(
+                "https://f-droid.org/repo/de.danoeh.antennapod/en-US/phoneScreenshots/1.png",
+                "https://f-droid.org/repo/de.danoeh.antennapod/de/phoneScreenshots/1.png",
+                "https://f-droid.org/repo/de.danoeh.antennapod/fr/tenInchScreenshots/1.png",
+                // Not an F-Droid repo path: nothing to recover, and nothing may be invented.
+                "https://downloadr2.apkmirror.com/wp-content/uploads/x-169x300.png",
+            )
+            shots.forEachIndexed { index, url ->
+                db.insertOrThrow(
+                    "listing_screenshots",
+                    null,
+                    ContentValues().apply {
+                        put("listing_id", 1L)
+                        put("url", url)
+                        put("kind", if (index == 2) "TEN_INCH" else "PHONE")
+                        put("sort_order", index)
+                    },
+                )
+            }
+        }
+
+        val database = openWithMigrations()
+        try {
+            val shots = database.catalogDao()
+                .listing(com.multistore.core.model.StoreId.FDROID, "de.danoeh.antennapod")
+                ?.screenshots
+                .orEmpty()
+
+            // Every row survives — a migration recreating the table would take the strip with it.
+            assertThat(shots).hasSize(4)
+            // Each locale comes from its own address, in `sort_order`. Three of these files are
+            // called `1.png`: the language is the only thing that tells them apart, which is the
+            // whole reason the column exists.
+            assertThat(shots.map { it.locale })
+                .containsExactly("en-US", "de", "fr", null).inOrder()
+        } finally {
+            database.close()
+        }
+    }
+
+    /**
+     * And after the migration the column is written and read back.
+     *
+     * Separate from the test above because the two fail for different reasons: that one catches a
+     * migration that loses rows, this one an `ALTER TABLE` whose column the entity does not agree
+     * with — the mismatch Room reports when opening the database, i.e. on the user's device.
+     */
+    @Test
+    fun `after the migration the translation link survives a round trip`() = runTest {
+        createVersion(5) { }
+
+        val database = openWithMigrations()
+        try {
+            val dao = database.catalogDao()
+            dao.saveListings(
+                listOf(
+                    listingWrite("pkg:org.fdroid.fdroid", "F-Droid", ContentKind.APP)
+                        .let { write ->
+                            write.copy(
+                                listing = write.listing.copy(
+                                    translationUrl = "https://hosted.weblate.org/projects/f-droid/",
+                                ),
+                            )
+                        },
+                ),
+            )
+
+            val row = dao.search(
+                storeId = com.multistore.core.model.StoreId.APKMIRROR,
+                query = "f-droid",
+                limit = 10,
+                offset = 0,
+            ).single()
+            assertThat(row.listing.translationUrl)
+                .isEqualTo("https://hosted.weblate.org/projects/f-droid/")
+        } finally {
+            database.close()
+        }
+    }
+
     private fun listingWrite(appKey: String, title: String, kind: ContentKind) =
         com.multistore.core.database.dao.ListingWrite(
             app = com.multistore.core.database.entity.AppEntity(

@@ -37,4 +37,26 @@
         <item quantity="many">%1$d aplicaciones listas para instalar</item>
         <item quantity="other">%1$d aplicaciones listas para instalar</item>
     </plurals>
+
+    <!-- La tira de imágenes y su visor a pantalla completa. -->
+    <string name="gallery_screenshot_position">Captura %1$d de %2$d</string>
+    <string name="gallery_close">Cerrar la captura</string>
+    <string name="gallery_position">%1$d / %2$d</string>
+
+    <!-- El panel «actualizar todo», mostrado en el inicio y en «Mis aplicaciones». -->
+    <string name="update_all_action">Actualizar todo</string>
+    <string name="update_all_applying">Actualizando %1$d de %2$d</string>
+    <string name="update_all_finished">%1$d actualizadas, %2$d sin hacer</string>
+    <string name="update_all_dismiss">OK</string>
+    <plurals name="update_all_title">
+        <item quantity="one">%1$d actualización disponible</item>
+        <item quantity="many">%1$d actualizaciones disponibles</item>
+        <item quantity="other">%1$d actualizaciones disponibles</item>
+    </plurals>
+
+    <!-- El orden de la lista de instaladas. Compartido por los ajustes y por la propia lista. -->
+    <string name="myapps_sort_name">Nombre</string>
+    <string name="myapps_sort_updatable">Actualizables primero</string>
+    <string name="myapps_sort_recent">Instaladas recientemente</string>
+    <string name="myapps_sort_store">Tienda de origen</string>
 </resources>

@@ -168,6 +168,101 @@ internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
     }
 }
 
+/**
+ * 5 → 6: `store_listings.translation_url`.
+ *
+ * ### A field that existed everywhere except where it had to survive
+ *
+ * `StoreListingDetail.translationUrl` has been in the model since M1 and F-Droid has been filling
+ * it since M1 — `PackageProjection` reads `metadata.string("translation")`. Between the adapter
+ * and the screen, though, there was no column: the entity mapper did not write it and the domain
+ * mapper could not read it. The value therefore lived as long as the object the adapter returned,
+ * and was gone the next time the listing came out of Room.
+ *
+ * Nobody noticed because nobody showed it. The links block is the first reader the seven author
+ * fields have ever had, and adding it without this column would have produced the worst of the
+ * three possible outcomes: a link visible on the very first visit to a listing and absent on every
+ * one after it — the shape of a defect people blame on the store.
+ *
+ * ### Two columns in one version, and the second has the same shape as the first
+ *
+ * `listing_screenshots.locale` is here for the reason the field above is: something is finally
+ * drawing that data, and drawing it showed what was being thrown away. F-Droid files the same
+ * screens under every language the pruning keeps — **95 images for AntennaPod**, measured on the
+ * device — and the adapter had been discarding the tag, reasonably, back when nobody looked. With a
+ * strip on the page that becomes four copies of each screen in languages the reader does not read.
+ *
+ * ### `translation_url` is nullable with nothing to back-fill; `locale` is not
+ *
+ * Nullable like 1 → 2, 2 → 3 and half of 4 → 5: absent means "this source publishes no translation
+ * page", which is true of eight stores out of nine and of every row written before this version.
+ * For that column the answer to "where is this value already written" really is *nowhere*, so the
+ * rows fill in as they are re-read.
+ *
+ * ### The locale is back-filled, and the first draft of this comment was wrong about why
+ *
+ * That draft said there was nothing to back-fill and that the rows would "fill in by themselves at
+ * the next index sync". Both halves were false, and the second is the one that would have shipped a
+ * defect:
+ *
+ *  - **`refresh` does nothing on an indexed store.** It returns `Success` without asking anything,
+ *    because a listing's freshness there is a property of the index. Only `StoreIndexRepository.sync`
+ *    re-projects, and a **diff** sync only touches entries that changed — so a stable app might not
+ *    be re-projected for months. Measured on the device: after upgrading, AntennaPod's strip showed
+ *    every language at once, in German to an English reader, and stayed that way across a refresh.
+ *  - **The value *is* already written**, in the URL. F-Droid's repo lays screenshots out as
+ *    `/repo/<package>/<locale>/<kind>Screenshots/<file>`, so the locale is the segment before the
+ *    kind directory — which makes this the same remedy as 3 → 4, where `content_kind` was recovered
+ *    from `apps.content_kind` rather than left to a re-read that would have taken seven days.
+ *
+ * Verified against a real 66 MB catalogue: with every locale erased and then rebuilt by the
+ * statements below, **32,353 of 32,397 rows come back byte-identical to what the projection had
+ * written, and zero differ**. The remaining 44 are apkmirror and apkmody rows, which carry no
+ * language and correctly stay `NULL` — a screenshot with no locale is shown to everybody, which is
+ * the right answer for the eight stores that publish no tag.
+ *
+ * The five directory names are F-Droid's and are matched literally rather than by taking "the third
+ * segment from the end": a URL that does not have this shape is then left alone instead of being
+ * given a segment that is not a language.
+ */
+internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `store_listings` ADD COLUMN `translation_url` TEXT")
+        db.execSQL("ALTER TABLE `listing_screenshots` ADD COLUMN `locale` TEXT")
+
+        for (directory in FDROID_SCREENSHOT_DIRECTORIES) {
+            val marker = "/$directory/"
+            // Everything up to the kind directory: `…/repo/<package>/<locale>`.
+            val head = "substr(url, 1, instr(url, '$marker') - 1)"
+            // `rtrim(head, <every character of head except '/'>)` leaves `head` up to and including
+            // its last slash, so what follows is the last segment — the locale.
+            db.execSQL(
+                """
+                UPDATE listing_screenshots
+                SET locale = substr($head, length(rtrim($head, replace($head, '/', ''))) + 1)
+                WHERE locale IS NULL AND instr(url, '$marker') > 0
+                """.trimIndent(),
+            )
+        }
+    }
+}
+
+/**
+ * How F-Droid's repo names the directory a screenshot's kind goes in.
+ *
+ * Measured on a real catalogue: phone 27,786 rows, tenInch 2,202, sevenInch 2,122, tv 195, wear 48.
+ * They mirror `PackageProjection.SCREENSHOT_KINDS`, and they are duplicated here on purpose —
+ * `:core:database` must not depend on a concrete store, and a migration has to keep describing the
+ * bytes that were written when it ran even if that adapter later renames something.
+ */
+private val FDROID_SCREENSHOT_DIRECTORIES = listOf(
+    "phoneScreenshots",
+    "sevenInchScreenshots",
+    "tenInchScreenshots",
+    "tvScreenshots",
+    "wearScreenshots",
+)
+
 /** Every migration, in the order Room would apply them. */
 internal val MULTISTORE_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)

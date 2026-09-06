@@ -57,6 +57,7 @@ import com.multistore.core.model.SearchSort
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
+import java.text.NumberFormat
 import com.multistore.core.model.ThemeMode
 import com.multistore.core.ui.component.AppListItem
 import com.multistore.core.ui.component.EmptyState
@@ -458,17 +459,7 @@ private fun ResultList(
                 supporting = {
                     Column {
                         StoreProvenance(app = app, storeDisplayName = storeDisplayName)
-                        // The rating is shown **because one can sort by rating**: a list reordered by a
-                        // number that appears nowhere is a list that looks randomly shuffled. Four stores
-                        // out of nine publish it, so a row without a rating is the normal case and not an
-                        // error.
-                        app.displaySummary.rating?.let { rating ->
-                            Text(
-                                text = stringResource(R.string.search_rating, formatRating(rating)),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        Reputation(summary = app.displaySummary)
                     }
                 },
             )
@@ -492,6 +483,60 @@ private fun ResultList(
             }
         }
     }
+}
+
+/**
+ * The rating, **how many people it comes from**, and how many downloads the store claims.
+ *
+ * ### The count is what makes the rating comparable
+ *
+ * The rating alone is shown because one can sort by it, and a list reordered by a number that
+ * appears nowhere looks randomly shuffled. But a search across nine stores puts several listings of
+ * the same app next to each other, and there "4.8" from twelve people and "4.3" from two hundred
+ * thousand used to read identically — while being the figure that most often decides which listing
+ * to open. `ratingCount` was collected by five adapters and shown by none.
+ *
+ * ### Which listing each number comes from
+ *
+ * `displaySummary` takes the rating and its count from the **same** listing, deliberately: two
+ * independent lookups would give "4.5 from 96 ratings" with the 4.5 from one store and the 96 from
+ * another, a figure that exists nowhere. The downloads label has no such constraint — it is one
+ * store's own claim, and nothing pairs it with anything.
+ *
+ * ### And it disappears entirely where nobody published anything
+ *
+ * Rating on four stores out of nine, count on five, downloads label on three. A row with none of the
+ * three is the ordinary case, not a failure, so nothing is drawn — no zero, no dash.
+ */
+@Composable
+private fun Reputation(summary: StoreListingSummary, modifier: Modifier = Modifier) {
+    val rating = summary.rating
+    val downloads = summary.downloadsLabel
+    if (rating == null && downloads == null) return
+
+    val parts = listOfNotNull(
+        rating?.let { value ->
+            val count = summary.ratingCount
+            if (count == null) {
+                stringResource(R.string.search_rating, formatRating(value))
+            } else {
+                stringResource(
+                    R.string.search_rating_count,
+                    formatRating(value),
+                    NumberFormat.getIntegerInstance().format(count),
+                )
+            }
+        },
+        // Shown as the store wrote it — apkcombo publishes "10M+" — because it is a label and not a
+        // number: turning it into a figure would invent a precision three stores did not claim.
+        downloads?.let { stringResource(R.string.search_downloads, it) },
+    )
+    Text(
+        text = parts.joinToString(separator = FACT_SEPARATOR),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -688,3 +733,11 @@ private fun SearchPreviewContent() {
         onRetry = {},
     )
 }
+
+/**
+ * Between the rating and the downloads label.
+ *
+ * A character with no letters, which the hardcoded-string detector deliberately ignores — and the
+ * same separator the detail page's header uses, so the two surfaces read as one app.
+ */
+private const val FACT_SEPARATOR = " · "

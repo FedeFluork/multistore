@@ -68,4 +68,6 @@
         <item quantity="many">%1$s ne publient pas %2$s dans leurs résultats, elles n\'ont donc pas été interrogées.</item>
         <item quantity="other">%1$s ne publient pas %2$s dans leurs résultats, elles n\'ont donc pas été interrogées.</item>
     </plurals>
+    <string name="search_rating_count">\u2605 %1$s (%2$s)</string>
+    <string name="search_downloads">%1$s t\u00e9l\u00e9chargements</string>
 </resources>

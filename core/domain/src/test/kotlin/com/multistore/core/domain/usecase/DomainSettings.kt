@@ -22,6 +22,8 @@ import com.multistore.core.model.UpdateInterval
 import com.multistore.core.model.UpdateSettings
 import com.multistore.core.model.VersionSettings
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.multistore.core.model.MyAppsSort
+import com.multistore.core.model.MyAppsSettings
 
 /**
  * The in-memory settings, for this module's tests.
@@ -45,6 +47,7 @@ internal class DomainSettings(
     override val security = MutableStateFlow(SecuritySettings())
     override val remoteConfig = MutableStateFlow(RemoteConfigSettings())
     override val search = MutableStateFlow(SearchSettings())
+    override val myApps = MutableStateFlow(MyAppsSettings())
     override val notifications = MutableStateFlow(NotificationSettings())
     override val diagnostics = MutableStateFlow(DiagnosticsSettings())
     override val storage = MutableStateFlow(StorageSettings())
@@ -56,6 +59,7 @@ internal class DomainSettings(
     )
 
     override suspend fun setAllowPreviewChannels(allow: Boolean) = Unit
+    override suspend fun setMyAppsSort(sort: MyAppsSort) = Unit
     override suspend fun setThemeMode(themeMode: ThemeMode) = Unit
     override suspend fun setDynamicColor(enabled: Boolean) = Unit
     override suspend fun setLanguageTag(tag: String) = Unit

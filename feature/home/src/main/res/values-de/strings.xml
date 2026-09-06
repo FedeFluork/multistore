@@ -34,15 +34,7 @@
     <string name="home_categories_all">Alle Apps</string>
 
     <!-- Available updates. -->
-    <string name="home_updates_update_all">Alle aktualisieren</string>
-    <string name="home_updates_applying">Aktualisierung %1$d von %2$d</string>
-    <string name="home_updates_finished">%1$d aktualisiert, %2$d nicht erledigt</string>
-    <string name="home_updates_dismiss">OK</string>
     <string name="home_updates_version_change">%1$s → %2$s</string>
-    <plurals name="home_updates_title">
-        <item quantity="one">%1$d Update verfügbar</item>
-        <item quantity="other">%1$d Updates verfügbar</item>
-    </plurals>
     <string name="home_popular_title">Beliebteste</string>
     <string name="home_new_title">Neuheiten</string>
     <string name="home_self_update_title">Eine neue Version von MultiStore</string>

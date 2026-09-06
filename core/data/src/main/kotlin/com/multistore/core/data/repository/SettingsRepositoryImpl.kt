@@ -13,6 +13,8 @@ import com.multistore.core.model.NetworkSettings
 import com.multistore.core.model.NotificationSettings
 import com.multistore.core.model.RemoteConfigSettings
 import com.multistore.core.model.SearchSettings
+import com.multistore.core.model.MyAppsSettings
+import com.multistore.core.model.MyAppsSort
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.SecuritySettings
 import com.multistore.core.model.StorageSettings
@@ -43,6 +45,8 @@ internal class SettingsRepositoryImpl @Inject constructor(
     override val remoteConfig: Flow<RemoteConfigSettings> = local.remoteConfig
 
     override val search: Flow<SearchSettings> = local.search
+
+    override val myApps: Flow<MyAppsSettings> = local.myApps
 
     override val notifications: Flow<NotificationSettings> = local.notifications
 
@@ -94,6 +98,8 @@ internal class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setDefaultSort(sort: SearchSort) = local.setDefaultSort(sort)
 
     override suspend fun setDefaultContentKind(kind: ContentKind?) = local.setDefaultContentKind(kind)
+
+    override suspend fun setMyAppsSort(sort: MyAppsSort) = local.setMyAppsSort(sort)
 
     override suspend fun setMuteDownloadNotifications(mute: Boolean) =
         local.setMuteDownloadNotifications(mute)

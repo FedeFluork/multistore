@@ -31,6 +31,10 @@ dependencies {
     // `Flow<PagingData<…>>`, so that type is part of the contract and its consumer —
     // `:feature:storelisting` — has to be able to name it.
     api(libs.androidx.paging.runtime)
+    // `FileProvider` lives in androidx.core, and it is here rather than in the feature that shares
+    // the file because the provider is declared in **this** module's manifest: whoever declares it
+    // is whoever depends on it.
+    implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
 
     // Room appears in the signature of the in-memory database the tests build.

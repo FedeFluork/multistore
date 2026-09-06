@@ -9,6 +9,7 @@ import android.os.Build
 import android.provider.Settings
 import android.text.format.DateUtils
 import android.text.format.Formatter
+import java.text.NumberFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -31,7 +33,14 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,14 +59,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -83,6 +95,7 @@ import com.multistore.core.installer.verify.PreInstallVerifier.VerificationOutco
 import com.multistore.core.model.AggregatedListing
 import com.multistore.core.model.AppVersion
 import com.multistore.core.model.LocalizedText
+import com.multistore.core.model.forLanguages
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
@@ -92,9 +105,12 @@ import com.multistore.core.model.VersionRef
 import com.multistore.core.data.repository.VersionOffer
 import com.multistore.core.ui.component.AppIcon
 import com.multistore.core.ui.component.EmptyState
+import com.multistore.core.ui.component.ScreenshotGallery
 import com.multistore.core.ui.component.MultiStoreDetailTopAppBar
 import com.multistore.core.ui.ExternalLinks
 import com.multistore.core.ui.InstallSources
+import com.multistore.core.ui.LaunchApp
+import com.multistore.core.ui.Sharing
 import com.multistore.core.ui.component.appErrorMessage
 import com.multistore.core.ui.component.installFailureMessage
 import com.multistore.core.ui.rememberPreferredLanguageTags
@@ -126,9 +142,24 @@ fun AppDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    val ready = uiState as? AppDetailUiState.Ready
+    val summary = ready?.detail?.listing?.summary
+    val packageName = summary?.packageName
+
     var canInstallPackages by remember { mutableStateOf(context.packageManager.canRequestPackageInstalls()) }
-    LifecycleResumeEffect(Unit) {
+
+    // Whether there is anything to open, and it is **not** the same question as "is it installed".
+    // Input methods, device administrators and wallpapers declare no launcher activity, and F-Droid
+    // publishes several of them: `installed != null` would draw a button that does nothing.
+    var launchable by remember { mutableStateOf(false) }
+
+    // Keyed on what is installed **now**, not on `Unit`. The old form only re-ran on returning to
+    // the foreground, which is right for a permission granted in Settings and wrong here: the app
+    // gets installed without ever leaving this screen — `PackageEvents` re-emits and `installed`
+    // changes — and an effect keyed on `Unit` would leave "Open" absent until the next visit.
+    LifecycleResumeEffect(packageName, ready?.detail?.installed?.versionCode) {
         canInstallPackages = context.packageManager.canRequestPackageInstalls()
+        launchable = LaunchApp.canOpen(context, packageName)
         onPauseOrDispose { }
     }
 
@@ -161,10 +192,31 @@ fun AppDetailScreen(
     // The "open in browser" button exists only if the store publishes a page **and** something on
     // this device would open it. Absent rather than disabled: a greyed-out button makes people
     // wonder why, one that is not there promises nothing.
-    val listingUrl = (uiState as? AppDetailUiState.Ready)?.detail?.listingUrl
+    val listingUrl = ready?.detail?.listingUrl
     val openInBrowser = listingUrl
         ?.takeIf { ExternalLinks.canOpen(context, it) }
         ?.let { url -> { ExternalLinks.open(context, url); Unit } }
+
+    // Sharing a listing means sharing **its public address**, so with no address there is nothing to
+    // share and the action is not drawn — the same rule as the button above it. All nine adapters
+    // implement `listingUrl` today, and it is the one contract method that touches no network, so
+    // this is not a hypothetical branch kept for symmetry: it is the contract allowing `null`.
+    val shareText = listingUrl?.let { url ->
+        stringResource(
+            R.string.appdetail_share_listing_text,
+            summary?.title.orEmpty(),
+            ready?.storeName.orEmpty(),
+            url,
+        )
+    }
+    val shareChooserTitle = stringResource(R.string.appdetail_action_share)
+    val shareListing = shareText?.let { text ->
+        { Sharing.shareText(context, text, shareChooserTitle); Unit }
+    }
+
+    val openApp = packageName
+        ?.takeIf { launchable }
+        ?.let { name -> { LaunchApp.open(context, name); Unit } }
 
     AppDetailScreen(
         uiState = uiState,
@@ -172,6 +224,10 @@ fun AppDetailScreen(
         canInstallPackages = canInstallPackages,
         installSourcesUnreachable = installSourcesUnreachable,
         onOpenInBrowser = openInBrowser,
+        onShareListing = shareListing,
+        onOpenApp = openApp,
+        canOpenLink = { url -> ExternalLinks.canOpen(context, url) },
+        onOpenLink = { url -> ExternalLinks.open(context, url) },
         onBack = onBack,
         onInstall = {
             if (!notificationPermissionAsked && context.needsNotificationPermission()) {
@@ -238,6 +294,29 @@ internal fun AppDetailScreen(
     installSourcesUnreachable: Boolean = false,
     /** `null` when nothing on this device would open that page: see `ExternalLinks`. */
     onOpenInBrowser: (() -> Unit)? = null,
+    /** `null` when this store publishes no page to point somebody at. */
+    onShareListing: (() -> Unit)? = null,
+    /**
+     * `null` when there is nothing to open: not installed, or installed with no launcher activity.
+     *
+     * The second half is a real case and not a defensive branch — see `LaunchApp`.
+     */
+    onOpenApp: (() -> Unit)? = null,
+    /**
+     * Whether this device would open an address, and how.
+     *
+     * They are parameters rather than direct calls to `ExternalLinks` inside the links block for the
+     * same reason `canInstallPackages` is one: they are facts about the **device**, and a composable
+     * that reads them itself cannot be photographed. Robolectric installs no browser, so a block
+     * asking the real `PackageManager` would render empty in every golden — a section drawn nowhere
+     * and therefore compared against nothing, which is precisely the shape of defect this release
+     * exists to remove.
+     *
+     * The permissive defaults belong to the preview and the goldens, not to the app: the real screen
+     * always passes both.
+     */
+    canOpenLink: (String) -> Boolean = { true },
+    onOpenLink: (String) -> Unit = {},
     onBack: () -> Unit,
     onInstall: () -> Unit,
     onUninstall: () -> Unit,
@@ -267,7 +346,18 @@ internal fun AppDetailScreen(
                 title = title,
                 onBack = onBack,
                 actions = {
-                    // Absent, not disabled: the button is there only if something would open it.
+                    // Both absent rather than disabled: a button is there only if it would do
+                    // something. Share comes first because it acts on the page one is looking at,
+                    // while "open in browser" leaves for somewhere else — and the rightmost slot of
+                    // a top bar is the one the thumb reaches, so it goes to the gesture that stays.
+                    onShareListing?.let { share ->
+                        IconButton(onClick = share) {
+                            Icon(
+                                imageVector = Icons.Rounded.Share,
+                                contentDescription = stringResource(R.string.appdetail_action_share),
+                            )
+                        }
+                    }
                     onOpenInBrowser?.let { open ->
                         IconButton(onClick = open) {
                             Icon(
@@ -302,6 +392,9 @@ internal fun AppDetailScreen(
                     preferredLanguageTags = preferredLanguageTags,
                     canInstallPackages = canInstallPackages,
                     installSourcesUnreachable = installSourcesUnreachable,
+                    onOpenApp = onOpenApp,
+                    canOpenLink = canOpenLink,
+                    onOpenLink = onOpenLink,
                     onInstall = onInstall,
                     onUninstall = onUninstall,
                     onCancel = onCancel,
@@ -330,6 +423,9 @@ private fun ReadyContent(
     preferredLanguageTags: List<String>,
     canInstallPackages: Boolean,
     installSourcesUnreachable: Boolean,
+    onOpenApp: (() -> Unit)?,
+    canOpenLink: (String) -> Boolean,
+    onOpenLink: (String) -> Unit,
     onInstall: () -> Unit,
     onUninstall: () -> Unit,
     onCancel: () -> Unit,
@@ -375,6 +471,7 @@ private fun ReadyContent(
 
         ActionArea(
             state = state,
+            onOpenApp = onOpenApp,
             onInstall = onInstall,
             onUninstall = onUninstall,
             onShowVersionHistory = onShowVersionHistory,
@@ -402,11 +499,19 @@ private fun ReadyContent(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+        // Below the divider is the descriptive half of the page, and its order is an order of
+        // caution: what could stop you installing (anti-features), what the app looks like, what it
+        // says about itself, what changed since last time, the two remaining facts, and finally the
+        // author's own addresses — reference material one goes looking for rather than reads.
         AntiFeatures(state = state, preferredLanguageTags = preferredLanguageTags)
+        Screenshots(state = state, preferredLanguageTags = preferredLanguageTags)
         Description(state = state, preferredLanguageTags = preferredLanguageTags)
+        WhatsNew(state = state, preferredLanguageTags = preferredLanguageTags)
         VersionFacts(state = state)
+        Links(state = state, canOpen = canOpenLink, onOpen = onOpenLink)
         VersionHistorySection(
             state = state,
+            preferredLanguageTags = preferredLanguageTags,
             onToggle = onToggleVersionHistory,
             onRetry = onRetryVersionHistory,
             onInstallVersion = onInstallVersion,
@@ -496,29 +601,57 @@ private fun Header(
 }
 
 /**
- * Version, size and rating on a single line, separated by a dot.
+ * Version, size, rating and how many people it comes from, on a single line separated by a dot.
  *
- * One `Text` and not three: they are three facts about the same thing, and three lines would make
- * them read as three independent statements. The separator is a character with no letters, which
- * the hardcoded-string detector deliberately ignores.
+ * One `Text` and not four: they are facts about the same thing, and four lines would make them read
+ * as four independent statements. The separator is a character with no letters, which the
+ * hardcoded-string detector deliberately ignores.
  *
  * **The version is the one the button would install**, not "the latest the store names": on F-Droid
  * the two differ on 14 packages out of 4,257, and showing the second would state a different number
  * from the one about to be downloaded. Where there is nothing to offer it falls back to what the
  * listing declares, because even a listing with no installable artifact has a version number to show.
  *
- * The rating is **missing on six stores out of nine** and the line does not fake it: only what
- * somebody published gets written.
+ * ### The rating count is part of the rating, not a fact next to it
+ *
+ * "4.8" from twelve people and "4.3" from two hundred thousand used to read identically, and it is
+ * the number that most often decides between two stores' listings of the same app. It is therefore
+ * folded into the same fact — `★ 4.8 (12)` — rather than added as a fifth item: separated by a dot
+ * it would read as an unrelated quantity, and the reader would have to guess what was being counted.
+ *
+ * Both are missing on most stores and the line does not fake either. `ratingCount` is published by
+ * five of the nine (an1, f-droid, liteapks, pdalife, uptodown) and `downloadsLabel` by three
+ * (apkcombo, f-droid, uptodown) — so a header showing neither is the ordinary case and not a defect.
+ *
+ * The count goes through `NumberFormat` rather than `toString`: six figures with no separator is a
+ * number one has to count the digits of, and the grouping character is not the same in the five
+ * supported languages.
  */
 @Composable
 private fun HeaderFacts(state: AppDetailUiState.Ready, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val summary = state.detail.listing.summary
     val offered = state.detail.selection.versionOrNull()
+    val rating = summary.rating?.let { value ->
+        val count = summary.ratingCount
+        if (count == null) {
+            stringResource(R.string.appdetail_meta_rating, value)
+        } else {
+            stringResource(
+                R.string.appdetail_meta_rating_count,
+                value,
+                NumberFormat.getIntegerInstance().format(count),
+            )
+        }
+    }
     val parts = listOfNotNull(
-        summary.rating?.let { stringResource(R.string.appdetail_meta_rating, it) },
+        rating,
         offered?.versionName ?: summary.latestVersionName,
         offered?.sizeBytes?.let { Formatter.formatShortFileSize(context, it) },
+        // Already a label and not a number — apkcombo publishes "10M+" — so it is shown as the store
+        // wrote it, with only the noun added. Parsing it into a figure would mean inventing a
+        // precision three different stores did not claim.
+        summary.downloadsLabel?.let { stringResource(R.string.appdetail_meta_downloads, it) },
     )
     if (parts.isEmpty()) return
     Text(
@@ -569,6 +702,7 @@ private fun NewerElsewhereNote(
 @Composable
 private fun ActionArea(
     state: AppDetailUiState.Ready,
+    onOpenApp: (() -> Unit)?,
     onInstall: () -> Unit,
     onUninstall: () -> Unit,
     onShowVersionHistory: () -> Unit,
@@ -589,6 +723,7 @@ private fun ActionArea(
         when (val install = state.install) {
             InstallUiState.Idle -> IdleActions(
                 state = state,
+                onOpenApp = onOpenApp,
                 onInstall = onInstall,
                 onUninstall = onUninstall,
                 onShowVersionHistory = onShowVersionHistory,
@@ -665,10 +800,16 @@ private fun ActionArea(
                 onCancel = null,
             )
 
+            // The one card on this page that ends with something better to do than closing it.
+            // Until now the flow the whole app exists to complete — find it, verify it, install it —
+            // stopped one gesture short: the user had to leave, find the launcher and look for the
+            // icon. `onOpenApp` is `null` for a package with no launcher activity, and then the card
+            // is exactly what it was.
             InstallUiState.Installed -> Outcome(
                 title = stringResource(R.string.appdetail_state_installed),
                 message = null,
                 onDismiss = onDismissOutcome,
+                onOpen = onOpenApp,
             )
 
             InstallUiState.Uninstalled -> Outcome(
@@ -749,6 +890,7 @@ private fun ActionArea(
 @Composable
 private fun IdleActions(
     state: AppDetailUiState.Ready,
+    onOpenApp: (() -> Unit)?,
     onInstall: () -> Unit,
     onUninstall: () -> Unit,
     onShowVersionHistory: () -> Unit,
@@ -796,6 +938,15 @@ private fun IdleActions(
             )
             OutlinedButton(onClick = onUninstall) {
                 Text(text = stringResource(R.string.appdetail_action_uninstall))
+            }
+            // The one branch of this page where nothing is on offer: the app is here, it is current,
+            // and the only two things one can do with it are start it and remove it. The fill goes
+            // to the first, by the rule that gives it to the action one actually wants — and it is
+            // absent, not disabled, when the package declares no launcher activity.
+            onOpenApp?.let { open ->
+                Button(onClick = open) {
+                    Text(text = stringResource(R.string.appdetail_action_open))
+                }
             }
         }
 
@@ -979,6 +1130,17 @@ private fun Emphasis.buttonColors() = when (this) {
  * gesture it offers is "I have read it". The button stays filled because closing this card is what
  * puts the page back into a state where one can try again — on a failure it is the only thing to do,
  * and a faded link made it look optional.
+ *
+ * ### Except when there is somewhere to go, and then the fill moves
+ *
+ * With [onOpen] the card has two gestures and they are not equal: one dismisses a message, the other
+ * starts the app that was just installed. The project's own rule — the fill belongs to the action
+ * that resolves — puts it on "Open" and turns "Dismiss" into the outlined one, which is the same
+ * asymmetry already applied to Cancel on a running download.
+ *
+ * The outlined button takes its colours from the container rather than from the base theme, for the
+ * reason written on [Emphasis.buttonColors]: a default `OutlinedButton` draws `primary` on whatever
+ * is behind it, and inside a coloured card that argues with the background instead of sitting on it.
  */
 @Composable
 private fun Outcome(
@@ -987,12 +1149,27 @@ private fun Outcome(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     emphasis: Emphasis = Emphasis.NEUTRAL,
+    onOpen: (() -> Unit)? = null,
 ) {
     EmphasisCard(emphasis = emphasis, modifier = modifier) {
         NoticeBody(title = title, message = message, emphasis = emphasis)
         CardActions {
-            Button(onClick = onDismiss, colors = emphasis.buttonColors()) {
-                Text(text = stringResource(R.string.appdetail_action_dismiss))
+            if (onOpen == null) {
+                Button(onClick = onDismiss, colors = emphasis.buttonColors()) {
+                    Text(text = stringResource(R.string.appdetail_action_dismiss))
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = emphasis.onContainer(),
+                    ),
+                ) {
+                    Text(text = stringResource(R.string.appdetail_action_dismiss))
+                }
+                Button(onClick = onOpen, colors = emphasis.buttonColors()) {
+                    Text(text = stringResource(R.string.appdetail_action_open))
+                }
             }
         }
     }
@@ -1461,6 +1638,7 @@ private fun UnavailableNote(
 @Composable
 internal fun VersionHistorySection(
     state: AppDetailUiState.Ready,
+    preferredLanguageTags: List<String>,
     onToggle: () -> Unit,
     onRetry: () -> Unit,
     onInstallVersion: (AppVersion) -> Unit,
@@ -1556,6 +1734,7 @@ internal fun VersionHistorySection(
         versions.forEach { offer ->
             VersionHistoryRow(
                 offer = offer,
+                preferredLanguageTags = preferredLanguageTags,
                 enabled = !state.install.isBusy,
                 onInstall = { onInstallVersion(offer.version) },
                 modifier = Modifier.padding(top = spacing.medium),
@@ -1567,6 +1746,7 @@ internal fun VersionHistorySection(
 @Composable
 private fun VersionHistoryRow(
     offer: VersionOffer,
+    preferredLanguageTags: List<String>,
     enabled: Boolean,
     onInstall: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1621,6 +1801,19 @@ private fun VersionHistoryRow(
                 text = stringResource(note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = spacing.extraSmall),
+            )
+        }
+        // What this particular build changed, where the store says so. Two stores publish it —
+        // f-droid and pdalife — and it is the one thing that makes a list of version numbers a list
+        // one can choose from: without it the rows differ only by a number and a date.
+        //
+        // Truncated like the section above the fold, and for a sharper reason: F-Droid's index
+        // carries a changelog per version, so an untruncated history of twenty versions would be
+        // twenty paragraphs where the reader came to find one row.
+        version.changelog.resolve(preferredLanguageTags)?.let { notes ->
+            ExpandableText(
+                text = notes,
                 modifier = Modifier.padding(top = spacing.extraSmall),
             )
         }
@@ -1720,6 +1913,308 @@ private fun Description(
         )
     }
 }
+
+/**
+ * The images the store publishes for this app.
+ *
+ * ### The most-populated field in the model, and until now the least-read
+ *
+ * Eight adapters out of nine fill `screenshots` — every one except an1, whose site publishes none —
+ * and `listing_screenshots` has kept them since M0, with its own foreign key, its own index and its
+ * own place in the cleanup. On the measured device they were 3.4 MB, 5% of the database: bytes
+ * downloaded, saved and swept, and drawn nowhere.
+ *
+ * ### It disappears rather than saying "no images"
+ *
+ * A store that publishes none is not a store with a problem, and a placeholder announcing an absence
+ * would put a permanent empty row on the page of every an1 listing. It is the same distinction the
+ * app already draws between "we do not know" and "there is nothing" — see `UpToDate.comparable`.
+ *
+ * ### One language, not all of them
+ *
+ * F-Droid files the same screens under every language it publishes, and the first thing showing them
+ * did was reveal the size of that: **95 images for AntennaPod**, measured on the device. The strip
+ * asks `forLanguages` for the set that matches the reader, through the same resolution ladder the
+ * store's text goes through — so the pictures and the description are in the same language, which is
+ * not something a second, hand-written rule could be relied on to keep true.
+ *
+ * The strip bleeds past the screen margin on purpose: the padding is `contentPadding` on the row and
+ * not `padding` on the column, so the first cell lines up with the title above it **and** a
+ * half-visible cell at the edge says there is more to the right. With the margin on the column the
+ * strip would stop dead at the edge and look like a complete list of three.
+ */
+@Composable
+internal fun Screenshots(
+    state: AppDetailUiState.Ready,
+    preferredLanguageTags: List<String>,
+    modifier: Modifier = Modifier,
+) {
+    val urls = state.detail.listing.screenshots.forLanguages(preferredLanguageTags).map { it.url }
+    if (urls.isEmpty()) return
+
+    val spacing = LocalSpacing.current
+    Column(modifier = modifier.padding(top = spacing.large)) {
+        Text(
+            text = stringResource(R.string.appdetail_section_screenshots),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = spacing.screenHorizontal),
+        )
+        ScreenshotGallery(
+            urls = urls,
+            contentPadding = PaddingValues(horizontal = spacing.screenHorizontal),
+            modifier = Modifier.padding(top = spacing.small),
+        )
+    }
+}
+
+/**
+ * What changed in the version about to be installed.
+ *
+ * ### Three sources out of nine, and that is the argument for it rather than against
+ *
+ * `StoreListingDetail.whatsNew` is filled by f-droid and modyolo, `AppVersion.changelog` by f-droid
+ * and pdalife. Neither had a reader. Among those three sits by far the largest catalogue, and on a
+ * store that redistributes **modified** builds those notes are the only place the modification is
+ * described in words — which makes them worth more there than anywhere else, not less.
+ *
+ * ### The version's own notes win over the listing's
+ *
+ * They answer the same question at two different precisions: `changelog` belongs to the build that
+ * is about to be downloaded, `whatsNew` to the listing as a whole. Preferring the second would show
+ * the notes of whatever the store considers current next to a button installing something else —
+ * which happens on every listing where the rule picks a version other than the newest, and on
+ * F-Droid that is 14 packages out of 4,257.
+ *
+ * ### And it disappears where there is nothing
+ *
+ * Six stores out of nine publish neither field. "No release notes" on all of their listings would be
+ * a permanent section saying nothing; absence is the honest form, and the same one the screenshots
+ * above use.
+ */
+@Composable
+internal fun WhatsNew(
+    state: AppDetailUiState.Ready,
+    preferredLanguageTags: List<String>,
+    modifier: Modifier = Modifier,
+) {
+    val offered = state.detail.selection.versionOrNull()
+    val notes = offered?.changelog?.resolve(preferredLanguageTags)
+        ?: state.detail.listing.whatsNew.resolve(preferredLanguageTags)
+        ?: return
+
+    val spacing = LocalSpacing.current
+    Column(
+        modifier = modifier.padding(
+            start = spacing.screenHorizontal,
+            end = spacing.screenHorizontal,
+            top = spacing.large,
+        ),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.appdetail_section_whats_new),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            // The number the notes belong to, when it is known. Without it the section says "what
+            // changed" without saying since when, and on a listing whose offered version is not the
+            // newest that is the difference between a true heading and a misleading one.
+            offered?.versionName?.let { name ->
+                Text(
+                    text = stringResource(R.string.appdetail_whats_new_version, name),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = spacing.small),
+                )
+            }
+        }
+        ExpandableText(
+            text = notes,
+            modifier = Modifier.padding(top = spacing.small),
+        )
+    }
+}
+
+/**
+ * A block of text that starts short and can be opened.
+ *
+ * ### Why release notes are truncated and the description is not
+ *
+ * A description is read once, deliberately, by somebody deciding whether they want the app. Release
+ * notes are read on the way to a button, and F-Droid publishes some that run to dozens of lines —
+ * untruncated they would push "Details", the links and the version history off the bottom of a page
+ * whose reader is one tap from updating. The description keeps its full height because nothing sits
+ * under it that the reader was on their way to.
+ *
+ * ### The state is remembered, and the reason is not convenience
+ *
+ * `rememberSaveable` rather than `remember`: a rotation with the notes open would otherwise close
+ * them, and the reader would have to find where they were in a text they had already started.
+ *
+ * The label switches between "read more" and "show less" instead of an icon rotating, because it is
+ * the only control on the page whose two states are both a legitimate resting place — and a chevron
+ * would have to be labelled for a screen reader anyway, in words, in five languages.
+ */
+@Composable
+private fun ExpandableText(text: String, modifier: Modifier = Modifier) {
+    val spacing = LocalSpacing.current
+    var expanded by rememberSaveable(text) { mutableStateOf(false) }
+    // Whether truncation is actually happening. Asking the layout is the only way to know: a
+    // three-line note must not get a "read more" that opens nothing, and the line count depends on
+    // the font scale, so it cannot be decided from the string's length.
+    var truncated by remember(text) { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Text(
+            // The same treatment as the description: stores publish reduced HTML, and printing
+            // `<b>` on screen is what happens without it.
+            text = AnnotatedString.fromHtml(text.asDisplayableHtml()),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_LINES,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { result -> truncated = result.hasVisualOverflow || truncated },
+        )
+        if (truncated) {
+            TextButton(
+                onClick = { expanded = !expanded },
+                contentPadding = PaddingValues(horizontal = spacing.small),
+            ) {
+                Text(
+                    text = if (expanded) {
+                        stringResource(R.string.appdetail_read_less)
+                    } else {
+                        stringResource(R.string.appdetail_read_more)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The addresses the source publishes about the app itself: code, site, issues, donations.
+ *
+ * ### Seven fields, one reader, and a disproportion that showed
+ *
+ * `sourceCodeUrl`, `issueTrackerUrl`, `webSiteUrl`, `changelogUrl`, `translationUrl`, `donateUrls`
+ * and `authorName` have been in the model since M1 and F-Droid publishes them for nearly every
+ * package. None of them reached a screen — while Settings carried **two donation buttons for
+ * MultiStore itself** and none for the developers of the apps MultiStore distributes.
+ *
+ * `authorName` is not in this block and that is not an omission: it has no address, so it is not a
+ * link. It is already on the header, which is where `CatalogMapping` sends it — the developer line
+ * reads `authorName` where the source publishes one.
+ *
+ * ### Only what was published, and only what this device would open
+ *
+ * The list is built from what is there, so a source publishing nothing gets no block at all rather
+ * than six greyed rows. The second filter is `ExternalLinks.canOpen`, the same one the top bar's
+ * "open in browser" already applies: a row that does nothing when tapped, and does not say so, sends
+ * people looking for the fault in the wrong place.
+ *
+ * ### The address is visible before the tap
+ *
+ * A label alone — "Source code" — asks the reader to trust that it goes where it says. On a page
+ * whose whole subject is provenance, that is the wrong thing to ask: the host is what tells a
+ * repository from a mirror, and it costs one line under the label.
+ */
+@Composable
+internal fun Links(
+    state: AppDetailUiState.Ready,
+    canOpen: (String) -> Boolean,
+    onOpen: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listing = state.detail.listing
+
+    val links = buildList {
+        fun add(icon: ImageVector, @StringRes labelRes: Int, url: String?) {
+            if (!url.isNullOrBlank() && canOpen(url)) {
+                add(AppLink(icon = icon, labelRes = labelRes, url = url))
+            }
+        }
+        add(Icons.Rounded.Code, R.string.appdetail_link_source_code, listing.sourceCodeUrl)
+        add(Icons.Rounded.Public, R.string.appdetail_link_website, listing.webSiteUrl)
+        add(Icons.Rounded.BugReport, R.string.appdetail_link_issue_tracker, listing.issueTrackerUrl)
+        add(Icons.Rounded.History, R.string.appdetail_link_changelog, listing.changelogUrl)
+        add(Icons.Rounded.Translate, R.string.appdetail_link_translation, listing.translationUrl)
+        // A list and not a single value: F-Droid publishes Liberapay, OpenCollective and a plain
+        // address for the same package, and picking one would be choosing for the author which of
+        // their channels gets shown.
+        listing.donateUrls.forEach { url ->
+            add(Icons.Rounded.FavoriteBorder, R.string.appdetail_link_donate, url)
+        }
+    }
+    if (links.isEmpty()) return
+
+    val spacing = LocalSpacing.current
+    Column(
+        modifier = modifier.padding(
+            start = spacing.screenHorizontal,
+            end = spacing.screenHorizontal,
+            top = spacing.large,
+        ),
+    ) {
+        Text(
+            text = stringResource(R.string.appdetail_section_links),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        links.forEach { link ->
+            LinkRow(link = link, onClick = { onOpen(link.url) })
+        }
+    }
+}
+
+/** One address: what it is, and where it goes. */
+@Composable
+private fun LinkRow(link: AppLink, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val spacing = LocalSpacing.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            // A hand-built clickable row does not go through `minimumInteractiveComponentSize`,
+            // which Material applies only to its own controls: without this the accessibility check
+            // hooked to every capture reports the target as too small.
+            .heightIn(min = MIN_TOUCH_TARGET)
+            .padding(vertical = spacing.extraSmall),
+    ) {
+        Icon(
+            imageVector = link.icon,
+            // Decorative: the label beside it says the same thing in words, and a second
+            // description would have a screen reader announce the row twice.
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(spacing.extraLarge),
+        )
+        Column(modifier = Modifier.padding(start = spacing.medium)) {
+            Text(
+                text = stringResource(link.labelRes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = link.url,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** An address the source published, with what it is for. */
+private data class AppLink(
+    val icon: ImageVector,
+    @param:StringRes val labelRes: Int,
+    val url: String,
+)
 
 /**
  * What is left to say after the header: minimum requirement and license.
@@ -1894,6 +2389,15 @@ private fun VersionSelection.Outcome.versionOrNull(): AppVersion? = when (this) 
  * a `Row`.
  */
 private val MIN_TOUCH_TARGET = 48.dp
+
+/**
+ * How much of a release note is shown before it has to be asked for.
+ *
+ * Six lines is about a paragraph: enough for the note that says "fixed the crash on startup" to be
+ * read whole without a tap, and short enough that the twenty-line ones do not push the rest of the
+ * page out of reach.
+ */
+private const val COLLAPSED_LINES = 6
 
 /** Between a version's size, date and channel. */
 private const val FACT_SEPARATOR = " · "

@@ -51,4 +51,13 @@
         <item quantity="one">%1$d store did not answer</item>
         <item quantity="other">%1$d stores did not answer</item>
     </plurals>
+
+    <!-- Searching and ordering inside the list. -->
+    <string name="myapps_action_sort">Change the order</string>
+    <string name="myapps_sort_dialog_title">Order of the list</string>
+    <string name="myapps_sort_dialog_close">Close</string>
+    <string name="myapps_search_label">Search your apps</string>
+    <string name="myapps_search_clear">Clear the search</string>
+    <string name="myapps_no_matches_title">Nothing matches</string>
+    <string name="myapps_no_matches_message">No installed app is called \u201c%1$s\u201d. Your apps are all still there \u2014 clear the search to see them.</string>
 </resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      The provider that lets a **staged APK** leave the app.
+
+      It is declared here and not in `:app` for the rule every permission in this project already
+      follows: whoever needs it declares it. `Staging` is the one object that knows where those files
+      live, the paths file below points at that same directory, and the authority is built from the
+      same constant — so the three cannot drift apart.
+
+      `android:exported="false"` plus `grantUriPermissions` is the whole security model: nobody can
+      list or read this directory, and a single receiving app gets read access to a single file for
+      as long as the intent that carried it lives. Exporting it would publish `filesDir/staging` —
+      which holds APKs already verified and about to be installed — to every app on the device.
+    -->
+    <application>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.staging"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/staging_paths" />
+        </provider>
+    </application>
+
+</manifest>

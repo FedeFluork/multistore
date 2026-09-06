@@ -67,6 +67,7 @@ fun StoreListingDetail.toRows(now: Instant, ttl: Duration): ListingWrite {
             issueTrackerUrl = issueTrackerUrl,
             webSiteUrl = webSiteUrl,
             changelogUrl = changelogUrl,
+            translationUrl = translationUrl,
             authorName = authorName ?: summary.developer,
             donateUrls = donateUrls,
             matchConfidence = if (summary.packageName != null) 1.0f else INFERRED_CONFIDENCE,
@@ -82,6 +83,7 @@ fun StoreListingDetail.toRows(now: Instant, ttl: Duration): ListingWrite {
                 listingId = 0,
                 url = shot.url,
                 kind = shot.kind.name,
+                locale = shot.locale,
                 sortOrder = index,
             )
         },
@@ -236,6 +238,7 @@ fun ListingWithDetails.toDetail(app: AppEntity? = null): StoreListingDetail {
             Screenshot(
                 url = it.url,
                 kind = runCatching { ScreenshotKind.valueOf(it.kind) }.getOrDefault(ScreenshotKind.PHONE),
+                locale = it.locale,
             )
         },
         versions = versions.map { it.toModel() },
@@ -245,6 +248,7 @@ fun ListingWithDetails.toDetail(app: AppEntity? = null): StoreListingDetail {
         issueTrackerUrl = listing.issueTrackerUrl,
         webSiteUrl = listing.webSiteUrl,
         changelogUrl = listing.changelogUrl,
+        translationUrl = listing.translationUrl,
         donateUrls = listing.donateUrls,
         authorName = listing.authorName,
         addedAt = listing.addedAt,

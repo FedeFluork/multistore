@@ -9,18 +9,27 @@ import com.multistore.core.data.repository.InstalledAppUpdate
 import com.multistore.core.data.repository.UpdateChannel
 import com.multistore.core.data.repository.UpdateCheckReport
 import com.multistore.core.data.store.StoreRegistry
+import com.multistore.core.domain.usecase.ActiveInstallDrivers
+import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.ObserveInstalledAppsUseCase
 import com.multistore.core.domain.usecase.ObserveUpdatesUseCase
+import com.multistore.core.domain.usecase.ResolveDownloadUseCase
 import com.multistore.core.domain.usecase.UninstallAppUseCase
+import com.multistore.core.domain.usecase.UpdateAllAppsUseCase
 import com.multistore.core.model.AppVersion
 import com.multistore.core.model.InstalledApp
 import com.multistore.core.model.InstalledPackage
 import com.multistore.core.model.InstallerKind
+import com.multistore.core.model.MyAppsSort
+import com.multistore.core.model.OwnPackage
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.VersionRef
+import com.multistore.core.testing.FakeAppDetailRepository
+import com.multistore.core.testing.FakeDownloadRepository
 import com.multistore.core.testing.FakeInstallRepository
 import com.multistore.core.testing.FakeInstalledAppsRepository
+import com.multistore.core.testing.FakeSettingsRepository
 import com.multistore.core.testing.FakeStoreAdapter
 import com.multistore.core.testing.FakeUpdateRepository
 import com.multistore.core.testing.MainDispatcherRule
@@ -57,17 +66,37 @@ class MyAppsViewModelTest {
     private val installedApps = FakeInstalledAppsRepository(listOf(anApp()))
     private val updates = FakeUpdateRepository(listOf(update(anApp())))
     private val installs = FakeInstallRepository()
+    private val settings = FakeSettingsRepository()
     private val subscriptions = CoroutineScope(SupervisorJob() + dispatcher)
 
     @After
     fun tearDown() = subscriptions.cancel()
 
-    private fun viewModel() = MyAppsViewModel(
-        installedApps = ObserveInstalledAppsUseCase(installedApps),
-        updates = ObserveUpdatesUseCase(updates, installedApps),
-        uninstallApp = UninstallAppUseCase(installs),
-        registry = StoreRegistry(setOf(FakeStoreAdapter())),
-    )
+    private fun viewModel(): MyAppsViewModel {
+        val registry = StoreRegistry(setOf(FakeStoreAdapter()))
+        return MyAppsViewModel(
+            installedApps = ObserveInstalledAppsUseCase(installedApps),
+            updates = ObserveUpdatesUseCase(updates, installedApps),
+            uninstallApp = UninstallAppUseCase(installs),
+            // The real loop, not a stand-in: "update all" moved into `:core:domain` precisely so this
+            // screen and the Home share one implementation, and a double here would stop covering
+            // the thing that moved.
+            updateAllApps = UpdateAllAppsUseCase(
+                updates = updates,
+                installApp = InstallAppUseCase(
+                    resolve = ResolveDownloadUseCase(registry, FakeAppDetailRepository(), settings),
+                    downloads = FakeDownloadRepository(),
+                    installs = installs,
+                    details = FakeAppDetailRepository(),
+                    settings = settings,
+                    drivers = ActiveInstallDrivers(),
+                ),
+                ownPackage = OwnPackage("com.multistore.test"),
+            ),
+            settings = settings,
+            registry = registry,
+        )
+    }
 
     @Test
     fun `the list carries the store's name, not its identifier`() = runTest(dispatcher) {
@@ -284,6 +313,104 @@ class MyAppsViewModelTest {
         assertThat(viewModel.ready().check).isEqualTo(UpdateCheckUiState.Incomplete(stores = 1))
     }
 
+    // --- Searching and ordering, as the state sees them ----------------------------------------
+
+    /**
+     * A query matching nothing is **not** an empty screen.
+     *
+     * The apps are still installed, and the field that produced the emptiness has to stay on screen
+     * so it can be cleared. Falling back to [MyAppsUiState.Empty] would take it away at exactly the
+     * moment it is needed — and would say "you have installed nothing", which is false.
+     *
+     * The filtering itself is proved in `MyAppsArrangementTest`, on the function that does it. What
+     * is proved here is the wiring: that the query reaches the list, and that the state stays Ready.
+     */
+    @Test
+    fun `a query that matches nothing stays Ready, and says which query`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.state()
+
+        viewModel.onQueryChange("zzqxwvnbtklmj")
+
+        val ready = viewModel.ready()
+        assertThat(ready.apps).isEmpty()
+        assertThat(ready.query).isEqualTo("zzqxwvnbtklmj")
+    }
+
+    @Test
+    fun `the field narrows the list`() = runTest(dispatcher) {
+        updates.state.value = listOf(
+            update(anApp(packageName = "org.mozilla.firefox", label = "Firefox")),
+            update(anApp(packageName = "org.videolan.vlc", label = "VLC")),
+        )
+        val viewModel = viewModel()
+        viewModel.state()
+
+        viewModel.onQueryChange("fire")
+
+        assertThat(viewModel.ready().apps.map { it.app.label }).containsExactly("Firefox")
+    }
+
+    /**
+     * The count next to "Update all" is over **everything**, not over what the search left visible.
+     *
+     * The gesture acts on every app with something newer, because that is what the shared use case
+     * does. A count taken from the filtered rows would put a number beside a button that then
+     * updated a different set — and a search is precisely when the two diverge.
+     */
+    @Test
+    fun `the updatable count ignores the search filter`() = runTest(dispatcher) {
+        updates.state.value = listOf(
+            update(anApp(packageName = "org.mozilla.firefox", label = "Firefox"), OFFERED),
+            update(anApp(packageName = "org.videolan.vlc", label = "VLC"), OFFERED),
+        )
+        val viewModel = viewModel()
+        viewModel.state()
+
+        viewModel.onQueryChange("fire")
+
+        val ready = viewModel.ready()
+        assertThat(ready.apps).hasSize(1)
+        assertThat(ready.updatable).isEqualTo(2)
+    }
+
+    /**
+     * The order is **remembered**, and there is one answer to what it is.
+     *
+     * The control writes the setting rather than a copy held here: a transient override next to a
+     * persisted default is the classic pair of values that diverge, with this screen showing one and
+     * the Settings entry the other.
+     */
+    @Test
+    fun `choosing an order writes the setting the Settings entry reads`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.state()
+
+        viewModel.setSort(MyAppsSort.STORE)
+
+        assertThat(settings.myApps.value.sort).isEqualTo(MyAppsSort.STORE)
+        assertThat(viewModel.ready().sort).isEqualTo(MyAppsSort.STORE)
+    }
+
+    /** And the chosen order really reaches the rows, which is the other half of the wiring. */
+    @Test
+    fun `the chosen order reaches the rows`() = runTest(dispatcher) {
+        updates.state.value = listOf(
+            update(anApp(packageName = "org.videolan.vlc", label = "VLC"), OFFERED),
+            update(anApp(packageName = "org.example.aardvark", label = "Aardvark")),
+        )
+        val viewModel = viewModel()
+        viewModel.state()
+
+        assertThat(viewModel.ready().apps.map { it.app.label })
+            .containsExactly("Aardvark", "VLC").inOrder()
+
+        viewModel.setSort(MyAppsSort.UPDATABLE_FIRST)
+
+        assertThat(viewModel.ready().apps.map { it.app.label })
+            .containsExactly("VLC", "Aardvark").inOrder()
+    }
+
     /**
      * Subscribes to the state and returns it.
      *
@@ -316,16 +443,19 @@ class MyAppsViewModelTest {
         sourceKnown: Boolean = true,
         ignoreUpdates: Boolean = false,
         pinnedVersionCode: Long? = null,
+        packageName: String = PACKAGE,
+        label: String = "Example",
+        installedAfter: Long = 0,
     ) = InstalledApp(
-        packageName = PACKAGE,
-        label = "Example",
+        packageName = packageName,
+        label = label,
         versionName = "1.2.3",
         versionCode = 12,
         signerSha256 = null,
-        installedAt = Instant.fromEpochSeconds(1_756_000_000),
+        installedAt = Instant.fromEpochSeconds(1_756_000_000 + installedAfter),
         installerKind = InstallerKind.SESSION,
         sourceStoreId = StoreId.FDROID.takeIf { sourceKnown },
-        sourceRef = StoreAppRef(PACKAGE).takeIf { sourceKnown },
+        sourceRef = StoreAppRef(packageName).takeIf { sourceKnown },
         ignoreUpdates = ignoreUpdates,
         pinnedVersionCode = pinnedVersionCode,
     )
@@ -337,6 +467,12 @@ class MyAppsViewModelTest {
             versionName = "1.2.3",
             versionCode = 12,
             ref = VersionRef("v12"),
+        )
+
+        /** A listing with something newer to offer, i.e. a row that counts as updatable. */
+        val OFFERED = VersionSelection.Outcome.Offer(
+            AppVersion(versionName = "2.0.0", versionCode = 20, ref = VersionRef("v20")),
+            isUpdate = true,
         )
 
         val NEWER = AppVersion(

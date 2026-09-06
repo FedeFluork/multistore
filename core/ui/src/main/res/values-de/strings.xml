@@ -35,4 +35,25 @@
         <item quantity="one">%1$d App kann installiert werden</item>
         <item quantity="other">%1$d Apps können installiert werden</item>
     </plurals>
+
+    <!-- Der Screenshot-Streifen und seine Vollbildansicht. -->
+    <string name="gallery_screenshot_position">Screenshot %1$d von %2$d</string>
+    <string name="gallery_close">Screenshot schließen</string>
+    <string name="gallery_position">%1$d / %2$d</string>
+
+    <!-- Das Panel „alle aktualisieren“, auf der Startseite und in „Meine Apps“. -->
+    <string name="update_all_action">Alle aktualisieren</string>
+    <string name="update_all_applying">Aktualisierung %1$d von %2$d</string>
+    <string name="update_all_finished">%1$d aktualisiert, %2$d nicht erledigt</string>
+    <string name="update_all_dismiss">OK</string>
+    <plurals name="update_all_title">
+        <item quantity="one">%1$d Update verfügbar</item>
+        <item quantity="other">%1$d Updates verfügbar</item>
+    </plurals>
+
+    <!-- Die Reihenfolge der installierten Liste. Von den Einstellungen und der Liste gemeinsam genutzt. -->
+    <string name="myapps_sort_name">Name</string>
+    <string name="myapps_sort_updatable">Aktualisierbare zuerst</string>
+    <string name="myapps_sort_recent">Kürzlich installiert</string>
+    <string name="myapps_sort_store">Herkunfts-Store</string>
 </resources>

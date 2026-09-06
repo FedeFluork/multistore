@@ -121,4 +121,27 @@
     <string name="appdetail_container_expansion_failed">Die Spieldaten ließen sich nicht kopieren: %1$s</string>
     <string name="appdetail_rejected_foreign_split">Der Teil %1$s gehört nicht zu dieser App: %2$s.</string>
     <string name="appdetail_unknown_sources_unreachable">Dieses Gerät hat keinen Bildschirm für diese Einstellung: die %1$s-Software hat ihn womöglich verschoben oder entfernt. Suche in den Systemeinstellungen nach „Unbekannte Apps installieren“.</string>
+
+    <!-- Teilen und \u00f6ffnen: die beiden Enden des Ablaufs, der bisher au\u00dferhalb der App endete. -->
+    <string name="appdetail_action_share">Teilen</string>
+    <string name="appdetail_action_open">\u00d6ffnen</string>
+    <string name="appdetail_share_listing_text">%1$s bei %2$s\n%3$s</string>
+
+    <!-- Kopfzeilen-Angaben, die sechs von neun Stores nicht ver\u00f6ffentlichen. -->
+    <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>
+    <string name="appdetail_meta_downloads">%1$s Downloads</string>
+
+    <!-- Was der Store l\u00e4ngst ver\u00f6ffentlicht hat und nichts angezeigt hat. -->
+    <string name="appdetail_section_screenshots">Screenshots</string>
+    <string name="appdetail_section_whats_new">Neuerungen</string>
+    <string name="appdetail_whats_new_version">in Version %1$s</string>
+    <string name="appdetail_read_more">Mehr lesen</string>
+    <string name="appdetail_read_less">Weniger anzeigen</string>
+    <string name="appdetail_section_links">Links</string>
+    <string name="appdetail_link_source_code">Quellcode</string>
+    <string name="appdetail_link_website">Website</string>
+    <string name="appdetail_link_issue_tracker">Problem melden</string>
+    <string name="appdetail_link_changelog">\u00c4nderungsprotokoll</string>
+    <string name="appdetail_link_translation">Beim \u00dcbersetzen helfen</string>
+    <string name="appdetail_link_donate">Spenden</string>
 </resources>

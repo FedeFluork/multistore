@@ -235,4 +235,9 @@
         <item quantity="one">%1$d app is ready to install and would be deleted: putting it back means downloading it again. Transfers in progress or paused are left alone.</item>
         <item quantity="other">%1$d apps are ready to install and would be deleted: putting them back means downloading them again. Transfers in progress or paused are left alone.</item>
     </plurals>
+
+    <!-- "My apps": how the installed list is arranged. -->
+    <string name="settings_section_my_apps">My apps</string>
+    <string name="settings_my_apps_sort_label">Order of the list</string>
+    <string name="settings_my_apps_sort_description">How the apps you installed through MultiStore are arranged. It applies to the list only \u2014 it changes nothing about updates.</string>
 </resources>

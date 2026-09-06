@@ -12,6 +12,8 @@ import com.multistore.core.model.NetworkSettings
 import com.multistore.core.model.NotificationSettings
 import com.multistore.core.model.RemoteConfigSettings
 import com.multistore.core.model.SearchSettings
+import com.multistore.core.model.MyAppsSettings
+import com.multistore.core.model.MyAppsSort
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.SecuritySettings
 import com.multistore.core.model.StorageSettings
@@ -84,6 +86,16 @@ interface SettingsRepository {
      */
     val search: Flow<SearchSettings>
 
+    /**
+     * What "My apps" remembers: the order, and only the order.
+     *
+     * Its own flow rather than a field folded into another group, for the reason every other group
+     * here has one: whoever collects it recomposes when it changes, and putting the sort inside, say,
+     * `search` would make the installed-apps list recompose every time somebody moved the search
+     * timeout slider.
+     */
+    val myApps: Flow<MyAppsSettings>
+
     val notifications: Flow<NotificationSettings>
 
     val diagnostics: Flow<DiagnosticsSettings>
@@ -131,6 +143,8 @@ interface SettingsRepository {
     suspend fun setDefaultSort(sort: SearchSort)
 
     suspend fun setDefaultContentKind(kind: ContentKind?)
+
+    suspend fun setMyAppsSort(sort: MyAppsSort)
 
     suspend fun setMuteDownloadNotifications(mute: Boolean)
 

@@ -14,6 +14,8 @@ import com.multistore.core.model.NetworkSettings
 import com.multistore.core.model.NotificationSettings
 import com.multistore.core.model.RemoteConfigSettings
 import com.multistore.core.model.SearchSettings
+import com.multistore.core.model.MyAppsSettings
+import com.multistore.core.model.MyAppsSort
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.SecuritySettings
 import com.multistore.core.model.StorageSettings
@@ -99,6 +101,10 @@ class SettingsLocalDataSource @Inject constructor(
 
     val search: Flow<SearchSettings> = settings
         .map { it.toSearch() }
+        .distinctUntilChanged()
+
+    val myApps: Flow<MyAppsSettings> = settings
+        .map { it.toMyApps() }
         .distinctUntilChanged()
 
     val network: Flow<NetworkSettings> = settings
@@ -204,6 +210,10 @@ class SettingsLocalDataSource @Inject constructor(
 
     suspend fun setDefaultSort(sort: SearchSort) {
         dataStore.updateData { it.toBuilder().setDefaultSort(sort.toProto()).build() }
+    }
+
+    suspend fun setMyAppsSort(sort: MyAppsSort) {
+        dataStore.updateData { it.toBuilder().setMyAppsSort(sort.toProto()).build() }
     }
 
     suspend fun setDefaultContentKind(kind: ContentKind?) {

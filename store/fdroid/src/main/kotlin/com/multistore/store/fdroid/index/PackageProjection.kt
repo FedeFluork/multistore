@@ -188,8 +188,13 @@ class PackageProjection(
         val byKind = element as? JsonObject ?: return emptyList()
         return byKind.entries.flatMap { (kindKey, perLocale) ->
             val kind = SCREENSHOT_KINDS[kindKey] ?: ScreenshotKind.PHONE
-            LocalePruning.localizedFileList(perLocale).mapNotNull { (_, file) ->
-                file.string("name")?.let { Screenshot(url = absoluteUrl(it), kind = kind) }
+            // The tag is kept, not dropped: F-Droid files the same screens under every language the
+            // pruning keeps — 95 images for AntennaPod — and a strip showing all of them is a strip
+            // showing four copies of each screen in languages the reader does not read.
+            LocalePruning.localizedFileList(perLocale).mapNotNull { (tag, file) ->
+                file.string("name")?.let {
+                    Screenshot(url = absoluteUrl(it), kind = kind, locale = tag)
+                }
             }
         }
     }

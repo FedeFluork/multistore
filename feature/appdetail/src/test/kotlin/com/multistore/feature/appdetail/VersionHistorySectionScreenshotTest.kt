@@ -11,6 +11,7 @@ import com.multistore.core.data.repository.VersionOffer
 import com.multistore.core.model.AppVersion
 import com.multistore.core.model.DeviceProfile
 import com.multistore.core.model.InstalledPackage
+import com.multistore.core.model.LocalizedText
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
@@ -60,12 +61,14 @@ class VersionHistorySectionScreenshotTest : ScreenshotTest() {
             Column {
                 VersionHistorySection(
                     state = state(VersionHistoryUiState(expanded = true, failed = true)),
+                    preferredLanguageTags = listOf("en"),
                     onToggle = {},
                     onRetry = {},
                     onInstallVersion = {},
                 )
                 VersionHistorySection(
                     state = state(VersionHistoryUiState(expanded = false)),
+                    preferredLanguageTags = listOf("en"),
                     onToggle = {},
                     onRetry = {},
                     onInstallVersion = {},
@@ -76,10 +79,14 @@ class VersionHistorySectionScreenshotTest : ScreenshotTest() {
 
     private fun state(history: VersionHistoryUiState): AppDetailUiState.Ready {
         val versions = listOf(
-            version("1.24.0", 1_024_000),
+            // Two of the five carry release notes, and it has to be two of five rather than five of
+            // five: two stores out of nine publish a per-version changelog, so a history where every
+            // row has one would photograph a case that does not occur. The long one is what makes
+            // "Read more" appear, and the short one is what shows a note that needs no button.
+            version("1.24.0", 1_024_000, changelog = SHORT_CHANGELOG),
             version("1.24.0-rc1", 1_023_900, channels = setOf("Beta")),
             version("1.23.2", INSTALLED),
-            version("1.23.1", 1_023_051),
+            version("1.23.1", 1_023_051, changelog = LONG_CHANGELOG),
             version("1.23.0", 1_023_050, minSdk = 99),
         )
         val device = DeviceProfile(sdkInt = 34, supportedAbis = listOf("arm64-v8a"))
@@ -125,6 +132,7 @@ class VersionHistorySectionScreenshotTest : ScreenshotTest() {
         code: Long,
         channels: Set<String> = emptySet(),
         minSdk: Int? = 23,
+        changelog: String? = null,
     ) = AppVersion(
         versionName = name,
         versionCode = code,
@@ -132,6 +140,7 @@ class VersionHistorySectionScreenshotTest : ScreenshotTest() {
         sizeBytes = 9_400_000,
         minSdk = minSdk,
         releaseChannels = channels,
+        changelog = changelog?.let { LocalizedText(mapOf("en" to it)) } ?: LocalizedText.EMPTY,
         // A fixed instant rather than `Clock.System.now()`: a date of today would change tomorrow, and
         // the comparison would report a regression on a screen that has not changed.
         publishedAt = Instant.fromEpochMilliseconds(1_756_166_400_000L),
@@ -140,5 +149,12 @@ class VersionHistorySectionScreenshotTest : ScreenshotTest() {
     private companion object {
         const val SCREEN_NAME = "VersionHistorySection"
         const val INSTALLED = 1_023_052L
+
+        const val SHORT_CHANGELOG = "Fixed a crash when opening a repository over a slow connection."
+
+        /** Long enough to overflow six lines at this device's density: that is what draws the button. */
+        val LONG_CHANGELOG = (1..12).joinToString(separator = "\n") { index ->
+            "Change number $index in this release, described at a length nobody reads in full."
+        }
     }
 }

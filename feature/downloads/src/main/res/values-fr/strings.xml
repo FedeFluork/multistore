@@ -34,4 +34,10 @@
     <string name="downloads_status_failed">Le téléchargement a échoué.</string>
     <string name="downloads_status_installed">De %1$s · installée</string>
     <string name="downloads_status_removed">De %1$s · fichier supprimé</string>
+
+    <!-- Transmettre ce qui est déjà sur l’appareil, et lancer ce qui a été installé. -->
+    <string name="downloads_share">Partager le fichier</string>
+    <string name="downloads_open">Ouvrir</string>
+    <string name="downloads_share_text">%1$s, téléchargée depuis %2$s avec MultiStore.</string>
+    <string name="downloads_share_hash">SHA-256 vérifié au téléchargement : %1$s</string>
 </resources>

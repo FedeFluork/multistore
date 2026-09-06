@@ -136,4 +136,27 @@
     <string name="appdetail_container_expansion_failed">The game data could not be copied: %1$s</string>
     <string name="appdetail_rejected_foreign_split">The piece %1$s does not belong to this app: %2$s.</string>
     <string name="appdetail_unknown_sources_unreachable">This device has no screen for that setting: the %1$s software may have moved or removed it. Look for “install unknown apps” in the system settings.</string>
+
+    <!-- Sharing and opening: the two ends of the flow that used to finish outside the app. -->
+    <string name="appdetail_action_share">Share</string>
+    <string name="appdetail_action_open">Open</string>
+    <string name="appdetail_share_listing_text">%1$s on %2$s\n%3$s</string>
+
+    <!-- Header facts that six stores out of nine do not publish. -->
+    <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>
+    <string name="appdetail_meta_downloads">%1$s downloads</string>
+
+    <!-- What the store already published and nothing showed. -->
+    <string name="appdetail_section_screenshots">Screenshots</string>
+    <string name="appdetail_section_whats_new">What\u2019s new</string>
+    <string name="appdetail_whats_new_version">in %1$s</string>
+    <string name="appdetail_read_more">Read more</string>
+    <string name="appdetail_read_less">Show less</string>
+    <string name="appdetail_section_links">Links</string>
+    <string name="appdetail_link_source_code">Source code</string>
+    <string name="appdetail_link_website">Website</string>
+    <string name="appdetail_link_issue_tracker">Report an issue</string>
+    <string name="appdetail_link_changelog">Changelog</string>
+    <string name="appdetail_link_translation">Help translate</string>
+    <string name="appdetail_link_donate">Donate</string>
 </resources>

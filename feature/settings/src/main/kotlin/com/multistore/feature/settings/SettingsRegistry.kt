@@ -36,6 +36,7 @@ enum class SettingKey(val protoField: String) {
     SEARCH_TIMEOUT("search_timeout_seconds"),
     DEFAULT_SORT("default_sort"),
     DEFAULT_CONTENT_KIND("default_content_kind"),
+    MY_APPS_SORT("my_apps_sort"),
     MUTE_DOWNLOAD_NOTIFICATIONS("mute_download_notifications"),
     MUTE_INSTALL_NOTIFICATIONS("mute_install_notifications"),
     MUTE_STORE_ALERTS("mute_store_alerts"),
@@ -56,6 +57,19 @@ enum class SettingsSection(@param:StringRes val titleRes: Int) {
     STORES(R.string.settings_section_stores),
     CONTENT(R.string.settings_section_content),
     SEARCH(R.string.settings_section_search),
+
+    /**
+     * "My apps", and it is a section of its own rather than a row under Updates.
+     *
+     * Updates is about **when to look**; this is about how a list is arranged. Filing an ordering
+     * preference under a heading about checking schedules would make it findable only by someone who
+     * already knew where it was — and the internal search of this screen matches on the section's
+     * words too, so a wrong heading is a wrong search result as well.
+     *
+     * It mirrors the app's own navigation, which is the model the reader already has: the tabs are
+     * Home, Search, My apps, Downloads.
+     */
+    MY_APPS(R.string.settings_section_my_apps),
     UPDATES(R.string.settings_section_updates),
     NOTIFICATIONS(R.string.settings_section_notifications),
     INSTALLATION(R.string.settings_section_installation),
@@ -291,6 +305,12 @@ val SETTINGS_REGISTRY: List<SettingsEntry> = listOf(
         section = SettingsSection.SEARCH,
         labelRes = R.string.settings_search_sort_label,
         descriptionRes = R.string.settings_search_sort_description,
+    ),
+    SettingsEntry(
+        key = SettingKey.MY_APPS_SORT,
+        section = SettingsSection.MY_APPS,
+        labelRes = R.string.settings_my_apps_sort_label,
+        descriptionRes = R.string.settings_my_apps_sort_description,
     ),
     SettingsEntry(
         key = SettingKey.METERED_NETWORK_ALLOWED,

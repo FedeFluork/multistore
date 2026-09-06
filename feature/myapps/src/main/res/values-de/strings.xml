@@ -46,4 +46,13 @@
         <item quantity="one">%1$d Store hat nicht geantwortet</item>
         <item quantity="other">%1$d Stores haben nicht geantwortet</item>
     </plurals>
+
+    <!-- Suchen und Sortieren innerhalb der Liste. -->
+    <string name="myapps_action_sort">Reihenfolge \u00e4ndern</string>
+    <string name="myapps_sort_dialog_title">Reihenfolge der Liste</string>
+    <string name="myapps_sort_dialog_close">Schlie\u00dfen</string>
+    <string name="myapps_search_label">Deine Apps durchsuchen</string>
+    <string name="myapps_search_clear">Suche l\u00f6schen</string>
+    <string name="myapps_no_matches_title">Keine Treffer</string>
+    <string name="myapps_no_matches_message">Keine installierte App hei\u00dft \u201e%1$s\u201c. Deine Apps sind alle noch da \u2014 l\u00f6sche die Suche, um sie zu sehen.</string>
 </resources>

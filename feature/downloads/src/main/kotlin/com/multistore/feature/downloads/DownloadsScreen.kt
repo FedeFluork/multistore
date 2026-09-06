@@ -50,6 +50,16 @@ import com.multistore.core.ui.component.EmptyState
 import com.multistore.core.ui.component.MultiStoreTopAppBar
 import com.multistore.core.ui.component.appErrorMessage
 import kotlin.time.Instant
+import java.io.File
+import com.multistore.core.model.Sha256
+import android.content.Context
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.multistore.core.data.repository.Staging
+import com.multistore.core.ui.LaunchApp
+import com.multistore.core.ui.Sharing
 
 /**
  * "Downloads": what is moving, what is waiting for a tap, and what already happened.
@@ -87,6 +97,15 @@ fun DownloadsScreen(
         }
     }
 
+    // Recomputed on every return to the foreground: the user leaves to install the file, comes back,
+    // and "Open" has to be there. A value captured once would be right only for rows whose app was
+    // already on the device when the screen opened.
+    var installed by remember { mutableStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        installed++
+        onPauseOrDispose { }
+    }
+
     DownloadsScreen(
         uiState = uiState,
         confirmation = confirmation,
@@ -97,8 +116,57 @@ fun DownloadsScreen(
         onConfirm = viewModel::confirm,
         onDismissConfirmation = viewModel::dismissConfirmation,
         modifier = modifier,
+        onShare = context::shareApk,
+        onOpen = { item -> LaunchApp.open(context, item.packageName) },
+        // `installed` is read so the lambda is rebuilt after a return to the foreground; without it
+        // Compose would keep the previous answer and the button would stay away.
+        canOpen = { item -> installed >= 0 && LaunchApp.canOpen(context, item.packageName) },
     )
 }
+
+/**
+ * Hands the staged APK to another app.
+ *
+ * ### Three things the text has to carry, and one it must not invent
+ *
+ * The name, the store it came from, and **the digest measured while the bytes were arriving** — not
+ * the one the store published. That distinction is the whole value of sharing from here rather than
+ * sharing a link: the receiving side gets the exact bytes this app checked, and a line saying what
+ * they hash to. Where the download predates the column, or never finished, the line is simply
+ * absent: a digest is either measured or not claimed.
+ *
+ * ### Why `Staging.shareableUri` and not `Uri.fromFile`
+ *
+ * A `file://` URI makes the receiving app throw `FileUriExposedException` from API 24 on, and the
+ * crash lands on **their** side. The provider is declared in `:core:data`, next to the one object
+ * that knows where these files live, and returns `null` rather than throwing for a path outside the
+ * staging subtree — which is what a row written by an older version could hold.
+ */
+private fun Context.shareApk(item: DownloadItem) {
+    val file = item.file ?: return
+    val uri = Staging.shareableUri(this, file) ?: return
+    val text = listOfNotNull(
+        getString(R.string.downloads_share_text, item.title, item.storeName),
+        item.sha256?.let { getString(R.string.downloads_share_hash, it.hex) },
+    ).joinToString(separator = "\n")
+    Sharing.shareFile(
+        context = this,
+        uri = uri,
+        // What the store called it, because a container is a zip whose real type nobody agrees on:
+        // claiming `application/vnd.android.package-archive` for an `.xapk` would offer it to apps
+        // that cannot read it. The extension is the only thing anyone downstream can act on.
+        mimeType = if (file.extension.equals("apk", ignoreCase = true)) {
+            Sharing.MIME_APK
+        } else {
+            MIME_OCTET_STREAM
+        },
+        text = text,
+        chooserTitle = getString(R.string.downloads_share),
+    )
+}
+
+/** For a split container: honest about being bytes rather than wrong about being an APK. */
+private const val MIME_OCTET_STREAM = "application/octet-stream"
 
 /**
  * ViewModel-free variant, for previews and screenshot tests: a screenshot must depend only on the
@@ -116,6 +184,18 @@ internal fun DownloadsScreen(
     onConfirm: () -> Unit,
     onDismissConfirmation: () -> Unit,
     modifier: Modifier = Modifier,
+    onShare: (DownloadItem) -> Unit = {},
+    onOpen: (DownloadItem) -> Unit = {},
+    /**
+     * Whether this row's app is on the device **and** has something to open.
+     *
+     * A parameter and not a `PackageManager` call inside the row, for the reason the app page gives
+     * for the same question: it is a fact about the device, and a composable that reads it itself
+     * cannot be photographed — Robolectric has none of these packages installed, so the button would
+     * be absent from every golden. The permissive default belongs to the goldens; the real screen
+     * always passes the real answer.
+     */
+    canOpen: (DownloadItem) -> Boolean = { false },
 ) {
     val spacing = LocalSpacing.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
@@ -167,6 +247,9 @@ internal fun DownloadsScreen(
                     onInstall = onInstall,
                     onCancel = onCancel,
                     onDelete = onDelete,
+                    onShare = onShare,
+                    onOpen = onOpen,
+                    canOpen = canOpen,
                 )
                 section(
                     titleRes = R.string.downloads_section_active,
@@ -174,6 +257,9 @@ internal fun DownloadsScreen(
                     onInstall = onInstall,
                     onCancel = onCancel,
                     onDelete = onDelete,
+                    onShare = onShare,
+                    onOpen = onOpen,
+                    canOpen = canOpen,
                 )
                 section(
                     titleRes = R.string.downloads_section_history,
@@ -181,6 +267,9 @@ internal fun DownloadsScreen(
                     onInstall = onInstall,
                     onCancel = onCancel,
                     onDelete = onDelete,
+                    onShare = onShare,
+                    onOpen = onOpen,
+                    canOpen = canOpen,
                 )
             }
         }
@@ -218,6 +307,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
     onInstall: (DownloadItem) -> Unit,
     onCancel: (DownloadItem) -> Unit,
     onDelete: (DownloadItem) -> Unit,
+    onShare: (DownloadItem) -> Unit,
+    onOpen: (DownloadItem) -> Unit,
+    canOpen: (DownloadItem) -> Boolean,
 ) {
     if (items.isEmpty()) return
     item(key = "header-$titleRes") { SectionHeader(text = stringResource(titleRes)) }
@@ -227,6 +319,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
             onInstall = onInstall,
             onCancel = onCancel,
             onDelete = onDelete,
+            onShare = onShare,
+            onOpen = onOpen,
+            canOpen = canOpen,
         )
     }
 }
@@ -250,24 +345,33 @@ private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
 /**
  * One download: icon, name, what it is doing, and — where there is something to do — the buttons.
  *
- * ### Which buttons, and why never more than two
+ * ### Which buttons, and why the set is written out rather than inferred
  *
- * Three situations, and each one offers only what it can actually carry out:
+ * Four situations, and each offers only what it can actually carry out:
  *
- * - the file is whole: **Delete** and **Install**;
+ * - the file is whole: **Delete**, **Share** and **Install**;
  * - the transfer is moving: **Cancel**, which stops it and keeps what has come down;
  * - the transfer is parked with a partial file: **Delete**, which is the way out of the state the
  *   previous button leaves. Without it, cancelling here would produce a row that can never leave
- *   this screen — restarting a transfer is the app page's job, not this one's.
+ *   this screen — restarting a transfer is the app page's job, not this one's;
+ * - it is installed and the package has a launcher activity: **Open**, which is the one thing a
+ *   history row can still do.
  *
- * A history row gets nothing, which is the point of it being history.
+ * ### Why Share is here and not only on the app's page
  *
- * ### Why the filled one is always Install
+ * A verified APK sits in `filesDir/staging`, a directory private to the app that no file manager can
+ * open. Before this it was the one thing the user could not pass on even though they had it on the
+ * device — and it is the more useful half of sharing, because the other end gets the exact bytes
+ * this app checked rather than a link to a page that may serve something else.
+ *
+ * ### Why the filled one is always Install, and Open when there is nothing to install
  *
  * Install is what the row exists for. Cancel and Delete are outlined because each throws something
  * away — the second a whole verified file, the first the certainty of finishing — and a filled
  * button next to a progress bar invites the tap that undoes the megabytes already paid for. It is
  * the same asymmetry the app page has had since M1, and it has to stay the same in both places.
+ * Share is outlined for a different reason: it is optional, and it must not compete with the
+ * gesture the row was created for.
  */
 @Composable
 private fun DownloadRow(
@@ -275,6 +379,9 @@ private fun DownloadRow(
     onInstall: (DownloadItem) -> Unit,
     onCancel: (DownloadItem) -> Unit,
     onDelete: (DownloadItem) -> Unit,
+    onShare: (DownloadItem) -> Unit,
+    onOpen: (DownloadItem) -> Unit,
+    canOpen: (DownloadItem) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalSpacing.current
@@ -327,10 +434,14 @@ private fun DownloadRow(
             }
         }
 
-        if (item.cancellable || item.deletable) {
-            // Disabled while this screen is installing the row: the two gestures act on the very
-            // file the installer is reading, and a session that loses its APK halfway fails with a
-            // message about the archive rather than about what the user just pressed.
+        // Absent, not disabled: the button is there only if there is something to open. A package
+        // with no launcher activity is ordinary — input methods, wallpapers, device administrators —
+        // and a greyed-out "Open" would make people wonder what they did wrong.
+        val openable = canOpen(item)
+        if (item.cancellable || item.deletable || openable) {
+            // Disabled while this screen is installing the row: the gestures act on the very file the
+            // installer is reading, and a session that loses its APK halfway fails with a message
+            // about the archive rather than about what the user just pressed.
             val idle = item.install !is RowInstallState.Working
             Row(
                 horizontalArrangement = Arrangement.spacedBy(spacing.small, Alignment.End),
@@ -348,9 +459,29 @@ private fun DownloadRow(
                         Text(text = stringResource(R.string.downloads_delete))
                     }
                 }
+                // Only on a whole file. A partial one would hand somebody bytes that verify against
+                // nothing, and the receiving side has no way of telling.
+                if (item.readyToInstall) {
+                    OutlinedButton(onClick = { onShare(item) }, enabled = idle) {
+                        Text(text = stringResource(R.string.downloads_share))
+                    }
+                }
                 if (item.readyToInstall) {
                     Button(onClick = { onInstall(item) }, enabled = idle) {
                         Text(text = stringResource(R.string.downloads_install))
+                    }
+                }
+                // The filled one when there is nothing to install: on a history row Open is the only
+                // thing left to do, and it is the thing the user came for in the first place.
+                if (openable) {
+                    if (item.readyToInstall) {
+                        OutlinedButton(onClick = { onOpen(item) }) {
+                            Text(text = stringResource(R.string.downloads_open))
+                        }
+                    } else {
+                        Button(onClick = { onOpen(item) }) {
+                            Text(text = stringResource(R.string.downloads_open))
+                        }
                     }
                 }
             }
@@ -469,6 +600,18 @@ private fun DownloadsScreenPreview() {
  * **the same picture**. Two copies would drift, and the one that drifts is always the preview —
  * which is the one somebody looks at while changing the layout.
  */
+/**
+ * A stand-in for a staged APK, in the preview and in the goldens.
+ *
+ * A path and not a real file: nothing here opens it. What it decides is which buttons the row draws,
+ * because `hasFile` is derived from it — which is the point of the field being the `File` and not a
+ * flag beside it.
+ */
+private val STAGED_FILE = File("/data/user/0/com.multistore/files/staging/1.apk")
+
+/** A digest that looks like one: the share text quotes its first sixteen characters. */
+private val STAGED_SHA256 = Sha256.parseOrNull("a1b2c3d4".repeat(8))
+
 internal val PREVIEW_STATE = DownloadsUiState.Ready(
     active = listOf(
         DownloadItem(
@@ -482,7 +625,9 @@ internal val PREVIEW_STATE = DownloadsUiState.Ready(
             bytesDownloaded = 41_400_000,
             bytesTotal = 114_300_000,
             fraction = 0.36f,
-            hasFile = true,
+            file = STAGED_FILE,
+            packageName = null,
+            sha256 = null,
             installedAt = null,
             createdAt = Instant.fromEpochSeconds(1_780_000_000),
             error = null,
@@ -498,7 +643,9 @@ internal val PREVIEW_STATE = DownloadsUiState.Ready(
             bytesDownloaded = 12_800_000,
             bytesTotal = 96_400_000,
             fraction = 0.13f,
-            hasFile = true,
+            file = STAGED_FILE,
+            packageName = null,
+            sha256 = null,
             installedAt = null,
             createdAt = Instant.fromEpochSeconds(1_779_995_000),
             error = null,
@@ -516,7 +663,11 @@ internal val PREVIEW_STATE = DownloadsUiState.Ready(
             bytesDownloaded = 8_647_000,
             bytesTotal = 8_647_000,
             fraction = 1f,
-            hasFile = true,
+            file = STAGED_FILE,
+            // The row that offers Share and Open, so it is the one carrying what both need: a
+            // package to launch, and the digest measured while the bytes arrived.
+            packageName = "org.fdroid.fdroid",
+            sha256 = STAGED_SHA256,
             installedAt = null,
             createdAt = Instant.fromEpochSeconds(1_779_990_000),
             error = null,
@@ -534,7 +685,9 @@ internal val PREVIEW_STATE = DownloadsUiState.Ready(
             bytesDownloaded = 72_100_000,
             bytesTotal = 72_100_000,
             fraction = 1f,
-            hasFile = false,
+            file = null,
+            packageName = null,
+            sha256 = null,
             installedAt = Instant.fromEpochSeconds(1_779_900_000),
             createdAt = Instant.fromEpochSeconds(1_779_899_000),
             error = null,
@@ -550,7 +703,9 @@ internal val PREVIEW_STATE = DownloadsUiState.Ready(
             bytesDownloaded = 238_000_000,
             bytesTotal = 238_000_000,
             fraction = 1f,
-            hasFile = false,
+            file = null,
+            packageName = null,
+            sha256 = null,
             installedAt = null,
             createdAt = Instant.fromEpochSeconds(1_779_800_000),
             error = null,

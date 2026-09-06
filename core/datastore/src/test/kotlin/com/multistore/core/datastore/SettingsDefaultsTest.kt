@@ -2,6 +2,7 @@ package com.multistore.core.datastore
 
 import com.google.common.truth.Truth.assertThat
 import com.multistore.core.datastore.proto.ContentKindFilter as ProtoContentKindFilter
+import com.multistore.core.datastore.proto.MyAppsSort as ProtoMyAppsSort
 import com.multistore.core.datastore.proto.SearchSort as ProtoSearchSort
 import com.multistore.core.datastore.proto.Settings
 import com.multistore.core.model.CatalogRetention
@@ -9,6 +10,7 @@ import com.multistore.core.model.ChallengeStrategy
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.DownloadHistoryLimit
 import com.multistore.core.model.InstallerPreference
+import com.multistore.core.model.MyAppsSort
 import com.multistore.core.model.SearchSettings
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.StorageSettings
@@ -173,6 +175,38 @@ class SettingsDefaultsTest {
 
         assertThat(chosen.toSearch().defaultContentKind).isEqualTo(ContentKind.GAME)
         assertThat(chosen.toSearch().defaultSort).isEqualTo(SearchSort.RATING)
+    }
+
+    /**
+     * "My apps" starts alphabetical, and the alternative is not a matter of taste.
+     *
+     * Of the four criteria, [MyAppsSort.NAME] is the only one that does not **rearrange the list
+     * while it is being read**: with `UPDATABLE_FIRST` at the zero value a row would jump to the
+     * top the moment a periodic check found something, under the finger of somebody halfway down.
+     * `RECENTLY_INSTALLED` has the same defect one step removed, and `STORE` groups by a fact the
+     * reader did not ask about.
+     *
+     * It is also the order in which one looks for an app whose name one knows — which is the
+     * reason that screen gets opened.
+     */
+    @Test
+    fun `the installed list starts in alphabetical order`() {
+        assertThat(empty.toMyApps().sort).isEqualTo(MyAppsSort.NAME)
+    }
+
+    @Test
+    fun `a criterion chosen by the user reaches the domain, and comes back`() {
+        val chosen = Settings.newBuilder()
+            .setMyAppsSort(ProtoMyAppsSort.MY_APPS_SORT_UPDATABLE_FIRST)
+            .build()
+
+        assertThat(chosen.toMyApps().sort).isEqualTo(MyAppsSort.UPDATABLE_FIRST)
+        // Both directions, unlike the search's sort: every criterion offered here is computable,
+        // so none of them may fall back on the way out — a preference saved as something else is a
+        // preference the user set and the app ignores.
+        MyAppsSort.entries.forEach { criterion ->
+            assertThat(criterion.toProto().toDomain()).isEqualTo(criterion)
+        }
     }
 
     /**

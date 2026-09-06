@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.multistore.core.model.CatalogRetention
 import com.multistore.core.model.ContentKind
+import com.multistore.core.model.MyAppsSettings
+import com.multistore.core.model.MyAppsSort
 import com.multistore.core.model.SearchSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.multistore.core.data.repository.DiagnosticsRepository
@@ -63,6 +65,7 @@ sealed interface SettingsUiState {
         val network: NetworkSettings,
         val remoteConfig: RemoteConfigSettings,
         val search: SearchSettings,
+        val myApps: MyAppsSettings,
         val notifications: NotificationSettings,
         val diagnostics: DiagnosticsSettings,
     ) : SettingsUiState
@@ -358,9 +361,28 @@ class SettingsViewModel @Inject constructor(
     private data class Rest(
         val network: NetworkSettings,
         val remoteConfig: RemoteConfigSettings,
-        val search: SearchSettings,
+        val lists: Lists,
         val notifications: NotificationSettings,
         val diagnostics: DiagnosticsSettings,
+    )
+
+    /**
+     * How the two lists in the app are arranged: the aggregated search, and the installed apps.
+     *
+     * The second nesting, and it grows here rather than in [Rest] for the same reason [UpdatePolicy]
+     * does: the two groups answer the same line of question — *in what order do I get to see
+     * things* — so whoever adds a field to one passes through here anyway. `combine` also takes at
+     * most five typed flows, and [Rest] had used all five.
+     */
+    private data class Lists(
+        val search: SearchSettings,
+        val myApps: MyAppsSettings,
+    )
+
+    private val lists = combine(
+        settingsRepository.search,
+        settingsRepository.myApps,
+        ::Lists,
     )
 
     /**
@@ -385,7 +407,7 @@ class SettingsViewModel @Inject constructor(
     private val rest = combine(
         settingsRepository.network,
         settingsRepository.remoteConfig,
-        settingsRepository.search,
+        lists,
         settingsRepository.notifications,
         settingsRepository.diagnostics,
         ::Rest,
@@ -406,7 +428,8 @@ class SettingsViewModel @Inject constructor(
             security = security,
             network = other.network,
             remoteConfig = other.remoteConfig,
-            search = other.search,
+            search = other.lists.search,
+            myApps = other.lists.myApps,
             notifications = other.notifications,
             diagnostics = other.diagnostics,
         )
@@ -486,6 +509,8 @@ class SettingsViewModel @Inject constructor(
         update { settingsRepository.setSearchTimeout(timeout) }
 
     fun setDefaultSort(sort: SearchSort) = update { settingsRepository.setDefaultSort(sort) }
+
+    fun setMyAppsSort(sort: MyAppsSort) = update { settingsRepository.setMyAppsSort(sort) }
 
     fun setDefaultContentKind(kind: ContentKind?) =
         update { settingsRepository.setDefaultContentKind(kind) }

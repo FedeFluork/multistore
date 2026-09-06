@@ -18,8 +18,13 @@ import org.junit.Test
  *
  * "In progress" holds two rows, and they are the two halves of cancelling: one still running, which
  * offers Cancel, and one already parked, which offers the Delete that gets it off the screen. It is
- * also the only place the asymmetry can be checked — three outlined buttons and one filled, the
- * filled one always Install.
+ * also the only place the button hierarchy can be checked — outlined for everything that throws
+ * something away or is optional, filled for the one the row exists for.
+ *
+ * `canOpen` answers `true` for the installed history row and nothing else, and that is the whole
+ * reason it is a parameter: Robolectric has none of these packages installed, so the real
+ * `PackageManager` would say no to every row and the "Open" button would appear in no golden ever —
+ * a button drawn nowhere is a button nothing compares.
  *
  * The second golden is the empty state, and it is not padding: it is the screen most users see on the
  * day they install the app, and it is the one no other capture would ever contain.
@@ -49,6 +54,12 @@ class DownloadsScreenScreenshotTest : ScreenshotTest() {
             onClearHistory = {},
             onConfirm = {},
             onDismissConfirmation = {},
+            onShare = {},
+            onOpen = {},
+            // The installed row, and only it: on a ready row Open would be outlined next to the
+            // filled Install, on a history row it is the one thing left to do and takes the fill.
+            // The golden has to show both arrangements or it shows neither.
+            canOpen = { item -> item.installedAt != null },
         )
     }
 

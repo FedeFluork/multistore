@@ -111,6 +111,21 @@ data class StoreListingEntity(
     @ColumnInfo(name = "issue_tracker_url") val issueTrackerUrl: String? = null,
     @ColumnInfo(name = "web_site_url") val webSiteUrl: String? = null,
     @ColumnInfo(name = "changelog_url") val changelogUrl: String? = null,
+    /**
+     * Where this app is translated.
+     *
+     * The last of the seven author links to get a column, and it got one **because it had none**:
+     * `PackageProjection` read F-Droid's `translation` into `StoreListingDetail.translationUrl`
+     * from M1, and the entity mapper dropped it on the floor. Nothing said so, because nothing
+     * showed it either — the value survived exactly as long as the object the adapter had just
+     * built, and vanished the moment the listing came back from Room.
+     *
+     * That is the defect this whole release is about, in its smallest form: a field populated by
+     * an adapter, saved by nobody, read by nobody. Adding the reader without adding the column
+     * would have produced a link that appears on the first visit to a listing and is gone on the
+     * second — which is worse than never showing it, because it looks like a bug in the store.
+     */
+    @ColumnInfo(name = "translation_url") val translationUrl: String? = null,
     @ColumnInfo(name = "author_name") val authorName: String? = null,
     @ColumnInfo(name = "donate_urls") val donateUrls: List<String> = emptyList(),
     @ColumnInfo(name = "match_confidence") val matchConfidence: Float = 1.0f,
@@ -139,6 +154,15 @@ data class ListingScreenshotEntity(
     @ColumnInfo(name = "listing_id") val listingId: Long,
     val url: String,
     val kind: String,
+    /**
+     * The language the source filed this image under, or `null` where it files none.
+     *
+     * Nullable and not defaulted, because "this store does not localise its screenshots" is the case
+     * for eight of the nine and is an **absence**, not a value. F-Droid is the exception, and at a
+     * scale that only became visible once something drew them: 95 images for one app, the same
+     * screens in every language the pruning keeps.
+     */
+    val locale: String? = null,
     @ColumnInfo(name = "sort_order") val sortOrder: Int,
 )
 

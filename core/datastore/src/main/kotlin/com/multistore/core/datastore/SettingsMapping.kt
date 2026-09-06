@@ -11,6 +11,8 @@ import com.multistore.core.model.NetworkSettings
 import com.multistore.core.model.NotificationSettings
 import com.multistore.core.model.RemoteConfigSettings
 import com.multistore.core.model.SearchSettings
+import com.multistore.core.model.MyAppsSettings
+import com.multistore.core.model.MyAppsSort
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.SecuritySettings
 import com.multistore.core.model.StorageSettings
@@ -24,6 +26,7 @@ import com.multistore.core.datastore.proto.ChallengeStrategy as ProtoChallengeSt
 import com.multistore.core.datastore.proto.ContentKindFilter as ProtoContentKindFilter
 import com.multistore.core.datastore.proto.DownloadHistoryLimit as ProtoDownloadHistoryLimit
 import com.multistore.core.datastore.proto.InstallerPreference as ProtoInstallerPreference
+import com.multistore.core.datastore.proto.MyAppsSort as ProtoMyAppsSort
 import com.multistore.core.datastore.proto.SearchSort as ProtoSearchSort
 import com.multistore.core.datastore.proto.ThemeMode as ProtoThemeMode
 import com.multistore.core.datastore.proto.UpdateInterval as ProtoUpdateInterval
@@ -141,6 +144,27 @@ internal fun Settings.toSearch(): SearchSettings = SearchSettings(
     defaultSort = defaultSort.toDomain(),
     defaultContentKind = defaultContentKind.toDomain(),
 )
+
+internal fun Settings.toMyApps(): MyAppsSettings = MyAppsSettings(
+    sort = myAppsSort.toDomain(),
+)
+
+internal fun ProtoMyAppsSort.toDomain(): MyAppsSort = when (this) {
+    ProtoMyAppsSort.MY_APPS_SORT_UPDATABLE_FIRST -> MyAppsSort.UPDATABLE_FIRST
+    ProtoMyAppsSort.MY_APPS_SORT_RECENTLY_INSTALLED -> MyAppsSort.RECENTLY_INSTALLED
+    ProtoMyAppsSort.MY_APPS_SORT_STORE -> MyAppsSort.STORE
+    // MY_APPS_SORT_NAME and UNRECOGNIZED — a value written by a future version — both fall back to
+    // alphabetical, which is the only order a build that does not know that value can produce, and
+    // the only one that does not rearrange the list while it is being read.
+    else -> MyAppsSort.NAME
+}
+
+internal fun MyAppsSort.toProto(): ProtoMyAppsSort = when (this) {
+    MyAppsSort.UPDATABLE_FIRST -> ProtoMyAppsSort.MY_APPS_SORT_UPDATABLE_FIRST
+    MyAppsSort.RECENTLY_INSTALLED -> ProtoMyAppsSort.MY_APPS_SORT_RECENTLY_INSTALLED
+    MyAppsSort.STORE -> ProtoMyAppsSort.MY_APPS_SORT_STORE
+    MyAppsSort.NAME -> ProtoMyAppsSort.MY_APPS_SORT_NAME
+}
 
 internal fun ProtoSearchSort.toDomain(): SearchSort = when (this) {
     ProtoSearchSort.SEARCH_SORT_NAME -> SearchSort.NAME

@@ -465,6 +465,8 @@ internal class DownloadRepositoryImpl @Inject constructor(
         title = title,
         iconUrl = iconUrl,
         installedAt = installedAt,
+        // The measured digest, not the declared one: see `DownloadStatus.sha256`.
+        sha256 = actualSha256,
         pendingInstall = pendingInstall,
         createdAt = createdAt,
         updatedAt = updatedAt,

@@ -325,6 +325,22 @@ message Settings {
   // queried.
   ContentKindFilter default_content_kind = 26;
 
+  // --- My apps ---------------------------------------------------------------
+  // How to order the list of apps installed through MultiStore.
+  //
+  // THE ORDER IS A BEHAVIOURAL DECISION, as with every enum in this file, and here the zero value
+  // decides something the app had never decided at all: until now the list came out in whatever
+  // order the query returned, which is an order nobody chose. `NAME` is at the head because it is
+  // the only one of the four that does not **move under the reader** — with "updatable first" a row
+  // jumps to the top the moment a check finds something, in a list somebody is in the middle of
+  // reading. Alphabetical is also the order in which one looks for an app whose name one knows,
+  // which is why one opens this screen.
+  //
+  // AN ENUM AND NOT A STRING, for the reason `catalog_retention` is one: a free value would let a
+  // future version write a criterion this build cannot apply, i.e. a preference that is saved and
+  // silently ignored.
+  MyAppsSort my_apps_sort = 38;
+
   // --- Storage ---------------------------------------------------------------
   // How many megabytes of icons and screenshots to keep on disk.
   //
@@ -449,6 +465,20 @@ enum SearchSort {
   SEARCH_SORT_RELEVANCE = 0;
   SEARCH_SORT_NAME      = 1;
   SEARCH_SORT_RATING    = 2;
+}
+
+// How to order the list of installed apps.
+//
+// Four criteria and not three, and each is a question somebody actually asks of this screen: what
+// is it called, what needs my attention, what did I install recently, and where did it come from.
+// The last is the one that only exists in a multi-store app: with nine sources, "which of these
+// came from apkmirror" is a real question and no other screen answers it.
+enum MyAppsSort {
+  // The zero value: the order that does not rearrange itself while it is being read.
+  MY_APPS_SORT_NAME                = 0;
+  MY_APPS_SORT_UPDATABLE_FIRST     = 1;
+  MY_APPS_SORT_RECENTLY_INSTALLED  = 2;
+  MY_APPS_SORT_STORE               = 3;
 }
 
 // Apps, games, or everything.

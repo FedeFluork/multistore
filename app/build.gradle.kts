@@ -15,8 +15,8 @@ android {
         // The applicationId, on the other hand, stays the bare domain: it is the app's identity
         // on the device, not a source package.
         applicationId = "com.multistore"
-        versionCode = 4
-        versionName = "0.6.0-BETA"
+        versionCode = 5
+        versionName = "0.7.0-BETA"
 
         /**
          * Where to download `parsers.json` from, when it is not the pinned address.

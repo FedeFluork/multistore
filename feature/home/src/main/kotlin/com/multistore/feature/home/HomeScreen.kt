@@ -56,10 +56,12 @@ import com.multistore.core.data.repository.InstalledAppUpdate
 import com.multistore.core.data.repository.SelfUpdateOffer
 import com.multistore.core.model.Category
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.UpdateAllUiState
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
 import com.multistore.core.model.ThemeMode
 import com.multistore.core.ui.component.AppIcon
+import com.multistore.core.ui.component.UpdateAllPanel
 import com.multistore.core.ui.component.AppListItem
 import com.multistore.core.ui.component.EmptyState
 import com.multistore.core.ui.component.MultiStoreTopAppBar
@@ -618,74 +620,18 @@ private fun UpdatesCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(spacing.large)) {
-            when (progress) {
-                is UpdateAllUiState.Running -> {
-                    Text(
-                        text = stringResource(
-                            R.string.home_updates_applying,
-                            progress.done + 1,
-                            progress.total,
-                        ),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = progress.label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = spacing.extraSmall),
-                    )
-                    LinearProgressIndicator(
-                        progress = { (progress.done + 1).toFloat() / progress.total },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = spacing.small),
-                    )
-                }
-
-                is UpdateAllUiState.Finished -> Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        // Successes and failures in the same sentence: saying only "3 updated" when
-                        // two were cancelled would leave the user wondering why the list did not
-                        // empty.
-                        text = stringResource(
-                            R.string.home_updates_finished,
-                            progress.installed,
-                            progress.failed,
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(onClick = onDismissResult) {
-                        Text(text = stringResource(R.string.home_updates_dismiss))
-                    }
-                }
-
-                UpdateAllUiState.Idle -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = pluralStringResource(
-                                R.plurals.home_updates_title,
-                                updates.size,
-                                updates.size,
-                            ),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Button(onClick = onUpdateAll) {
-                            Text(text = stringResource(R.string.home_updates_update_all))
-                        }
-                    }
-                    updates.forEach { update ->
-                        UpdateRow(update = update, onAppClick = onAppClick)
-                    }
+            // The panel itself lives in `:core:ui`: "My apps" offers the same gesture, and the two
+            // screens have to say the same sentences about it — see `UpdateAllPanel`. What stays
+            // here is the one thing that is the Home's own, the rows listing what will be updated,
+            // which on "My apps" would be the list drawn twice.
+            UpdateAllPanel(
+                state = progress,
+                updatable = updates.size,
+                onUpdateAll = onUpdateAll,
+                onDismissResult = onDismissResult,
+            ) {
+                updates.forEach { update ->
+                    UpdateRow(update = update, onAppClick = onAppClick)
                 }
             }
         }

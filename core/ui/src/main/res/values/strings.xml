@@ -43,4 +43,25 @@
         <item quantity="one">%1$d app ready to install</item>
         <item quantity="other">%1$d apps ready to install</item>
     </plurals>
+
+    <!-- The screenshot strip and its full-screen reader. -->
+    <string name="gallery_screenshot_position">Screenshot %1$d of %2$d</string>
+    <string name="gallery_close">Close the screenshot</string>
+    <string name="gallery_position">%1$d / %2$d</string>
+
+    <!-- The "update everything" panel, drawn on the Home and in "My apps". -->
+    <string name="update_all_action">Update all</string>
+    <string name="update_all_applying">Updating %1$d of %2$d</string>
+    <string name="update_all_finished">%1$d updated, %2$d not done</string>
+    <string name="update_all_dismiss">OK</string>
+    <plurals name="update_all_title">
+        <item quantity="one">%1$d update available</item>
+        <item quantity="other">%1$d updates available</item>
+    </plurals>
+
+    <!-- The order of the installed list. Shared by Settings and by the list itself: one wording, two places. -->
+    <string name="myapps_sort_name">Name</string>
+    <string name="myapps_sort_updatable">Updatable first</string>
+    <string name="myapps_sort_recent">Recently installed</string>
+    <string name="myapps_sort_store">Store it came from</string>
 </resources>

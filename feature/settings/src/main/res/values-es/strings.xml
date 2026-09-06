@@ -237,4 +237,9 @@
         <item quantity="many">%1$d aplicaciones están listas para instalar y se borrarían: reponerlas significa volver a descargarlas. Las transferencias en curso o en pausa se quedan como están.</item>
         <item quantity="other">%1$d aplicaciones están listas para instalar y se borrarían: reponerlas significa volver a descargarlas. Las transferencias en curso o en pausa se quedan como están.</item>
     </plurals>
+
+    <!-- \u00abMis aplicaciones\u00bb: c\u00f3mo se ordena la lista de las instaladas. -->
+    <string name="settings_section_my_apps">Mis aplicaciones</string>
+    <string name="settings_my_apps_sort_label">Orden de la lista</string>
+    <string name="settings_my_apps_sort_description">C\u00f3mo se ordenan las aplicaciones que instalaste con MultiStore. Solo afecta a la lista: no cambia nada de las actualizaciones.</string>
 </resources>

@@ -34,4 +34,10 @@
     <string name="downloads_status_failed">Der Download ist fehlgeschlagen.</string>
     <string name="downloads_status_installed">Von %1$s · installiert</string>
     <string name="downloads_status_removed">Von %1$s · Datei gelöscht</string>
+
+    <!-- Weitergeben, was schon auf dem Gerät ist, und starten, was installiert wurde. -->
+    <string name="downloads_share">Datei teilen</string>
+    <string name="downloads_open">Öffnen</string>
+    <string name="downloads_share_text">%1$s, mit MultiStore von %2$s heruntergeladen.</string>
+    <string name="downloads_share_hash">SHA-256 beim Download geprüft: %1$s</string>
 </resources>

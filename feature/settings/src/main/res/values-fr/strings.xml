@@ -237,4 +237,9 @@
         <item quantity="many">%1$d applications sont prêtes à installer et seraient supprimées : les remettre signifie les retélécharger. Les transferts en cours ou en pause restent en place.</item>
         <item quantity="other">%1$d applications sont prêtes à installer et seraient supprimées : les remettre signifie les retélécharger. Les transferts en cours ou en pause restent en place.</item>
     </plurals>
+
+    <!-- \u00ab\u00a0Mes applications\u00a0\u00bb\u00a0: la disposition de la liste des applications install\u00e9es. -->
+    <string name="settings_section_my_apps">Mes applications</string>
+    <string name="settings_my_apps_sort_label">Ordre de la liste</string>
+    <string name="settings_my_apps_sort_description">Comment sont dispos\u00e9es les applications install\u00e9es via MultiStore. Cela ne concerne que la liste\u00a0: rien ne change pour les mises \u00e0 jour.</string>
 </resources>

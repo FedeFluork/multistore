@@ -48,4 +48,13 @@
         <item quantity="many">%1$d tiendas no han respondido</item>
         <item quantity="other">%1$d tiendas no han respondido</item>
     </plurals>
+
+    <!-- Buscar y ordenar dentro de la lista. -->
+    <string name="myapps_action_sort">Cambiar el orden</string>
+    <string name="myapps_sort_dialog_title">Orden de la lista</string>
+    <string name="myapps_sort_dialog_close">Cerrar</string>
+    <string name="myapps_search_label">Busca entre tus aplicaciones</string>
+    <string name="myapps_search_clear">Borrar la b\u00fasqueda</string>
+    <string name="myapps_no_matches_title">Sin coincidencias</string>
+    <string name="myapps_no_matches_message">Ninguna aplicaci\u00f3n instalada se llama \u00ab%1$s\u00bb. Tus aplicaciones siguen ah\u00ed: borra la b\u00fasqueda para verlas.</string>
 </resources>

@@ -237,4 +237,9 @@
         <item quantity="many">%1$d app sono pronte da installare e verrebbero cancellate: rimetterle vuol dire riscaricarle. I trasferimenti in corso o in pausa restano dove sono.</item>
         <item quantity="other">%1$d app sono pronte da installare e verrebbero cancellate: rimetterle vuol dire riscaricarle. I trasferimenti in corso o in pausa restano dove sono.</item>
     </plurals>
+
+    <!-- \u00abLe mie app\u00bb: come \u00e8 disposto l\u2019elenco delle installate. -->
+    <string name="settings_section_my_apps">Le mie app</string>
+    <string name="settings_my_apps_sort_label">Ordine dell\u2019elenco</string>
+    <string name="settings_my_apps_sort_description">Come sono disposte le app che hai installato con MultiStore. Vale solo per l\u2019elenco: non cambia niente degli aggiornamenti.</string>
 </resources>

@@ -48,4 +48,13 @@
         <item quantity="many">%1$d store non hanno risposto</item>
         <item quantity="other">%1$d store non hanno risposto</item>
     </plurals>
+
+    <!-- Cercare e ordinare dentro l\u2019elenco. -->
+    <string name="myapps_action_sort">Cambia l\u2019ordine</string>
+    <string name="myapps_sort_dialog_title">Ordine dell\u2019elenco</string>
+    <string name="myapps_sort_dialog_close">Chiudi</string>
+    <string name="myapps_search_label">Cerca fra le tue app</string>
+    <string name="myapps_search_clear">Cancella la ricerca</string>
+    <string name="myapps_no_matches_title">Nessuna corrispondenza</string>
+    <string name="myapps_no_matches_message">Nessuna app installata si chiama \u00ab%1$s\u00bb. Le tue app ci sono ancora tutte: cancella la ricerca per rivederle.</string>
 </resources>

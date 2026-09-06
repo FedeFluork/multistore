@@ -20,6 +20,8 @@ import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.ObserveUpdatesUseCase
 import com.multistore.core.domain.usecase.ResolveDownloadUseCase
 import com.multistore.core.domain.usecase.SyncIndexUseCase
+import com.multistore.core.domain.usecase.UpdateAllAppsUseCase
+import com.multistore.core.model.UpdateAllUiState
 import com.multistore.core.model.Category
 import com.multistore.core.model.AppVersion
 import com.multistore.core.model.InstalledApp
@@ -118,19 +120,29 @@ class HomeViewModelTest {
         metered: Boolean = false,
         registry: StoreRegistry = StoreRegistry(setOf(FakeIndexedStoreAdapter())),
         ownPackage: OwnPackage = OwnPackage("com.multistore.test"),
-    ) = HomeViewModel(
-        registry = registry,
-        index = index,
-        syncIndex = SyncIndexUseCase(index, settings) { metered },
-        homeContent = GetHomeContentUseCase(search),
-        updates = ObserveUpdatesUseCase(updates, installedApps),
-        installApp = InstallAppUseCase(
+    ) = run {
+        val installApp = InstallAppUseCase(
             resolve = ResolveDownloadUseCase(registry, details, settings),
             downloads = downloads,
             installs = installs,
             details = details,
             settings = settings,
             drivers = ActiveInstallDrivers(),
+        )
+        HomeViewModel(
+        registry = registry,
+        index = index,
+        syncIndex = SyncIndexUseCase(index, settings) { metered },
+        homeContent = GetHomeContentUseCase(search),
+        updates = ObserveUpdatesUseCase(updates, installedApps),
+        installApp = installApp,
+        // The real loop, not a double: "update all" moved into `:core:domain` precisely so the two
+        // screens that offer it share one implementation, and a test wiring a stand-in here would
+        // stop covering the thing that moved.
+        updateAllApps = UpdateAllAppsUseCase(
+            updates = updates,
+            installApp = installApp,
+            ownPackage = ownPackage,
         ),
         // The remote index is absent in these tests, and that is the normal state: with no document
         // the Home stays the local-catalogue one, which is exactly what is verified here.
@@ -156,7 +168,8 @@ class HomeViewModelTest {
             install = installs,
         ),
         ownPackage = ownPackage,
-    )
+        )
+    }
 
     @Test
     fun `at first launch the catalogue is missing and the Home downloads it by itself`() = runTest {

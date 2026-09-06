@@ -232,4 +232,9 @@
         <item quantity="one">%1$d App kann installiert werden und würde gelöscht: sie zurückzuholen heißt erneut herunterladen. Laufende oder pausierte Übertragungen bleiben unangetastet.</item>
         <item quantity="other">%1$d Apps können installiert werden und würden gelöscht: sie zurückzuholen heißt erneut herunterladen. Laufende oder pausierte Übertragungen bleiben unangetastet.</item>
     </plurals>
+
+    <!-- \u201eMeine Apps\u201c: wie die Liste der installierten Apps angeordnet ist. -->
+    <string name="settings_section_my_apps">Meine Apps</string>
+    <string name="settings_my_apps_sort_label">Reihenfolge der Liste</string>
+    <string name="settings_my_apps_sort_description">Wie die \u00fcber MultiStore installierten Apps angeordnet werden. Gilt nur f\u00fcr die Liste \u2014 an den Updates \u00e4ndert sich nichts.</string>
 </resources>

@@ -123,4 +123,27 @@
     <string name="appdetail_container_expansion_failed">Les données de jeu n\'ont pas pu être copiées : %1$s</string>
     <string name="appdetail_rejected_foreign_split">L\'élément %1$s n\'appartient pas à cette application : %2$s.</string>
     <string name="appdetail_unknown_sources_unreachable">Cet appareil n\'a pas d\'écran pour ce réglage : le logiciel %1$s l\'a peut-être déplacé ou retiré. Cherche « installer des applications inconnues » dans les réglages du système.</string>
+
+    <!-- Partager et ouvrir\u00a0: les deux bouts du parcours qui se terminait hors de l\u2019application. -->
+    <string name="appdetail_action_share">Partager</string>
+    <string name="appdetail_action_open">Ouvrir</string>
+    <string name="appdetail_share_listing_text">%1$s sur %2$s\n%3$s</string>
+
+    <!-- Donn\u00e9es d\u2019en-t\u00eate que six magasins sur neuf ne publient pas. -->
+    <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>
+    <string name="appdetail_meta_downloads">%1$s t\u00e9l\u00e9chargements</string>
+
+    <!-- Ce que le magasin publiait d\u00e9j\u00e0 et que rien n\u2019affichait. -->
+    <string name="appdetail_section_screenshots">Captures d\u2019\u00e9cran</string>
+    <string name="appdetail_section_whats_new">Nouveaut\u00e9s</string>
+    <string name="appdetail_whats_new_version">dans la version %1$s</string>
+    <string name="appdetail_read_more">Lire la suite</string>
+    <string name="appdetail_read_less">R\u00e9duire</string>
+    <string name="appdetail_section_links">Liens</string>
+    <string name="appdetail_link_source_code">Code source</string>
+    <string name="appdetail_link_website">Site web</string>
+    <string name="appdetail_link_issue_tracker">Signaler un probl\u00e8me</string>
+    <string name="appdetail_link_changelog">Journal des modifications</string>
+    <string name="appdetail_link_translation">Aider \u00e0 traduire</string>
+    <string name="appdetail_link_donate">Faire un don</string>
 </resources>

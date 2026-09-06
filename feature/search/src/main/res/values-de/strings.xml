@@ -64,4 +64,6 @@
         <item quantity="one">%1$s veröffentlicht %2$s nicht in den Ergebnissen und wurde deshalb nicht abgefragt.</item>
         <item quantity="other">%1$s veröffentlichen %2$s nicht in den Ergebnissen und wurden deshalb nicht abgefragt.</item>
     </plurals>
+    <string name="search_rating_count">\u2605 %1$s (%2$s)</string>
+    <string name="search_downloads">%1$s Downloads</string>
 </resources>

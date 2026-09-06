@@ -34,4 +34,10 @@
     <string name="downloads_status_failed">The download failed.</string>
     <string name="downloads_status_installed">From %1$s · installed</string>
     <string name="downloads_status_removed">From %1$s · file deleted</string>
+
+    <!-- Passing on what is already on the device, and starting what was installed. -->
+    <string name="downloads_share">Share the file</string>
+    <string name="downloads_open">Open</string>
+    <string name="downloads_share_text">%1$s, downloaded from %2$s with MultiStore.</string>
+    <string name="downloads_share_hash">SHA-256 verified on download: %1$s</string>
 </resources>
