@@ -20,19 +20,17 @@ source you choose, through the same verification pipeline every time.
 <a href="https://github.com/FedeFluork/multistore/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/FedeFluork/multistore/ci.yml?branch=main&label=CI&style=flat-square"></a>
 </p>
 
+<p>
+<a href="https://github.com/FedeFluork/multistore/releases/latest"><img alt="Download the latest release" src="https://img.shields.io/badge/Download%20the%20latest%20release-4F5BD5?style=for-the-badge&logo=android&logoColor=white"></a>
+</p>
+
 </div>
 
 ---
 
 ## Install
 
-<div align="center">
-
-### ⬇&nbsp; [Download the latest APK](https://github.com/FedeFluork/multistore/releases/latest)
-
-</div>
-
-1. Download the `.apk` from the [latest release](https://github.com/FedeFluork/multistore/releases/latest).
+1. Download and install the `.apk` from the [latest release](https://github.com/FedeFluork/multistore/releases/latest).
 2. Open it. Android asks once whether MultiStore may install applications. That is the
    `REQUEST_INSTALL_PACKAGES` permission, which any app that installs other apps needs. If your
    device makes that setting hard to find, MultiStore has a shortcut straight to it.
@@ -56,14 +54,12 @@ Signer #1 certificate SHA-256 digest:
 ```
 
 <div align="center">
-<img src="docs/screenshots/home.png" width="260" alt="Home">
+<img src="docs/screenshots/home.png" width="260" alt="Home, with the most popular and newest apps from the signed index">
 &nbsp;
-<img src="docs/screenshots/search.png" width="260" alt="Search across stores">
+<img src="docs/screenshots/app-page.png" width="260" alt="An app listing: the same app on three stores, with its screenshots">
 &nbsp;
-<img src="docs/screenshots/app-page.png" width="260" alt="App page with cross-store matches">
+<img src="docs/screenshots/my-apps.png" width="260" alt="My apps: what is installed, what has an update, and what is waiting to be installed">
 </div>
-
----
 
 ## What it does
 
