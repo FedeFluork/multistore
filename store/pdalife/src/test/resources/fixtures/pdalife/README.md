@@ -4,13 +4,18 @@
 Chrome mobile User-Agent declared by `PdalifeConfig.DEFAULT_USER_AGENT`. None has been modified:
 they are the bytes the server sent, gzipped.
 
+`search-past-last-page.html.gz` was captured on **10/09/2026** the same way, and the "Outcome"
+column carries the status code because on this store it has stopped being decorative — see
+"A fruitless search now answers 404" below.
+
 To look at one: `gzcat detail.html.gz | less`.
 
 | File | URL | Outcome |
 |---|---|---|
 | `search.html.gz` | `pdalife.com/search/minecraft/` | 200, 69 KB — **20 rows, 18 Android**, 2 iOS |
 | `search-page2.html.gz` | `pdalife.com/search/minecraft/page-2/` | 200, 59 KB — **14 rows, 12 Android**, 1 iOS, **1 PSP** |
-| `search-empty.html.gz` | `pdalife.com/search/zzqxwvnbtklmj/` | 200, 35 KB — **0 results and one apology row** |
+| `search-empty.html.gz` | `pdalife.com/search/zzqxwvnbtklmj/` | **404** since 06/09/2026 (200 when captured), 35 KB — **0 results and one apology row** |
+| `search-past-last-page.html.gz` | `pdalife.com/search/minecraft/page-9/` | **404**, 35 KB — the same apology page, with `data-max_page="2"` and `data-current_page="9"` |
 | `search-other-os.html.gz` | `pdalife.com/search/procreate/` | 200, 67 KB — **20 results, none Android** |
 | `search-unrated.html.gz` | `pdalife.com/search/turbogram/` | 200, 36 KB — **1 Android result, rating 0** |
 | `detail.html.gz` | `pdalife.com/telegram-android-a14523.html` | 200, 96 KB — a **program**, with the Play link |
@@ -149,6 +154,32 @@ It looks like the dangerous case and is not: that row contains no title, so the 
 discards it. The second class, `js-list-item`, would tell it apart anyway — and it is on the full
 pages too, 21 `li.catalog-item` for 20 results — but it is a net, not a defence: see the table
 above.
+
+## A fruitless search now answers 404, and the body is the same page
+
+Found by the nightly canary on 06/09/2026 and re-measured from a consumer connection on
+10/09/2026 — the measurement that decides, because this pipeline runs from a datacentre. **The
+markup did not move; the status code did.** Both of these answer 404 and carry the complete search
+page:
+
+| address | status | `data-max_page` | `catalog-list` |
+|---|---|---|---|
+| `/search/zzqxwvnbtklmj/` — nothing matches | **404** | `-1` | **yes** |
+| `/search/minecraft/page-9/` — past the last page | **404** | `2` (`data-current_page="9"`) | **yes** |
+| `/search/minecraft/` — results | 200 | `2` | yes |
+| `/questa-app-non-esiste-android-a99999999.html` — really gone | 404 | absent | **no** |
+
+The last row is the one that makes the fix possible. A 404 carrying `ul.catalog-list` is pdalife
+answering a search with nothing; a 404 without it is an address that does not exist, and
+`not-found.html.gz` is exactly that page — `<title>Page not found | PDALIFE</title>`, 33 KB of
+menu, sidebar and footer, and not one `catalog-list` in it. The adapter reads the body of a 404
+**only** on the search path and only concludes "empty" on positive evidence, so a search URL that
+genuinely moved still fails loudly instead of becoming an empty catalogue for ever.
+
+`PdalifeTestServer` therefore serves `search-empty.html.gz` **with 404**, as the site does. A double
+that kept answering 200 would be the only place where the old pdalife still exists, and the test
+that matters most here — a fruitless search is an empty success — would be passing on a store
+nobody can reach any more.
 
 The same page publishes **ten** sidebar links with the same `a.color-android` as the results. They
 live in `li.side-top__item`, so they were never a risk: the `ul.catalog-list` container would

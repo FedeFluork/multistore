@@ -68,13 +68,33 @@ class PdalifeCanaryTest {
         page.items.forEach { assertThat(it.ref.value).contains(ANDROID_MARKER) }
     }
 
+    /**
+     * A search with nothing to give is an **empty success**, whatever it arrives with.
+     *
+     * Two ways of getting this wrong, and this store has now produced both.
+     *
+     * The first is the markup: the page with no results contains a `li.catalog-item` all the same,
+     * with "Oops, maybe try another request?". If the selector lost the second class, this call
+     * would fail with `ParseFailure` **and would open the breaker on every search with no
+     * results**.
+     *
+     * The second is the **status code**, and it is what made this check red for four nights from
+     * 06/09/2026. pdalife started answering **404** to a fruitless search — sending the same page,
+     * only with a different code — so the body never reached the parser and every search this
+     * store had no answer for came back as a store failure, drawn to the user as a shortfall sign
+     * next to the results. The adapter now reads that body and concludes "empty" only on positive
+     * evidence that it *is* the search page; a 404 without the results container is still
+     * `NotFound`.
+     *
+     * Which is why this stays a hard assertion rather than becoming a premise: it holds whichever
+     * code pdalife chooses, and if they went back to 200 tomorrow nothing here would need
+     * touching. What it forbids is the one outcome that is ours — a fruitless search reported as a
+     * fault.
+     */
     @Test
     fun `the empty search is still empty, and not a ParseFailure`() = runTest {
         val page = pdalife.search(EMPTY_QUERY).orFail("empty search")
 
-        // The page with no results contains a `li.catalog-item` all the same, with "Oops, maybe try
-        // another request?". If the selector lost the second class, this call would fail with
-        // ParseFailure **and would open the breaker on every search with no results**.
         assertThat(page.items).isEmpty()
         assertThat(page.hasMore).isFalse()
     }
@@ -314,12 +334,25 @@ class PdalifeCanaryTest {
             // reader acts on: it sent them to `PdalifeRefs` when the thing to change was
             // `slugify`, `searchUrl` or `RECENT_FEED_PATH`. pdalife's engine 404s aggressively by
             // design, so this branch is reached often enough for that to matter.
+            // A 404 on this store no longer means one thing, and since 06/09/2026 the search
+            // surfaces are the reason: pdalife answers 404 **with its whole search page** when a
+            // query matches nothing or a page is past the last, so the adapter reads that body and
+            // only `NotFound`s when the results container is absent. Reaching this branch from a
+            // search therefore says something quite specific — and it is no longer "check
+            // `slugify`", which is what it used to send the reader to do.
             StoreError.NotFound -> error(
                 "$what: **404, and which address it was decides the job.** For `search`, `empty " +
-                    "search` or `search p.N`: nothing about a listing is involved — the query is " +
-                    "slugified into the **path** (`/search/{slug}/`), so a 404 means `slugify` " +
-                    "or the search URL shape, and note that a query that cannot be slugified " +
-                    "404s by design (`c++` does). For `news feed`: `RECENT_FEED_PATH` " +
+                    "search` or `search p.N` this is **not** the ordinary 404 it looks like: " +
+                    "since 06/09/2026 pdalife answers 404 to any search with nothing to give, " +
+                    "page included, and sends the complete page anyway — so the adapter reads the " +
+                    "body and reports `NotFound` only when `PdalifeSelectors.searchContainer` " +
+                    "(`${config.selectors.searchContainer}`) is **not** in it. Getting here " +
+                    "from a search means one of two things, and they are told apart by opening " +
+                    "the URL: the container has been renamed — a markup change, recapture " +
+                    "`search-empty.html.gz` — or the search really has moved, i.e. `slugify` or " +
+                    "the URL shape, in which case the page in the browser is pdalife's " +
+                    "\"Page not found\" and not a results page. Note a query that cannot be " +
+                    "slugified 404s by design (`c++` does). For `news feed`: `RECENT_FEED_PATH` " +
                     "(`${PdalifeConfig.RECENT_FEED_PATH}`) has moved. For `detail` or " +
                     "`download`: `$APP_REF` is gone or has been re-slugged — a listing's URL " +
                     "carries the platform (`$ANDROID_MARKER`), and if pdalife changed that every " +

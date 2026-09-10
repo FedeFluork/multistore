@@ -40,6 +40,17 @@ object Fixtures {
     const val SEARCH_EMPTY: String = "search-empty.html.gz"
 
     /**
+     * The same apology page, reached by asking for a page past the last one.
+     *
+     * The second measured shape of pdalife's 404-with-a-page, and it differs from [SEARCH_EMPTY]
+     * where it matters: `data-max_page="2"` with `data-current_page="9"`, so `hasMore` comes out
+     * false by comparing two numbers, while on the empty search it comes out false because
+     * `data-current_page` is the empty string. Two routes to the same answer, and only one of them
+     * would survive someone "simplifying" the pager reading.
+     */
+    const val SEARCH_PAST_LAST_PAGE: String = "search-past-last-page.html.gz"
+
+    /**
      * Twenty results and **none** Android: `/search/procreate/` is a catalogue of iPad brushes.
      *
      * It is the fixture that makes the operating-system filter a provable defence rather than a

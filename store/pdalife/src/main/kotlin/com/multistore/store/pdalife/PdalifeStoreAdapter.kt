@@ -176,6 +176,26 @@ class PdalifeStoreAdapter @Inject constructor(
      * The query is slugified before being sent: without that, the first page costs two redirects
      * and `c++` answers 404. A query that reduces to nothing — `+++`, `///` — does not become a
      * request: it would be `/search//`, which is a different page.
+     *
+     * ### A fruitless search on pdalife is a 404, and it is still an answer
+     *
+     * Since 06/09/2026 — first seen by the canary, re-measured from a consumer connection on
+     * 10/09/2026 — this store answers **404 with its complete search page** when a query matches
+     * nothing (`/search/zzqxwvnbtklmj/`, `data-max_page="-1"`) and when a page is past the last
+     * one (`/search/minecraft/page-9/`, `data-max_page="2"` with `data-current_page="9"`). Nothing
+     * about the markup moved: only the status code did.
+     *
+     * Left alone that is not merely a red canary. `PageFetcher` turns a 404 into
+     * [StoreError.NotFound] before the body exists, the fan-out records a failure and draws a
+     * shortfall sign, so **every search this store has no answer for was reported to the user as
+     * pdalife having broken** — about a store that answered perfectly correctly.
+     *
+     * What is *not* done here is to read a 404 as an empty result. A search URL that had genuinely
+     * moved answers 404 too, and swallowing it would give an empty catalogue for ever with nothing
+     * anywhere saying why. The body decides, and it can: the results container is on the fruitless
+     * page and absent from a real "Page not found" — see `PdalifeSelectors.searchContainer`. So a
+     * 404 that carries the search page is parsed, which yields no items and no next page; a 404
+     * that does not stays `NotFound`, and the canary keeps its ability to catch a moved scheme.
      */
     override suspend fun search(
         query: String,
@@ -185,8 +205,17 @@ class PdalifeStoreAdapter @Inject constructor(
         if (page < 0) return@storeCall StoreResult.Success(PagedResult.empty(page))
         val slug = config.slugify(query)
         if (slug.isBlank()) return@storeCall StoreResult.Success(PagedResult.empty(page))
-        when (val fetched = fetcher.get(config.searchUrl(slug, page))) {
-            is StoreResult.Success -> searchParser.parse(fetched.value.html, fetched.value.url, page)
+        // The only call in this adapter that reads a 404's body, and the reason is measured: see
+        // `emptyOrNotFound`.
+        when (val fetched = fetcher.get(config.searchUrl(slug, page), readBodyOnNotFound = true)) {
+            is StoreResult.Success -> {
+                val body = fetched.value
+                if (body.isNotFound && !searchParser.isSearchPage(body.html, body.url)) {
+                    StoreResult.Failure(StoreError.NotFound)
+                } else {
+                    searchParser.parse(body.html, body.url, page)
+                }
+            }
             is StoreResult.Failure -> fetched
             StoreResult.Unsupported -> StoreResult.Unsupported
         }

@@ -280,6 +280,33 @@ data class PdalifeSelectors(
      * search filtered by OS it would not even be true.
      */
     val searchPager: String = ".catalog__more-button",
+    /**
+     * The results container, and **the only thing that says a 404 is still a search page**.
+     *
+     * Since 06/09/2026 pdalife answers **404** to a search matching nothing, and to any page past
+     * the last one — with the complete page all the same: this `<ul>`, the "Oops, maybe try another
+     * request?" row inside it, and the pager saying `data-max_page="-1"`. Measured from a consumer
+     * connection on 10/09/2026: `/search/zzqxwvnbtklmj/` and `/search/minecraft/page-9/` both 404
+     * and both carry it; `/nonexistent-android-a99999999/`, a genuinely missing address, answers
+     * 404 with `<title>Page not found | PDALIFE</title>` and **no** `catalog-list` anywhere.
+     *
+     * That is why the reading of a 404 hangs on this selector and not on the status code: it is the
+     * positive evidence that pdalife answered the search. Without it the adapter would have to
+     * treat *every* 404 as "no results", and a search URL that had genuinely moved would come back
+     * as an empty catalogue for ever — the silent empty field this project keeps refusing.
+     *
+     * **And "genuinely moved" was measured too, not assumed**, because the whole defence rests on
+     * those two 404s not looking alike. On 10/09/2026: `/searchXX/minecraft/` — the shape a
+     * renamed scheme would take — answers 404 with **no** `catalog-list`, and so does `/search/`
+     * with an empty slug. The one page on this site that carries the container without being a
+     * search is the **homepage**, and it cannot arrive here: it answers 200, where this selector
+     * is never consulted.
+     *
+     * It is deliberately **not** [searchItem]'s container by coincidence: that selector begins with
+     * the same `ul.catalog-list` and can legitimately match nothing (a page of iOS-only results),
+     * so it cannot tell "the search answered with nothing" from "this is not the search page".
+     */
+    val searchContainer: String = "ul.catalog-list",
 
     // --- detail ---
     val detailTitle: String = "h1[itemprop=name]",

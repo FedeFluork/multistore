@@ -172,6 +172,47 @@ class PdalifeParsersTest {
             assertThat(search(Fixtures.SEARCH_EMPTY, 0).items).isEmpty()
         }
 
+        /**
+         * The gate that lets a **404** be read as a search at all.
+         *
+         * Since 06/09/2026 pdalife answers 404 to a fruitless search and to any page past the
+         * last, sending the whole page anyway. `isSearchPage` is what separates that from an
+         * address that does not exist, and it has to be checked in **both** directions on real
+         * pages: too narrow and every fruitless search is reported as a store failure again, too
+         * wide and a search URL that genuinely moved becomes an empty catalogue for ever.
+         *
+         * `not-found.html.gz` is the demanding negative: 33 KB of real page whose sidebar carries
+         * ten `a.color-android` links, so "the page looks empty" is not what is being measured.
+         */
+        @Test
+        @DisplayName("a 404 is read as a search only when it carries the results container")
+        fun onlyTheSearchPageCountsAsOne() {
+            assertThat(searchParser.isSearchPage(Fixtures.html(Fixtures.SEARCH_EMPTY), BASE_URL))
+                .isTrue()
+            assertThat(
+                searchParser.isSearchPage(Fixtures.html(Fixtures.SEARCH_PAST_LAST_PAGE), BASE_URL),
+            ).isTrue()
+            assertThat(searchParser.isSearchPage(Fixtures.html(Fixtures.SEARCH), BASE_URL)).isTrue()
+
+            assertThat(searchParser.isSearchPage(Fixtures.html(Fixtures.NOT_FOUND), BASE_URL))
+                .isFalse()
+        }
+
+        /**
+         * The second shape of the 404, and it reaches `hasMore` by another route.
+         *
+         * `data-max_page="2"` with `data-current_page="9"` — two numbers compared — where the
+         * empty search has an empty `data-current_page` that parses to nothing. Both must say
+         * "no next page", and a reading that kept only one of the two would still look right.
+         */
+        @Test
+        @DisplayName("a page past the last one is empty and declares no next page")
+        fun pastTheLastPageDeclaresNoMore() {
+            val page = search(Fixtures.SEARCH_PAST_LAST_PAGE, 8)
+            assertThat(page.items).isEmpty()
+            assertThat(page.hasMore).isFalse()
+        }
+
         private fun search(fixture: String, page: Int) =
             searchParser.parse(Fixtures.html(fixture), BASE_URL, page).expectSuccess()
     }

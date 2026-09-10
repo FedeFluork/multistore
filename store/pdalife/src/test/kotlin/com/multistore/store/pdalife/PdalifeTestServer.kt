@@ -57,7 +57,10 @@ class PdalifeTestServer(private val server: MockWebServer) {
         overrides[path]?.let { return page(it) }
         rawOverrides[path]?.let { return body(it.toByteArray()) }
 
-        searchFixture(path)?.let { return page(it) }
+        // A search answers 404 when it has nothing to give — see `searchFixture`.
+        searchFixture(path)?.let { fixture ->
+            return if (fixture in FRUITLESS_SEARCHES) pageWithCode(fixture, HTTP_NOT_FOUND) else page(fixture)
+        }
 
         return when (path) {
             "/${PdalifeConfig.RECENT_FEED_PATH}/" -> feed(Fixtures.RECENT_FEED)
@@ -79,13 +82,28 @@ class PdalifeTestServer(private val server: MockWebServer) {
      * The slug is compared against the one the adapter would have produced, not against the raw
      * query: it is the only way for the double to also exercise slugification instead of bypassing
      * it.
+     *
+     * ### A fruitless search answers **404**, because the real one does
+     *
+     * Since 06/09/2026 pdalife answers 404 — with the whole search page in the body — both to a
+     * query matching nothing and to a page past the last. Serving those 200 here would leave the
+     * double as the only place the old pdalife still exists, and the adapter's most load-bearing
+     * behaviour on this store, "a search with nothing is an empty success", would be verified
+     * against a site nobody can reach. What tells them apart from a genuinely missing address is
+     * the body, not the code: see [notFound], which serves a page with no `catalog-list` at all.
      */
     private fun searchFixture(path: String): String? {
         val segments = path.trim('/').split('/')
         if (segments.firstOrNull() != SEARCH_SEGMENT || segments.size !in SEARCH_SEGMENTS) return null
         val page = segments.getOrNull(2)
         return when (segments.getOrNull(1).orEmpty()) {
-            Fixtures.QUERY_WITH_RESULTS -> if (page == null) Fixtures.SEARCH else Fixtures.SEARCH_PAGE_2
+            // Three pages and not two: the real catalogue for this query ends at page 2, and what
+            // comes after is not an empty 200 but the apology page with a 404 on it.
+            Fixtures.QUERY_WITH_RESULTS -> when (page) {
+                null -> Fixtures.SEARCH
+                PAGE_2 -> Fixtures.SEARCH_PAGE_2
+                else -> Fixtures.SEARCH_PAST_LAST_PAGE
+            }
             Fixtures.QUERY_OTHER_OS -> Fixtures.SEARCH_OTHER_OS
             Fixtures.QUERY_UNRATED -> Fixtures.SEARCH_UNRATED
             else -> Fixtures.SEARCH_EMPTY
@@ -100,6 +118,13 @@ class PdalifeTestServer(private val server: MockWebServer) {
         .build()
 
     private fun page(fixture: String): MockResponse = body(Fixtures.bytes(fixture))
+
+    /** A fixture served with a code of its own: pdalife's fruitless search is a 404 with a page. */
+    private fun pageWithCode(fixture: String, code: Int): MockResponse = MockResponse.Builder()
+        .code(code)
+        .addHeader("Content-Type", "text/html; charset=utf-8")
+        .body(Buffer().write(Fixtures.bytes(fixture)))
+        .build()
 
     private fun body(bytes: ByteArray): MockResponse = MockResponse.Builder()
         .code(HTTP_OK)
@@ -132,6 +157,10 @@ class PdalifeTestServer(private val server: MockWebServer) {
         const val HTTP_MOVED_PERMANENTLY = 301
         const val HTTP_NOT_FOUND = 404
         const val SEARCH_SEGMENT = "search"
+        const val PAGE_2 = "page-2"
+
+        /** The pages pdalife answers 404 to while still sending the search page. */
+        val FRUITLESS_SEARCHES = setOf(Fixtures.SEARCH_EMPTY, Fixtures.SEARCH_PAST_LAST_PAGE)
         val SEARCH_SEGMENTS = 2..3
         const val MOBDISC_PATH = "/mobdisc/download.html"
     }

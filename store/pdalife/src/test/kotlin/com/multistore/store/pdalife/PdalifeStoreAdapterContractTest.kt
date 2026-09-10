@@ -98,6 +98,77 @@ class PdalifeStoreAdapterContractTest : StoreAdapterContractTest() {
     }
 
     /**
+     * A fruitless search is an **empty success**, and it arrives as a 404.
+     *
+     * The shared contract already requires the empty result; this one is about *how* it is
+     * reached, which is the whole of the 06/09/2026 change. pdalife answers 404 with its complete
+     * search page when nothing matches, so without reading that body every fruitless search on
+     * this store came back `NotFound` — recorded as a store failure and drawn as a shortfall sign
+     * next to the results, about a store that had answered correctly.
+     *
+     * The assertion on the code is not decoration: if the double ever went back to 200 this test
+     * would still pass on the outcome while proving nothing about the path that broke.
+     */
+    @Test
+    @DisplayName("a search with no results is empty, and the store answered 404")
+    fun fruitlessSearchIsEmptyDespiteTheNotFound() = runTest {
+        val result = pdalife.search(Fixtures.QUERY_WITHOUT_RESULTS)
+
+        assertThat(result).isInstanceOf(StoreResult.Success::class.java)
+        val page = (result as StoreResult.Success).value
+        assertThat(page.items).isEmpty()
+        assertThat(page.hasMore).isFalse()
+        // And the transport really did report a failure: asserting only the outcome would keep
+        // this test green if the double drifted back to answering 200, i.e. exactly when it had
+        // stopped covering anything.
+        assertThat(codeOf("/search/${Fixtures.QUERY_WITHOUT_RESULTS}/")).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    /**
+     * The other measured 404: a page past the last one.
+     *
+     * It reaches `hasMore` differently from the empty search — `data-max_page="2"` against
+     * `data-current_page="9"`, two numbers compared, where the empty page has an empty
+     * `data-current_page` that parses to nothing. Both must come out false, and only one of the
+     * two routes would survive someone tidying the pager reading.
+     */
+    @Test
+    @DisplayName("a page past the last one is empty, not a fault")
+    fun pastTheLastPageIsEmpty() = runTest {
+        val result = pdalife.search(Fixtures.QUERY_WITH_RESULTS, page = 8)
+
+        assertThat(result).isInstanceOf(StoreResult.Success::class.java)
+        val page = (result as StoreResult.Success).value
+        assertThat(page.items).isEmpty()
+        assertThat(page.hasMore).isFalse()
+    }
+
+    /**
+     * **A 404 that is not the search page stays `NotFound`** — the other half, and the one that
+     * keeps the first half honest.
+     *
+     * Reading a 404's body is only defensible because the body decides. The cheap version of this
+     * fix — "on this store a 404 from the search means no results" — would pass every other test
+     * in this file and turn a search URL that had genuinely moved into an empty catalogue for
+     * ever, with nothing anywhere saying why: the silent empty field this project keeps refusing,
+     * and the exact reading the canary's `NotFound` branch exists to send someone to fix.
+     *
+     * The body served here is `not-found.html.gz`, pdalife's real one: 33 KB of menu, sidebar and
+     * footer — the sidebar carrying ten `a.color-android` links, so a parser that went looking
+     * would find something — and not one `catalog-list` in it.
+     */
+    @Test
+    @DisplayName("a 404 that is not the search page is still NotFound")
+    fun realNotFoundOnSearchStaysNotFound() = runTest {
+        fake.missing += "/search/${Fixtures.QUERY_WITH_RESULTS}/"
+
+        val result = pdalife.search(Fixtures.QUERY_WITH_RESULTS)
+
+        assertThat(result).isInstanceOf(StoreResult.Failure::class.java)
+        assertThat((result as StoreResult.Failure).error).isEqualTo(StoreError.NotFound)
+    }
+
+    /**
      * A query made only of punctuation does not become a request.
      *
      * `/search/c%2B%2B/` answers **404** on the real site, and an empty slug would give
@@ -218,5 +289,20 @@ class PdalifeStoreAdapterContractTest : StoreAdapterContractTest() {
 
         /** The container holding the listing's four `accordion-item`s together. */
         const val VERSIONS_BLOCK = "accordion-item js-accordion-item"
+
+        const val HTTP_NOT_FOUND = 404
     }
+
+    /** What the double answers on a path, to check the status code and not only the outcome. */
+    private fun codeOf(path: String): Int {
+        val connection = java.net.URI(fake.baseUrl + path).toURL().openConnection()
+            as java.net.HttpURLConnection
+        return try {
+            connection.requestMethod = "GET"
+            connection.responseCode
+        } finally {
+            connection.disconnect()
+        }
+    }
+
 }

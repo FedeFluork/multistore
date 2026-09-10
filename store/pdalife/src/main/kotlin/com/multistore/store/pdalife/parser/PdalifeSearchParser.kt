@@ -35,8 +35,34 @@ import com.multistore.store.pdalife.PdalifeRefs
  *
  * Telling the two situations apart is exactly what [mapRowsOrFail] exists for, and keeping that
  * alive means not letting rows that were never ours reach the count.
+ *
+ * ### And since 06/09/2026 that page arrives with a 404
+ *
+ * The markup above did not change; the status code did. pdalife now answers **404** both to a
+ * query matching nothing and to a page past the last one, so this parser stopped being reached at
+ * all — `PageFetcher` turned the body into `NotFound` before anyone could read it, and every
+ * fruitless search on this store was reported to the user as pdalife having failed. What decides
+ * that a 404 is still this page is [isSearchPage].
  */
 internal class PdalifeSearchParser(private val config: PdalifeConfig) {
+
+    /**
+     * Whether [html] is pdalife's search page at all.
+     *
+     * Asked of a **404**, and only of a 404: since 06/09/2026 this store answers one to a search
+     * matching nothing and to any page past the last, with the whole results page in the body. The
+     * question this answers is therefore not "are there results?" — [parse] answers that, and zero
+     * is a legitimate answer — but "did pdalife answer the search, or is this the address not
+     * existing?".
+     *
+     * It looks for the **container** and not for rows, because a page with no rows is exactly the
+     * case being read; and it is positive evidence rather than the absence of a 404 page's marker,
+     * so a redesigned "Page not found" changes nothing here while a search that stopped answering
+     * still fails loudly.
+     */
+    fun isSearchPage(html: String, url: String): Boolean =
+        runCatching { HtmlPage.of(html, url).oneOrNull(config.selectors.searchContainer) != null }
+            .getOrDefault(false)
 
     fun parse(html: String, url: String, page: Int): StoreResult<PagedResult<StoreListingSummary>> =
         parseHtml(html, url) { document ->

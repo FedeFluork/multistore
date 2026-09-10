@@ -48,10 +48,44 @@ class PageFetcher(
     private val escalator: ChallengeEscalator = http.escalator,
 ) {
 
-    /** A downloaded page: the text, and the URL it actually came from. */
-    data class Page(val url: String, val html: String)
+    /** A downloaded page: the text, the URL it actually came from, and the code it arrived with. */
+    data class Page(val url: String, val html: String, val code: Int) {
+        /**
+         * Whether this body arrived with a 404 — which only happens if the caller asked for it.
+         *
+         * Without [get]'s `readBodyOnNotFound` a 404 never becomes a [Page] at all, so this is
+         * never true by accident: whoever reads it has already decided that on this store a 404
+         * can carry a real page.
+         */
+        val isNotFound: Boolean get() = code == HTTP_NOT_FOUND
+    }
 
-    suspend fun get(url: String, headers: Map<String, String> = emptyMap()): StoreResult<Page> {
+    /**
+     * A `GET`, and the page it answered with.
+     *
+     * ### `readBodyOnNotFound`, and why it is opt-in and named after one code
+     *
+     * A 404 normally becomes [StoreError.NotFound] here without the body ever being read, and that
+     * is right nearly everywhere: the address does not exist, so there is nothing on the other side
+     * to interpret. pdalife is the measured exception — since 06/09/2026 it answers **404 with its
+     * complete search page** when a query matches nothing, or when a page is past the last one.
+     * Collapsing that into `NotFound` reports a store that answered correctly as a store that
+     * failed.
+     *
+     * It is opt-in because the default is the safe reading: a caller that has not measured its
+     * store must not start handing 404 bodies to a parser, where "this address is gone" would
+     * quietly turn into "no results". And it names **one** code rather than taking a set, because
+     * one code is what has been measured — a set would be branches no configuration walks.
+     *
+     * What this does **not** decide is whether that body means anything: it hands over the page
+     * with [Page.isNotFound] set and leaves the reading to the adapter, which is the only one that
+     * knows what its store's search page looks like.
+     */
+    suspend fun get(
+        url: String,
+        headers: Map<String, String> = emptyMap(),
+        readBodyOnNotFound: Boolean = false,
+    ): StoreResult<Page> {
         val request = Request.Builder().url(url).apply {
             headers.forEach { (name, value) -> header(name, value) }
         }.build()
@@ -59,7 +93,7 @@ class PageFetcher(
         return when (val outcome = escalator.execute(request, http)) {
             is ChallengeOutcome.Passed -> {
                 http.recordTier(outcome.tier)
-                outcome.response.use { it.toPage() }
+                outcome.response.use { it.toPage(readBodyOnNotFound) }
             }
 
             is ChallengeOutcome.Blocked, is ChallengeOutcome.Failed ->
@@ -94,7 +128,7 @@ class PageFetcher(
         return when (val outcome = escalator.execute(request, http)) {
             is ChallengeOutcome.Passed -> {
                 http.recordTier(outcome.tier)
-                outcome.response.use { it.toPage() }
+                outcome.response.use { it.toPage(readBodyOnNotFound = false) }
             }
 
             is ChallengeOutcome.Blocked, is ChallengeOutcome.Failed ->
@@ -203,8 +237,11 @@ class PageFetcher(
     /** The outcome of a HEAD: where it lands, and what there would be to download. */
     data class Redirected(val url: String, val contentLength: Long?, val contentType: String?)
 
-    private fun Response.toPage(): StoreResult<Page> {
-        if (!isSuccessful) return StoreResult.Failure(StoreErrors.fromResponse(this))
+    private fun Response.toPage(readBodyOnNotFound: Boolean): StoreResult<Page> {
+        // A 404 the caller has asked to read is the one non-2xx that gets this far. Every other
+        // code, and a 404 nobody asked about, keeps the old reading and never reaches the body.
+        val readable = isSuccessful || (readBodyOnNotFound && code == HTTP_NOT_FOUND)
+        if (!readable) return StoreResult.Failure(StoreErrors.fromResponse(this))
         val text = runCatching { body.string() }.getOrElse {
             return StoreResult.Failure(StoreError.Network(it, code))
         }
@@ -212,13 +249,22 @@ class PageFetcher(
             // A 200 with an empty body is not a page: it is a failure disguised as success, and
             // handing it to the parser would give a parse failure that sends people looking for a
             // markup change that never happened.
-            return StoreResult.Failure(StoreError.Network(cause = null, httpCode = code))
+            //
+            // A **404** with an empty body is the ordinary 404 the caller was hoping was something
+            // else, so it goes back to being one: reporting `Network` there would replace a
+            // diagnosis that is right with one that is not.
+            return if (isSuccessful) {
+                StoreResult.Failure(StoreError.Network(cause = null, httpCode = code))
+            } else {
+                StoreResult.Failure(StoreErrors.fromResponse(this))
+            }
         }
-        return StoreResult.Success(Page(url = request.url.toString(), html = text))
+        return StoreResult.Success(Page(url = request.url.toString(), html = text, code = code))
     }
 
     private companion object {
         const val CONTENT_LENGTH = "Content-Length"
         const val CONTENT_TYPE = "Content-Type"
+        const val HTTP_NOT_FOUND = 404
     }
 }
