@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -429,12 +428,30 @@ private fun ResultList(
     //
     // Hence: re-pin on every change of the answer while the reader has not moved, and never once
     // they have.
-    var readerMoved by remember(state.query) { mutableStateOf(false) }
+    //
+    // **Which query the reader took over**, and not a `Boolean` — the same shape as
+    // `noticesDismissedFor` above, for a related reason but a different failure. It has to be
+    // `rememberSaveable` because it says something about the *reader*, not about this composition,
+    // and that was the defect: opening an app page disposes this list, a plain `remember` came back
+    // `false`, and the effect below then pinned the position back to the top — over the offset
+    // `rememberLazyListState` had just restored correctly. Reproduced, and the report also said the
+    // position *did* survive when one came straight back without touching the page: consistent with
+    // the disposal not having happened yet, which is the half that was **not** measured. What the
+    // test drives is the other half, and it is the one the fix is about.
+    //
+    // Carrying the query rather than a flag is what makes the saved value safe to restore. A saved
+    // `true` would answer for whatever is searched for next, and that case is reachable: after
+    // process death the results are gone — the ViewModel starts idle — so the entry would sit there
+    // unconsumed until the next search picked it up and opened part-way down its own results, which
+    // is precisely the defect the pin exists for. A query cannot be mistaken for another one, so
+    // restoring it is right on the way back from an app page and inert everywhere else.
+    var movedInQuery by rememberSaveable { mutableStateOf<String?>(null) }
+    val readerMoved = movedInQuery == state.query
     // Only a real drag counts. `interactionSource` reports gestures, not programmatic scrolls, so
     // the `scrollToItem` below cannot mistake itself for the reader — which a
     // `firstVisibleItemIndex` check would have done.
     LaunchedEffect(listState, state.query) {
-        listState.interactionSource.interactions.collect { readerMoved = true }
+        listState.interactionSource.interactions.collect { movedInQuery = state.query }
     }
     LaunchedEffect(state.query, state.apps, readerMoved) {
         if (!readerMoved) listState.scrollToItem(0)
