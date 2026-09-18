@@ -38,6 +38,25 @@ jobs:
 
       - name: Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # **The package list is stated instead of inherited, and that is the whole fix.**
+          #
+          # `setup-android@v3` defaults to `tools platform-tools`, and `tools` — the obsolete SDK
+          # Tools bundle — has been removed from Google's repository. The action then runs
+          # `sdkmanager tools`, which answers `Warning: Failed to find package 'tools'` and exits 1,
+          # so the job dies at setup with nothing of ours having run. It broke between 10/09/2026
+          # (green) and 18/09/2026 (red) with no change on our side.
+          #
+          # Measured rather than assumed, with the SDK this project builds against:
+          # `sdkmanager --list` offers `platform-tools` 37.0.1 and **no** bare `tools` entry.
+          #
+          # `v4` fixes the default and moves to node24, and it is where this will go — but not on
+          # the day it is needed: v4.0.2, .3 and .4 were all published within two hours of each
+          # other on 17/09/2026, around this same removal, and the moving `v4` tag would pick up
+          # whatever lands next. Naming the package here fixes the failure on the version already
+          # in use and, more to the point, stops a default we do not control from deciding what CI
+          # installs — which is exactly how this broke.
+          packages: platform-tools
 
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -62,15 +81,17 @@ jobs:
         run: ./gradlew build lint
 
       - name: Screenshot Roborazzi (chiaro e scuro)
-        # OPEN POINT: the committed goldens were recorded on macOS/arm64 and are compared here on
-        # ubuntu/x86-64. Robolectric renders with its own `android-all` font stack, so in theory the
-        # output does not depend on the host — but "in theory" is not a verification, and this CI has
-        # never run yet (the repo has no remote).
+        # **Settled, and it is worth saying which way.** The committed goldens are recorded on
+        # macOS/arm64 and compared here on ubuntu/x86-64, and the open question was whether
+        # Robolectric's own `android-all` font stack really makes the output host-independent — "in
+        # theory it does" not being a verification. It has since run: this step has passed on every
+        # green CI run, the last being 10/09/2026.
         #
-        # On the first run: if this step fails with widespread, tiny differences, the cause is the
-        # platform, not a regression. In that case the fix is NOT to lower the threshold, it is to
-        # choose ubuntu-latest as the single recording platform — `./gradlew recordRoborazziDebug`
-        # from a workflow_dispatch job, PNGs committed — and stop recording locally.
+        # So a failure here is a **regression**, not the platform, and the remedy is to look at the
+        # diff artifact below. If widespread, sub-pixel differences ever do appear, the fix is still
+        # not to lower the threshold: it is to make ubuntu-latest the single recording platform —
+        # `./gradlew recordRoborazziDebug` from a workflow_dispatch job, PNGs committed — and stop
+        # recording locally.
         run: ./gradlew verifyRoborazziDebug
 
       - name: Report dei test
