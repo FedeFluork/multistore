@@ -8,6 +8,11 @@ they are the bytes the server sent, gzipped.
 column carries the status code because on this store it has stopped being decorative — see
 "A fruitless search now answers 404" below.
 
+The three `detail*.html.gz` were **recaptured on 18/09/2026**, the same way, because pdalife
+redesigned the listing — see "The redesign of 16/09/2026" below. Their sizes and some of their
+contents moved with them: `detail-mod.html.gz` is now at 6.4.0 rather than 6.3.5 and has gained a
+release, and `detail.html.gz` links full-size screenshots where it used to link medium ones.
+
 To look at one: `gzcat detail.html.gz | less`.
 
 | File | URL | Outcome |
@@ -270,3 +275,40 @@ The title carries the site's verb: `The Walking Dead: A New Frontier скача�
 following `скачать` belongs to the page — version, channel (`Full`, `Unlocked`, `Pro`, `Premium`:
 eight forms measured) and platform — and the cut is made **on the Russian word**, not on "на
 Android", because before the word there is only ever the name.
+
+
+## The redesign of 16/09/2026, and the two things it moved
+
+Caught by the nightly canary, which went red on 16, 17 and 18/09/2026 with `expected not to be
+empty` — the screenshots. Nothing inside the app would have said anything: an empty screenshot strip
+and a null minimum SDK both look like an app that simply has neither.
+
+It moved exactly two things this adapter reads, and it is worth writing both down with their old and
+new shape, because the second was not visible from the failure at all:
+
+| | before | after |
+|---|---|---|
+| screenshots | `<div class="game-gallery">` (fotorama), `<a href="…/m_img1.jpg"><img src="…/th_img1.jpg">` | `<div class="game-screenshots-rail">` (magnific-popup), `<a class="mfp-image" href="…/img1.jpg"><img src="…/img1.jpg">` |
+| requirements | `<ul class="game-download__list"><li>OS version: Android 2.2+</li>` | `<dl class="game-information-facts"><div><dt>OS</dt><dd>Android 2.2+</dd></div>` |
+
+Three things worth keeping:
+
+- **what kept the old name is the lightbox.** `game-gallery-close`, `game-gallery-image`,
+  `game-gallery-prev` are all still on the page — six occurrences of the string — and none of them
+  is `class="game-gallery"`, which is what the selector matched. A grep for the old name says the
+  gallery is still there; a CSS selector says it is not, and the CSS selector is right;
+- **the screenshots are bigger now, and that is the store's choice, not ours.** All three sizes are
+  still served — measured on Telegram's first shot: `th_img1.jpg` 4,136 bytes, `m_img1.jpg` 12,782,
+  `img1.jpg` 36,639 — but only the full one is on the page. Deriving `m_` from `img` would be
+  inventing a URL out of a guess about their storage layout, which is the kind of guess that breaks
+  silently;
+- **the requirements trap is gone, and the defence against it stays.** The old `ul` had a "Help"
+  list beside it with identical markup, which is why the minimum SDK has always been found by the
+  **shape** of the value (`Android` followed by a number) rather than by position or by the label
+  beside it. The `dl` has no such twin, but the label is still the server's translation, so the
+  shape-based read is still the only correct one.
+
+And one thing it moved that the adapter does not read: the version accordion's class list gained
+`game-download-version`. No selector depends on it — but the contract test that builds a
+"listing with no versions" by deleting that block from this fixture does, and its anchor silently
+stopped matching. That test now asserts its replacement changed something before trusting it.

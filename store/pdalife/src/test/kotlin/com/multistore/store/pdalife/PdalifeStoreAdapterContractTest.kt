@@ -274,8 +274,16 @@ class PdalifeStoreAdapterContractTest : StoreAdapterContractTest() {
         // stays a page the parser can read. The case has no fixture because the site does not
         // produce it — every sampled listing has at least one version — but "the page is there and
         // offers nothing" is exactly the shape a withdrawn app would take.
-        fake.rawOverrides["/${Fixtures.APP_REF}.html"] =
-            Fixtures.html(Fixtures.DETAIL).replace(VERSIONS_BLOCK, "")
+        val whole = Fixtures.html(Fixtures.DETAIL)
+        val stripped = whole.replace(VERSIONS_BLOCK, "")
+        // **The anchor is checked before it is trusted.** This document is built by string
+        // replacement, and on 16/09/2026 the recaptured fixture stopped containing the old anchor —
+        // the redesign inserted `game-download-version` into that class list. The replacement then
+        // removed nothing, the listing arrived with all its versions, and the test failed claiming
+        // the adapter had stopped answering `NotFound`. It is the repository's own injection rule
+        // one floor up: an anchor that matches nothing is a broken harness, not a result.
+        assertThat(stripped).isNotEqualTo(whole)
+        fake.rawOverrides["/${Fixtures.APP_REF}.html"] = stripped
 
         val resolution = pdalife.getDownloadLink(existingRef, version = null)
 
@@ -288,7 +296,7 @@ class PdalifeStoreAdapterContractTest : StoreAdapterContractTest() {
         const val RECAPTCHA_KEY = "6Lceo_8UAAAAAGKPGkR-373630tIcnJuXBybKBGp"
 
         /** The container holding the listing's four `accordion-item`s together. */
-        const val VERSIONS_BLOCK = "accordion-item js-accordion-item"
+        const val VERSIONS_BLOCK = "accordion-item game-download-version"
 
         const val HTTP_NOT_FOUND = 404
     }

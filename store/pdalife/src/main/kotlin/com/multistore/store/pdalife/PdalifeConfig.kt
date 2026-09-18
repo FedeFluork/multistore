@@ -325,7 +325,22 @@ data class PdalifeSelectors(
     val detailRatingValue: String = "[itemprop=aggregateRating] meta[itemprop=ratingValue]",
     val detailRatingCount: String = "[itemprop=aggregateRating] meta[itemprop=ratingCount]",
     val detailRatingBest: String = "[itemprop=aggregateRating] meta[itemprop=bestRating]",
-    val detailScreenshot: String = ".game-gallery a[href]",
+    /**
+     * The screenshots, anchored to the **rail** their template puts them in.
+     *
+     * It was `.game-gallery a[href]` until pdalife redesigned the gallery, seen on 16/09/2026: the
+     * shots now live in `<div class="game-screenshots-rail">` inside
+     * `<section class="game-about-panel game-screenshots-panel">`, and what kept the old name is
+     * the lightbox — `game-gallery-close`, `game-gallery-image`, `game-gallery-prev`. Those are
+     * hyphenated siblings, which `.game-gallery` does not match, so the selector found nothing and
+     * every listing on the store came back with **no screenshots**. The canary said so for three
+     * nights; nothing in the app would have.
+     *
+     * The rail and not the panel, because the panel also holds the heading and the image count;
+     * the rail holds the seven anchors and nothing else — verified on the three detail fixtures,
+     * one of which is an advert-heavy page with none of them inside it.
+     */
+    val detailScreenshot: String = ".game-screenshots-rail a[href]",
     /**
      * The Google Play link **inside the offers container**, which is the only real one.
      *
@@ -339,15 +354,24 @@ data class PdalifeSelectors(
      */
     val detailPlayLink: String = ".game-download__stores a[href*=play.google.com]",
     /**
-     * The requirements, which are a list of `li` with the label **translated by the server**.
+     * The requirements, whose values are `dd`s with the label **translated by the server**.
      *
-     * `OS version: Android 2.2+`, `Internet: required`, `Requires free space: 30 Mb`. The first
-     * `ul.game-download__list` always looks like the right one and is not: next to it sits "Help",
-     * with the same markup, and positional selectors are forbidden on this site. All the `li`s are
-     * taken and the one **containing an Android version number** is kept, which is the only part
-     * of the row translation does not touch.
+     * `Android 2.2+`, `required`, `30 Mb`, `English, Russian`. The one **containing an Android
+     * version number** is kept, which is the only part translation does not touch — see
+     * `PdalifeDetailParser.minSdkOf`.
+     *
+     * It was `ul.game-download__list li` until the redesign of 16/09/2026, which turned the block
+     * into `<dl class="game-information-facts"><div><dt>OS</dt><dd>Android 2.2+</dd></div>`. The
+     * same redesign moved the screenshots — see [detailScreenshot] — and the two are the only
+     * things on this page it moved.
+     *
+     * One consequence is worth recording, because it removes a trap rather than adding one: the
+     * adjacent "Help" block, which kept `ul.game-download__list` and used to be indistinguishable
+     * from the requirements, is now a different element entirely. The shape-based read stays all
+     * the same. It never depended on that ambiguity, and positional selectors remain forbidden on
+     * this site for the reason the advert slots give.
      */
-    val detailRequirement: String = "ul.game-download__list li",
+    val detailRequirement: String = "dl.game-information-facts dd",
     /**
      * The catalogue division, read from the breadcrumbs.
      *

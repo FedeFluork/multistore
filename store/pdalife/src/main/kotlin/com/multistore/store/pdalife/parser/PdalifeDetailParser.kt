@@ -147,11 +147,11 @@ internal class PdalifeDetailParser(private val config: PdalifeConfig) {
     /**
      * The minimum SDK, sought by **shape** and neither by position nor by label.
      *
-     * The row is `<li>OS version: Android 2.2+</li>`, inside a `ul.game-download__list`. The
-     * problem is that next to it sits a second one, "Help", with the same markup, and that the
-     * label is translated by the server. All the `li`s are taken and the first from which
-     * `TextValues.apiLevel` can extract a level is kept: "Android" followed by a number is the only
-     * part of the row no translation touches.
+     * The row is `<div><dt>OS</dt><dd>Android 2.2+</dd></div>`, inside a
+     * `dl.game-information-facts`, and the label is translated by the server. Every `dd` is taken
+     * and the first from which `TextValues.apiLevel` can extract a level is kept: "Android"
+     * followed by a number is the only part of the row no translation touches. Reading the `dt`
+     * instead would be reading the translation.
      *
      * It holds for the whole listing and not for the individual version, although the block's title
      * says "Requirements to v9.7.3": pdalife publishes **only one**, the current version's.

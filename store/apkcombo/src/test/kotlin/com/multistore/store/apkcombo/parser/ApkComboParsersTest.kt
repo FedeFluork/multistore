@@ -291,6 +291,137 @@ class ApkComboParsersTest {
             assertThat(variants.map { it.objectKey }.toSet()).hasSize(variants.size)
         }
 
+        /**
+         * **The other half of the store**, and the defect that made it uninstallable.
+         *
+         * apkcombo wraps the file URL in two endpoints: `/r2?u=<percent-encoded>` towards
+         * Cloudflare R2 and `/d?u=<base64>` towards `download.pureapk.com`. Reading only the first
+         * dropped every anchor on a page of the second kind, so the listing arrived with no
+         * variant, `getDownloadLink` answered `NotFound`, and on the device every Install on such a
+         * listing failed with "Not found on this store". Measured 18/09/2026 over 22 apps from the
+         * store's own feed: 11 `/d?`, 11 `/r2?`, none both.
+         */
+        @Test
+        fun `the file URL is decoded from the base64 form too`() {
+            val variants = parser.parse(
+                Fixtures.html(Fixtures.DOWNLOAD_PUREAPK),
+                DOWNLOAD_URL,
+                null,
+            ).expect()
+
+            assertThat(variants).hasSize(1)
+            val only = variants.single()
+            assertThat(only.url).startsWith("https://download.pureapk.com/")
+            // The object key is the last segment of the **decoded** URL, so it stays the per-file
+            // identity on this CDN exactly as it is on R2.
+            assertThat(only.objectKey).isEqualTo("Y29tLmlNZS5hbmRyb2lkXzEyMDkwNDAyXzRkNDJhZjJh")
+            assertThat(only.artifactType).isEqualTo(ArtifactType.XAPK)
+            assertThat(only.versionCode).isEqualTo(12_090_402L)
+            // pureapk publishes no expiry of its own: the redirect is signed when it is followed.
+            // Saying so is not a gap — `null` is "no known expiry", and inventing one would make a
+            // resolution look stale that is not.
+            assertThat(only.expiresAt).isNull()
+        }
+
+        /**
+         * The name comes from `_fn`, pureapk's equivalent of a signed content disposition.
+         *
+         * Without it the fallback takes the last path segment, and on this CDN that segment is
+         * itself base64: the file would reach the user called `Y29tLmlNZS5hbmRyb2lk…`, with no
+         * extension and nothing in it to recognise.
+         */
+        @Test
+        fun `the file name on the other CDN comes from its own parameter`() {
+            val only = parser.parse(
+                Fixtures.html(Fixtures.DOWNLOAD_PUREAPK),
+                DOWNLOAD_URL,
+                null,
+            ).expect().single()
+
+            assertThat(only.fileName).endsWith("_apkcombo.com.xapk")
+            assertThat(only.fileName).doesNotContain("Y29tLmlNZS5hbmRyb2lk")
+        }
+
+        /**
+         * **Anchors that none of the decoders can read are a parse failure, not an empty page.**
+         *
+         * This is the guard whose absence let the defect above stay silent for three weeks. While
+         * "no variant readable" and "no variant offered" were the same answer, apkcombo could begin
+         * wrapping its URLs in a form this parser did not know and the only symptom was a store
+         * that quietly stopped being installable: no selector named, nothing in diagnostics, and
+         * the nightly canary green on every check that looks at this page.
+         *
+         * The document is constructed because the shape is, by definition, one no capture has: it
+         * is a third wrapper, which is exactly what the next change would look like.
+         */
+        @Test
+        fun `anchors nobody can decode are a declared failure, not zero variants`() {
+            val html = """
+                <html><body><div id="best-variant-tab"><div class="tree"><ul><li><code>arm64-v8a</code>
+                  <a class="variant" href="/v3?u=not-a-url-in-any-encoding">
+                    <span class="vername">12.9.4</span><span class="vercode">(12090402)</span>
+                    <span class="vtype"><span class="type-apk">APK</span></span>
+                  </a>
+                </li></ul></div></div></body></html>
+            """.trimIndent()
+
+            val result = parser.parse(html, DOWNLOAD_URL, null)
+
+            val failure = result as? StoreResult.Failure
+                ?: error("unreadable anchors must fail, gave $result")
+            val parseFailure = failure.error as? StoreError.ParseFailure
+                ?: error("must name the selector to rewrite, gave ${failure.error}")
+            assertThat(parseFailure.selector).isEqualTo(config.selectors.downloadVariant)
+        }
+
+        /**
+         * And a page with **no** anchors stays an empty list.
+         *
+         * The distinction is the whole value of the guard above: an app whose latest page offers no
+         * file is ordinary, and `getAppDetails` answers it by falling back to the version list on
+         * the same page. Turning that into a store error would make a fault out of an app's shape.
+         */
+        @Test
+        fun `a page with no anchor at all is empty, not a failure`() {
+            val html = "<html><body><div id=\"best-variant-tab\"><div class=\"tree\"></div></div></body></html>"
+
+            assertThat(parser.parse(html, DOWNLOAD_URL, null).expect()).isEmpty()
+        }
+
+        /**
+         * The base64 is read **before** percent-decoding, and a `+` is why.
+         *
+         * apkcombo uses the standard alphabet — measured on five anchors, `/` and `=` travel
+         * unescaped — so `+` is one of its 64 characters, and `URLDecoder` turns `+` into a space.
+         * Decoding the parameter first and base64-decoding the result would corrupt exactly those
+         * payloads that contain one.
+         *
+         * The payload is constructed, and the case it represents is narrow but real rather than
+         * theoretical. Base64 of ASCII text can only produce `+` where a byte at an offset of 2 in
+         * its triple is `>` or `~`; `>` is not legal in a URL, `~` is — and it occurs in file
+         * names, which is what pureapk carries in `_fn`. It is also the worst kind of defect to
+         * meet in the wild: one app in a catalogue breaking while every other one works.
+         */
+        @Test
+        fun `a base64 payload containing a plus survives`() {
+            val payload = "aHR0cHM6Ly9kb3dubG9hZC5wdXJlYXBrLmNvbS9iL1hBUEsvWTI5dExtVjRZVzF3YkdVP19mbj1hfmImaz1kZWFkYmVlZn5+"
+            val html = """
+                <html><body><div id="best-variant-tab"><div class="tree"><ul><li><code>arm64-v8a</code>
+                  <a class="variant" href="/d?u=$payload">
+                    <span class="vername">1.0</span><span class="vercode">(1)</span>
+                    <span class="vtype"><span class="type-apk">APK</span></span>
+                  </a>
+                </li></ul></div></div></body></html>
+            """.trimIndent()
+
+            // The premise, asserted so the test cannot quietly stop covering what it is named for.
+            assertThat(payload).contains("+")
+
+            val only = parser.parse(html, DOWNLOAD_URL, null).expect().single()
+
+            assertThat(only.url).isEqualTo("https://download.pureapk.com/b/XAPK/Y29tLmV4YW1wbGU?_fn=a~b&k=deadbeef~~")
+        }
+
         @Test
         fun `an older version's page has the same structure`() {
             val variants = parser.parse(

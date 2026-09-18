@@ -26,6 +26,17 @@ class ApkComboTestServer(private val server: MockWebServer) {
     /** Substitutions: path -> fixture to serve in its place. */
     val overrides: MutableMap<String, String> = mutableMapOf()
 
+    /**
+     * Substitutions: path -> a document built by the test rather than captured.
+     *
+     * It exists for the one shape no committed page can supply: a variants page offering **no
+     * file** while still naming its versions. The page that used to be believed to have it turned
+     * out to carry a variant in apkcombo's second link form, and the same URL today answers with
+     * neither — so the case is real, has no photograph, and is built by stripping the anchors from
+     * the page that has them. A test using this says so.
+     */
+    val bodies: MutableMap<String, String> = mutableMapOf()
+
     init {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
@@ -45,6 +56,7 @@ class ApkComboTestServer(private val server: MockWebServer) {
         val path = request.url.encodedPath
         if (path in missing) return notFound()
         overrides[path]?.let { return page(it) }
+        bodies[path]?.let { return html(it) }
 
         return when {
             path.startsWith(SEARCH_PREFIX) -> {
@@ -79,6 +91,12 @@ class ApkComboTestServer(private val server: MockWebServer) {
         .code(HTTP_OK)
         .addHeader("Content-Type", "text/html; charset=utf-8")
         .body(Buffer().write(Fixtures.bytes(fixture)))
+        .build()
+
+    private fun html(body: String): MockResponse = MockResponse.Builder()
+        .code(HTTP_OK)
+        .addHeader("Content-Type", "text/html; charset=utf-8")
+        .body(body)
         .build()
 
     /**

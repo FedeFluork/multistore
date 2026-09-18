@@ -125,7 +125,8 @@ object Fixtures {
     const val MOD_REF: String = "real-gangster-crime-android-a32255"
     const val MOD_TITLE: String = "Real Gangster Crime"
     const val MOD_PACKAGE: String = "com.gta.real.gangster.crime"
-    const val MOD_VERSION: String = "6.3.5 Money Mod"
+    /** Recaptured 16/09/2026: the app moved from 6.3.5. The suffix is what the test is about. */
+    const val MOD_VERSION: String = "6.4.0 Money Mod"
     const val MOD_DOWNLOAD_HASH: String = "6d2d7bca"
 
     // --- The listing with no package ---------------------------------------------------------

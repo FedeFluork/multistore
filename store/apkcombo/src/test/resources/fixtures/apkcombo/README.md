@@ -64,27 +64,51 @@ answer 200 with **zero links to a listing** — they have the right headings and
 the content. They differ from one another only in their canonical link and in a randomly chosen
 tag cloud.
 
-## `download-no-variants.html.gz` — the dead end, and what gets it out
+## `download-pureapk.html.gz` — the second form of the download link
 
 `https://apkcombo.com/ime-telegram-ai-messenger/com.iMe.android/download/apk`, captured
 29/08/2026, **HTTP 200**, 92.418 bytes, with `curl 8.7.1` and the Chrome mobile UA. apkcombo is the
 one store where curl is a legitimate capture client and that is measured, not assumed: `/download/apk`
 comes back byte for byte identical with a Chrome UA, with curl's own and with none at all.
 
-It is **another app** than the other fixtures, and it has to be: Telegram has variants on its
-latest page, so the dead end is not photographable from it. The URL redirects — the slug in the ref
-is not canonical (`ime-messenger` → `ime-telegram-ai-messenger`), which the adapter already follows.
+It is **another app** than the other fixtures, and it has to be: the fixture app's file is served by
+R2, so the second form is not photographable from it. The URL redirects — the slug in the ref is not
+canonical (`ime-messenger` → `ime-telegram-ai-messenger`), which the adapter already follows.
 
-What this page is for, and it is the whole point:
+**This file was committed as `download-no-variants.html.gz`, and that name was a misreading which
+cost apkcombo half its catalogue.** What was measured was right — *zero `/r2?` links* — and the
+conclusion drawn from it was wrong. The page has one `a.variant` anchor all along, wrapping a 159 MB
+XAPK in the other form apkcombo uses:
 
-- **zero `/r2?` links.** The latest-version segment (`apk`) publishes no downloadable variant for
-  this app, so the listing used to arrive with an empty version list and the screen said "this store
-  publishes no installable package for this app" — a dead end with nothing saying why;
-- **the version list is on it anyway**: `ul.list-versions a.ver-item`, 3 rows (12.9.4, 12.9.3,
-  12.9.2), the same markup `/old-versions/` uses at greater length. That is why the fallback costs
-  **no extra request**: the page that proved there is nothing to install is the page that says where
-  the files are.
+```
+href="https://apkcombo.com/d?u=<base64>"
+  -> https://download.pureapk.com/b/XAPK/Y29tLmlNZS5hbmRyb2lkXzEyMDkwNDAyXzRkNDJhZjJh?as2=…&_fn=…
+```
 
-Measured on the same day, for the record: this app's `/old-versions/` page answers 200 with **31**
+The parser read only `/r2?u=<percent-encoded>`, dropped the anchor, and `getAppDetails` fell back to
+the version list on the page. From that the repository concluded that this app publishes no
+installable artifact and that on this store "the files live only under the per-version segments" —
+neither of which is true. Measured 18/09/2026 across 22 apps from the store's own feed: **11 serve
+`/d?`, 11 serve `/r2?`, none both.**
+
+So what this fixture is for is the opposite of what its old name said:
+
+- **one variant in the `/d?u=` form**, XAPK, 159 MB, version 12.9.4 (`12090402`) — the shape that
+  answered `NotFound` to every Install;
+- the object key is the last segment of the *decoded* URL and is stable per file, which is what
+  keeps two variants of one release from collapsing onto one `VersionRef`;
+- the file name comes from `_fn`, pureapk's equivalent of a signed content disposition. Without it
+  the fallback would name the file after that base64 path segment.
+
+The version list, `ul.list-versions a.ver-item` with 3 rows (12.9.4, 12.9.3, 12.9.2), is still on the
+page and still parsed — it is just no longer what makes this listing installable.
+
+**A genuinely variant-less page exists and is not this one.** Measured 18/09/2026, the same URL now
+answers 200 with **zero** `a.variant` and **zero** `ver-item`: the app is gone from the store while
+its page stays. That is why "no anchors" stays an empty list and only "anchors that none of the
+decoders can read" is a parse failure — and why the fallback is exercised by a document the test
+builds by stripping the anchors from this one, which the test says it is doing.
+
+Measured on the capture day, for the record: this app's `/old-versions/` page answers 200 with **31**
 `ver-item` rows. Reaching for it would have worked too, and would have cost a second request to get
 28 rows nobody has asked for yet — the version-history section fetches them when opened.

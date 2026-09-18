@@ -41,12 +41,15 @@ object Fixtures {
     const val DOWNLOAD_OLD: String = "download-old.html.gz"
 
     /**
-     * A variants page with **no variant**, and the version list still on it.
+     * A variants page whose only file is wrapped in the **second** form, `/d?u=<base64>`.
      *
-     * It is another app on purpose — see the README: the fixture app has variants on its latest
-     * page, so the dead end cannot be photographed from it.
+     * It was committed as `download-no-variants.html.gz`, and the name was the misreading: the
+     * page always carried a 159 MB XAPK, and what could not see it was the parser, which read only
+     * `/r2?u=<percent-encoded>`. Half of apkcombo answers this way — see `ApkComboDownloadParser`.
+     *
+     * It is another app than the other fixtures on purpose: the fixture app is served by R2.
      */
-    const val DOWNLOAD_NO_VARIANTS: String = "download-no-variants.html.gz"
+    const val DOWNLOAD_PUREAPK: String = "download-pureapk.html.gz"
     const val OLD_VERSIONS: String = "old-versions.html.gz"
     const val NOT_FOUND: String = "not-found.html.gz"
 

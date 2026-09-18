@@ -11,6 +11,7 @@ import com.multistore.store.api.StoreResult
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assumptions.abort
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -91,21 +92,28 @@ class ApkComboCanaryTest {
         // nightly with "expected to be greater than: 1", which names none of the three jobs this
         // class exists to tell apart and sent the reader hunting a selector that had not moved.
         // Hence the premise is checked apart from the invariant, and says which of the two it is.
+        //
+        // And an expired premise **skips**, it does not fail. That is the rule everywhere else in
+        // this repository and this class was the last one breaking it: between 12/09 and 18/09/2026
+        // these two checks opened an issue every night against an adapter with nothing wrong with
+        // it, which is the quickest way to teach a reader to ignore a red.
         val codes = detail.versions.map { it.versionCode }.toSet()
         if (detail.versions.size < 2) {
-            error(
+            abort<Unit>(
                 "several variants: **the reference app now publishes a single variant**. Not a " +
                     "markup change, not a block, not a fault — apkcombo is serving " +
                     "'$MULTI_VARIANT_PATH' as one artifact, so this guard has lost its subject " +
                     "and proves nothing. Re-anchor `MULTI_VARIANT_PATH` to an app whose latest " +
                     "release still offers several variants sharing one version code. Note that " +
-                    "**zero** variants is a different case and not this one: it is covered by the " +
-                    "version-list fallback in `getAppDetails`, and on 31/08/2026 it was the shape " +
-                    "of both `com.zhiliaoapp.musically` and `com.instagram.android`.",
+                    "**zero** variants is a different case and not this one: it means either an " +
+                    "app that has left the store while its page stays, which is what " +
+                    "`com.iMe.android` became by 18/09/2026, or a link form this adapter cannot " +
+                    "read — and the second is no longer silent, because unreadable anchors are a " +
+                    "declared `ParseFailure` naming `a.variant`.",
             )
         }
         if (codes.size != 1 || codes.single() == null) {
-            error(
+            abort<Unit>(
                 "several variants: **the variants no longer share one version code** " +
                     "(codes: $codes). The collapse this test guards needed refs derived from a " +
                     "code that repeats; with one code per variant they cannot collide whatever " +
@@ -120,6 +128,60 @@ class ApkComboCanaryTest {
         // And at least one installable without opening a container: the survivor of the original
         // defect was the XAPK, so an all-XAPK answer would hide the same symptom again.
         assertThat(detail.versions.any { it.artifactType == ArtifactType.APK }).isTrue()
+    }
+
+    /**
+     * **Whatever apkcombo wraps the file URL in, it comes back readable.**
+     *
+     * The check this class did not have, and the one that would have caught the defect of
+     * 18/09/2026. Every other check here goes through `APP_PATH`, whose file is served by
+     * Cloudflare R2 — so when apkcombo began serving half its catalogue through
+     * `download.pureapk.com` behind `/d?u=<base64>` instead of `/r2?u=<percent-encoded>`, this
+     * canary stayed green on all of it while every Install on the affected half answered "Not
+     * found on this store" on the device.
+     *
+     * It samples the store's **own feed** rather than naming apps, because which app is served by
+     * which CDN is a fact about apkcombo that expires, and naming one would be the expired premise
+     * this class has already been bitten by twice. Unreadable anchors now reach here as a declared
+     * `ParseFailure` naming `a.variant`, which is the message to act on: a third wrapper.
+     */
+    @Test
+    fun `a listing offering a file resolves it, whichever CDN wraps it`() = runTest {
+        val sample = apkcombo.getRecent().orFail("new-releases feed").items.take(SAMPLE)
+        if (sample.isEmpty()) {
+            abort<Unit>(
+                "the wrappers: **the feed came back empty**, so there was nothing to sample. That " +
+                    "is the feed's own check to report, not this one.",
+            )
+        }
+
+        val resolved = mutableMapOf<String, String>()
+        var offering = 0
+        for (item in sample) {
+            // A listing can legitimately offer no file — an app that has left the store while its
+            // page stays. That is not this check's subject, so it moves on.
+            val version = apkcombo.getAppDetails(item.ref).orFail("detail of ${item.ref.value}")
+                .versions.firstOrNull { it.sizeBytes != null } ?: continue
+            offering++
+            val direct = apkcombo.getDownloadLink(item.ref, version.ref)
+                .orFail("download of ${item.ref.value}") as? DownloadResolution.Direct
+                ?: error("apkcombo declares DIRECT but returned something else")
+            val host = java.net.URI(direct.url).host.orEmpty()
+            // Decoded, not followed: a URL still pointing at apkcombo is the wrapper handed on
+            // unopened, which loses the file name and any expiry the CDN signed into it.
+            assertThat(host).doesNotContain(ApkComboConfig.HOST)
+            resolved[item.ref.value] = host
+        }
+
+        if (offering == 0) {
+            abort<Unit>(
+                "the wrappers: **none of the $SAMPLE sampled apps offered a file**, so nothing was " +
+                    "resolved and this check proves nothing. That is a fact about what the feed " +
+                    "happened to list, not a fault: re-run, and if it persists the store has " +
+                    "stopped publishing files on its newest listings, which the other checks say.",
+            )
+        }
+        println("apkcombo resolved ${resolved.size} of $SAMPLE sampled: ${resolved.values.toSet()}")
     }
 
     @Test
@@ -234,6 +296,9 @@ class ApkComboCanaryTest {
     private companion object {
         /** A feed is a window: how wide it is depends on how much the store published. */
         const val MIN_FEED_ITEMS = 10
+
+        /** Enough to meet both CDNs at a 50/50 split without being a crawl: 1 - 2^-4. */
+        const val SAMPLE = 4
 
         const val QUERY = "telegram"
         const val APP_PATH = "telegram/org.telegram.messenger"

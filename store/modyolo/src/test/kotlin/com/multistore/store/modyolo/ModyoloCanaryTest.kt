@@ -266,8 +266,22 @@ class ModyoloCanaryTest {
     private companion object {
         const val QUERY = "minecraft"
         const val NSFW_QUERY = "lewd"
-        const val APP_REF = "minecraft-19"
-        const val PACKAGE_NAME = "com.mojang.minecraftpe"
+        /**
+         * The listing the download check runs on, re-anchored 18/09/2026.
+         *
+         * It was `minecraft-19`, whose binary had been answering 500 since at least 12/09/2026 — so
+         * the check skipped three nights running and the AJAX resolution went unverified, which is
+         * the cost the skip's own message names. Re-measured that day: 4 of 7 sampled listings had
+         * a live binary, which is the one-in-four-to-one-in-two rate this store is documented at.
+         *
+         * Chosen for the property that makes an anchor last here, and it is the opposite of the
+         * obvious one: **a rarely updated app**. The dead binary comes from the file name being
+         * built out of the post's `lastest_version`, so a version bumped before the object lands on
+         * the CDN produces exactly that 500 — which makes a popular, frequently updated title the
+         * worst possible anchor. Minecraft was one.
+         */
+        const val APP_REF = "space-rpg-4-51024"
+        const val PACKAGE_NAME = "com.esaptonor.spacerpg4"
 
         /**
          * A post whose file name carries `%20` and `%28`: see the escaping test.

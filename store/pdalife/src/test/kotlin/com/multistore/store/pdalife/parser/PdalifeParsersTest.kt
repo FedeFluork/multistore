@@ -240,8 +240,13 @@ class PdalifeParsersTest {
             assertThat(summary.rating).isWithin(TOLERANCE)
                 .of(Fixtures.APP_RATING_OUT_OF_TEN / 2f)
             assertThat(detail.screenshots).hasSize(Fixtures.APP_SCREENSHOTS)
-            // The anchor's `href`, not the thumbnail's `src`.
-            assertThat(detail.screenshots.first().url).endsWith("/m_img1.jpg")
+            // The anchor's `href`, not the thumbnail's `src` — and since the gallery redesign of
+            // 16/09/2026 those are the same file. The old fotorama markup linked `m_img1.jpg`
+            // (medium) behind a `th_img1.jpg` thumbnail; the magnific-popup rail that replaced it
+            // publishes `img1.jpg` in both. All three sizes still exist on their CDN — 4 KB, 13 KB
+            // and 37 KB measured on this app — but only the full one is on the page, and deriving
+            // `m_` from it would be inventing a URL out of a guess about their storage.
+            assertThat(detail.screenshots.first().url).endsWith("/img1.jpg")
             assertThat(detail.description.byTag.values.single()).contains("Pavel Durov")
         }
 
@@ -304,8 +309,13 @@ class PdalifeParsersTest {
         @Test
         @DisplayName("the minimum SDK is recognised by shape, not by position in the list")
         fun readsMinSdkWithoutCountingLists() {
+            // The premise, verified: the requirements are the `dl` the redesign of 16/09/2026
+            // introduced, and the label next to the value is the server's translation — which is
+            // why the value is found by shape and never by the `dt` beside it.
             val document = HtmlPage.of(Fixtures.html(Fixtures.DETAIL), BASE_URL)
-            assertThat(document.all("ul.game-download__list").size).isAtLeast(2)
+            assertThat(document.all("dl.game-information-facts dd").size).isAtLeast(2)
+            assertThat(document.all("dl.game-information-facts dt").map { it.textOrNull() })
+                .contains("OS")
 
             // Android 2.2 = API 8. The value is there and not null: "I did not read it" and "I
             // read it and it is very low" are two different answers.
@@ -382,14 +392,26 @@ class PdalifeParsersTest {
             assertThat(oldest.publishedAt.toString()).startsWith("2022-11-11")
         }
 
-        /** `8.02.2026` next to `25.05.2026`: the day is not always two digits. */
+        /**
+         * `8.02.2026` next to `25.05.2026`: the day is not always two digits.
+         *
+         * The assertion is on the **single-digit date and on every date parsing**, not on the list
+         * of releases this app happens to have. Pinning the list made this test fail the day
+         * pdalife published one more — a fact about their catalogue that says nothing about the
+         * parser, and the kind of expired premise a red is worth nothing for.
+         */
         @Test
         @DisplayName("a date with a single-digit day reads like the others")
         fun singleDigitDayIsParsed() {
             val versions = detail(Fixtures.DETAIL_MOD).versions
-            assertThat(versions.map { it.publishedAt.toString().take(DATE_CHARS) })
-                .containsExactly("2026-05-25", "2026-02-08")
-                .inOrder()
+            val dates = versions.map { it.publishedAt.toString().take(DATE_CHARS) }
+
+            // The premise, verified rather than assumed: the fixture still carries the odd one.
+            assertThat(Fixtures.html(Fixtures.DETAIL_MOD)).contains("8.02.2026")
+            assertThat(dates).contains("2026-02-08")
+            // And nothing was skipped on the way: a date that fails to parse drops its version.
+            assertThat(dates).hasSize(versions.size)
+            assertThat(dates).isInOrder(compareByDescending<String> { it })
         }
 
         private fun detail(fixture: String) = detailParser

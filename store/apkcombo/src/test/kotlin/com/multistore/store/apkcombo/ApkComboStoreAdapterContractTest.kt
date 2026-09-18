@@ -158,27 +158,68 @@ class ApkComboStoreAdapterContractTest : StoreAdapterContractTest() {
     }
 
     /**
-     * A listing whose latest page offers **no file** still arrives installable.
+     * A listing whose file is served by the **second** CDN is installable like any other.
      *
-     * The dead end, and it was reachable on the real store: on `com.iMe.android` the latest-version
-     * segment publishes zero variants, so the listing came back with an empty version list and the
-     * screen said "this store publishes no installable package for this app". Nothing said why, and
-     * the way out was undiscoverable — opening the version-history section made an Install button
-     * appear, because on that store the files live only under the per-version segments.
+     * This is the regression the user met on the device: every apkcombo listing showed "Install"
+     * and every tap answered "Not found on this store". The cause was one line — the parser read
+     * the file URL only out of `/r2?u=<percent-encoded>`, and apkcombo wraps half its catalogue in
+     * `/d?u=<base64>` instead. Every anchor on such a page was dropped, the listing fell back to
+     * its version list, and `getDownloadLink` found nothing to resolve.
      *
-     * The fixture is that real page served at the fixture app's path: see the README. Telegram has
-     * variants on its latest page, so the dead end cannot be photographed from it.
+     * The fixture is that real page served at the fixture app's path: see the README. It is
+     * another app because the fixture app's file is served by R2.
      */
     @Test
-    @DisplayName("a listing with no variant on its latest page still names its versions")
-    fun aListingWithoutVariantsFallsBackToTheVersionsOnThePage() = runTest {
-        fake.overrides["/${Fixtures.APP_PATH}/download/apk"] = Fixtures.DOWNLOAD_NO_VARIANTS
+    @DisplayName("a listing whose file is wrapped in the second form resolves to a real URL")
+    fun aListingServedByTheOtherCdnStillResolves() = runTest {
+        fake.overrides["/${Fixtures.APP_PATH}/download/apk"] = Fixtures.DOWNLOAD_PUREAPK
 
         val versions = apkcombo.getAppDetails(existingRef).expect().versions
 
-        // **The premise is verified, not assumed.** Variants carry a size; the version list cannot —
-        // apkcombo publishes neither size nor version code on it. If the served page ever grew
-        // variants, the assertions below would pass without proving anything.
+        // **The premise is verified, not assumed**: what makes this page worth keeping is that its
+        // anchor is in the base64 form. Served an R2 page by mistake, everything below would pass
+        // while proving nothing — which is how the old shape of this test read for three weeks.
+        assertThat(Fixtures.html(Fixtures.DOWNLOAD_PUREAPK)).contains("apkcombo.com/d?u=")
+
+        // A variant, not the version-list fallback: the fallback cannot carry a size, because
+        // apkcombo does not publish one on that list.
+        assertThat(versions.mapNotNull { it.sizeBytes }).isNotEmpty()
+        assertThat(versions.map { it.versionName }).contains("12.9.4")
+
+        val direct = apkcombo.getDownloadLink(existingRef, versions.first().ref).expect()
+            as DownloadResolution.Direct
+        // Decoded, not followed: the target is the CDN, not apkcombo's redirect endpoint.
+        assertThat(direct.url).startsWith("https://download.pureapk.com/")
+        // And named from `_fn`. Without it the name would be the base64 path segment, with no
+        // extension — a file the user could not identify.
+        assertThat(direct.fileName).endsWith(".xapk")
+    }
+
+    /**
+     * A variants page offering **no file at all** still names its versions.
+     *
+     * The document is **constructed**, and the reason has to be stated rather than hidden: no
+     * committed page has this shape and none can be captured today. The page long believed to have
+     * it — `download-pureapk.html.gz` — in fact carries a variant in the second link form, and the
+     * same URL now answers with neither variants nor a version list, because the app has left the
+     * store while its page stays. So the case is real, has no photograph, and is built here by
+     * stripping the anchors from the page that has them.
+     *
+     * What it holds in place is the distinction the parser draws: **no anchors** is a page with
+     * nothing to download and falls back to the version list, while anchors that cannot be read are
+     * a declared parse failure. Conflating them is what made the original defect silent.
+     */
+    @Test
+    @DisplayName("a page with no variant at all falls back to the versions named on it")
+    fun aPageWithoutAnyVariantFallsBackToTheVersionsOnThePage() = runTest {
+        val stripped = Fixtures.html(Fixtures.DOWNLOAD_PUREAPK)
+            .replace("class=\"variant\"", "class=\"stripped-for-this-test\"")
+        fake.bodies["/${Fixtures.APP_PATH}/download/apk"] = stripped
+
+        val versions = apkcombo.getAppDetails(existingRef).expect().versions
+
+        // The premise, verified: the anchors really are gone, so the fallback is what answered.
+        assertThat(stripped).doesNotContain("class=\"variant\"")
         assertThat(versions.mapNotNull { it.sizeBytes }).isEmpty()
         assertThat(versions.map { it.versionName }).containsExactly("12.9.4", "12.9.3", "12.9.2")
 
