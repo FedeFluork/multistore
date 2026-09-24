@@ -1,5 +1,6 @@
 package com.multistore.store.an1.parser
 
+import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
 import com.multistore.store.an1.An1Config
@@ -30,8 +31,16 @@ internal class An1SearchParser(private val config: An1Config) {
 
     fun parse(html: String, url: String, page: Int): StoreResult<PagedResult<StoreListingSummary>> =
         parseHtml(html, url) { document ->
+            // The reworks, first, so a row can say whether an1 marked it. `all` and not
+            // `mapRowsOrFail`: a page with no marked row is the ordinary case — 0 of 4 on the
+            // page-2 fixture — and failing there would turn "nothing modified here" into a parse
+            // error.
+            val modRefs = document.all(config.selectors.searchModItem)
+                .mapNotNull { it.absUrlOrNull(config.selectors.searchLink, "href") }
+                .mapNotNull(An1Refs::refFromUrl)
+                .toSet()
             val items = document.all(config.selectors.searchItem)
-                .mapRowsOrFail(config.selectors.searchItem, ::summaryOf)
+                .mapRowsOrFail(config.selectors.searchItem) { summaryOf(it, modRefs) }
             PagedResult(
                 items = items,
                 page = page,
@@ -39,7 +48,7 @@ internal class An1SearchParser(private val config: An1Config) {
             )
         }
 
-    private fun summaryOf(item: HtmlPage): StoreListingSummary? {
+    private fun summaryOf(item: HtmlPage, modRefs: Set<StoreAppRef>): StoreListingSummary? {
         val href = item.absUrlOrNull(config.selectors.searchLink, "href") ?: return null
         val ref = An1Refs.refFromUrl(href) ?: return null
         val title = item.textOrNull(config.selectors.searchLink) ?: return null
@@ -56,6 +65,7 @@ internal class An1SearchParser(private val config: An1Config) {
             // The rating sits in the `li`'s text, not in an attribute. The percentage width says the
             // same thing graphically, and reading it from the style would mean interpreting CSS.
             rating = TextValues.rating(item.textOrNull(config.selectors.searchRating)),
+            declaredModified = ref in modRefs,
         )
     }
 }

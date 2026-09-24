@@ -1,6 +1,7 @@
 package com.multistore.core.model
 
 import kotlin.time.Instant
+import kotlinx.serialization.Serializable
 
 /**
  * A downloadable version of an app, as one store publishes it.
@@ -46,9 +47,62 @@ data class AppVersion(
     val antiFeatures: List<AntiFeature> = emptyList(),
     /** Empty = default (stable) channel. Any value = a non-default channel. */
     val releaseChannels: Set<String> = emptySet(),
+    /**
+     * What this build asks the operating system for — or `null`, meaning nobody has looked yet.
+     *
+     * ### The nullability is the whole point
+     *
+     * An app that requests **no** permissions is ordinary, especially on F-Droid, so an empty list
+     * has to be able to mean exactly that. `null` is the other thing: this version's manifest has
+     * not been read. Collapsing the two would put "asks for nothing" on every listing of the eight
+     * stores whose permissions are only knowable from the downloaded file — the most reassuring
+     * possible sentence, produced by ignorance. It is the same discipline as
+     * `VersionSelection.Outcome.UpToDate.comparable`.
+     *
+     * ### Where each of the two sources fills it
+     *
+     * F-Droid publishes it in the index (`manifest.usesPermission` plus `usesPermissionSdk23`), so
+     * there it is known **before** anything is downloaded — which is the only place in the app where
+     * that is true. On the other eight it is read from the archive itself, after the pre-install
+     * verification and before the session is committed, and written back into the catalogue: from
+     * then on the listing has it.
+     */
+    val permissions: List<UsesPermission>? = null,
 ) {
     /** `true` if the version is in the stable channel, i.e. the one offered by default. */
     val isDefaultChannel: Boolean get() = releaseChannels.isEmpty()
+}
+
+/**
+ * One `<uses-permission>` line of a build's manifest.
+ *
+ * [maxSdk] is `android:maxSdkVersion`: the permission is **not** requested on newer systems, and an
+ * app that lists `WRITE_EXTERNAL_STORAGE` up to API 28 is not asking a modern device for storage
+ * access. Showing it anyway would be the screen accusing an app of wanting something it stopped
+ * wanting years ago — see [isRequestedOn].
+ *
+ * It stays `null` for everything read out of an APK rather than out of F-Droid's index:
+ * `PackageManager.getPackageArchiveInfo` returns the names and not the ceilings. That is an absence
+ * of data and not a "no ceiling", and [isRequestedOn] therefore treats it as "still requested",
+ * which is the prudent of the two — a permission shown that is not asked for is a reader
+ * over-informed, one hidden that is asked for is a reader misled.
+ */
+@Serializable
+data class UsesPermission(
+    val name: String,
+    val maxSdk: Int? = null,
+) {
+    /** `true` if a device on [sdkInt] would really be asked for this. */
+    fun isRequestedOn(sdkInt: Int): Boolean = maxSdk == null || sdkInt <= maxSdk
+
+    /**
+     * The last segment of the name, for the rows the system cannot label.
+     *
+     * Android localises the ones it knows (`PermissionInfo.loadLabel`); a permission declared by
+     * another app has no label anywhere on this device, and its full name is a line of dotted text
+     * that pushes everything else off the row.
+     */
+    val shortName: String get() = name.substringAfterLast('.').ifEmpty { name }
 }
 
 /**

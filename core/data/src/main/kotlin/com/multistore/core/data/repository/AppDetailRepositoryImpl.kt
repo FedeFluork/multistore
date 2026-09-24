@@ -16,6 +16,8 @@ import com.multistore.core.database.dao.CatalogDao
 import com.multistore.core.database.dao.ListingWithDetails
 import com.multistore.core.model.DeviceProfile
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.UsesPermission
+import com.multistore.core.model.VersionRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
 import com.multistore.core.model.VersionSettings
@@ -67,6 +69,20 @@ internal class AppDetailRepositoryImpl @Inject constructor(
 
     override suspend fun detail(storeId: StoreId, ref: StoreAppRef): AppDetail? = withContext(io) {
         catalogDao.listing(storeId, ref.value)?.let { compose(it, settings.versions.first()) }
+    }
+
+    override suspend fun recordPermissions(
+        storeId: StoreId,
+        ref: StoreAppRef,
+        versionRef: VersionRef,
+        permissions: List<UsesPermission>,
+    ) = withContext(io) {
+        // The return value is deliberately dropped: zero rows updated means the version is not in
+        // the catalogue, which is ordinary — the self-update's APK belongs to no listing — and there
+        // is nothing for a caller to do about it. Room re-emits from `observe` when a row does
+        // change, so the open listing fills in by itself.
+        catalogDao.recordPermissions(storeId, ref.value, versionRef.value, permissions)
+        Unit
     }
 
     override suspend fun refresh(
@@ -211,6 +227,23 @@ internal class AppDetailRepositoryImpl @Inject constructor(
             // It is built by the adapter, the only one that knows what shape its `ref` has.
             listingUrl = registry.adapter(rows.listing.storeId)
                 ?.listingUrl(StoreAppRef(rows.listing.storeAppRef)),
+            // Read from the row that was already loaded for the pin: the channel is a third fact
+            // about the same installation, and asking for it separately would be a second query for
+            // an answer already in hand. The three fields travel together or not at all — a store
+            // with no ref points at nothing.
+            updateChannel = tracked?.let { app ->
+                val channelStore = app.updateChannelStoreId
+                val channelRef = app.updateChannelRef
+                if (channelStore != null && channelRef != null) {
+                    InstalledUpdateChannel(
+                        storeId = channelStore,
+                        ref = channelRef,
+                        installedSignerSha256 = installed?.signerSha256,
+                    )
+                } else {
+                    null
+                }
+            },
         )
     }
 }

@@ -54,6 +54,31 @@ class An1ParsersTest {
         }
 
         @Test
+        @DisplayName("the rework class marks exactly the rows an1 marks, and no others")
+        fun readsTheModDeclaration() {
+            val page = searchParser.parse(Fixtures.html(Fixtures.SEARCH), searchUrl, page = 0).expect()
+
+            // The fixture carries `class="item_app mod"` five times and `class="item_app"` five
+            // times. Both halves are asserted: a flag on every row would be as wrong as a flag on
+            // none, and only the split tells the two failures apart.
+            assertThat(page.items).hasSize(10)
+            assertThat(page.items.count { it.declaredModified }).isEqualTo(5)
+            assertThat(page.items.count { !it.declaredModified }).isEqualTo(5)
+        }
+
+        @Test
+        @DisplayName("a page with nothing marked is not a parse failure")
+        fun anUnmarkedPageIsFine() {
+            // Page 2 has four rows and no `mod` class at all. Reading the reworks with the same
+            // `mapRowsOrFail` used for the rows themselves would turn "nothing modified here" —
+            // the ordinary case — into a parse error for the whole page.
+            val page = searchParser.parse(Fixtures.html(Fixtures.SEARCH_PAGE_2), searchUrl, page = 1).expect()
+
+            assertThat(page.items).isNotEmpty()
+            assertThat(page.items.none { it.declaredModified }).isTrue()
+        }
+
+        @Test
         @DisplayName("a broken row selector is a parse failure, not zero results")
         fun aBrokenRowSelectorFails() {
             // The defect found on the emulator by publishing a signed document with a wrong

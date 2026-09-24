@@ -405,6 +405,20 @@ data class PdalifeSelectors(
     val versionFile: String = "ul.game-versions__downloads-list li[data-version_id]",
     val versionFileLink: String = "a.game-versions__downloads-button[href]",
     val versionFileSize: String = ".game-versions__downloads-size",
+    /**
+     * pdalife's own label for a reworked file — "Money Mod" on the committed MOD fixture.
+     *
+     * It sits inside the same `ul.game-versions__downloads-list` as the file rows, which is the
+     * container this store's parsing is anchored to for the reason written above [versionFile]:
+     * on a site where two of three download buttons are adverts, "the first element of that kind"
+     * is never the answer.
+     *
+     * Measured on the two committed detail fixtures — the ones re-captured after the 16/09/2026
+     * redesign: **0** occurrences on the plain one, **3** on the MOD one, one per accordion item.
+     * That difference is what makes it a declaration and not a word in a title, and the count is
+     * the store's to change: what the assertion checks is zero against non-zero.
+     */
+    val versionFileMod: String = "ul.game-versions__downloads-list p.game-versions__downloads-mod",
 ) {
     companion object {
         /** The compiled value of [PdalifeSelectors.searchItem], for error messages. */

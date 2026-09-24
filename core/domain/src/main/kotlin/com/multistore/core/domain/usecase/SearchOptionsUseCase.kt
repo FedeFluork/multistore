@@ -1,6 +1,8 @@
 package com.multistore.core.domain.usecase
 
 import com.multistore.core.data.repository.SettingsRepository
+import com.multistore.core.common.net.StoreDiagnosis
+import com.multistore.core.model.StoreId
 import com.multistore.core.data.repository.StoreEntry
 import com.multistore.core.data.repository.StoreHealthRepository
 import com.multistore.core.model.SearchSettings
@@ -38,4 +40,14 @@ class SearchOptionsUseCase @Inject constructor(
     /** The stores the user has left on, in the order they are shown. */
     fun enabledStores(): Flow<List<StoreEntry>> =
         health.observeStores().map { entries -> entries.filter { it.enabled } }
+
+    /**
+     * Why one store did not answer, for the notice standing beside the results.
+     *
+     * It passes through here rather than the screen reaching for `StoreHealthRepository`, so that
+     * both surfaces that ask — this one and Settings — go through the same call and get the same
+     * object. Two derivations of "how long has this been failing" would be two answers to one
+     * question, which is what this project keeps taking apart.
+     */
+    suspend fun diagnosis(storeId: StoreId): StoreDiagnosis = health.diagnosis(storeId)
 }

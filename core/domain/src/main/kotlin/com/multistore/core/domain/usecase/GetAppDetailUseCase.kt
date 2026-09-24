@@ -3,6 +3,7 @@ package com.multistore.core.domain.usecase
 import com.multistore.core.common.result.Outcome
 import com.multistore.core.data.repository.AppDetail
 import com.multistore.core.data.repository.AppDetailRepository
+import com.multistore.core.data.repository.InstalledAppsRepository
 import com.multistore.core.data.repository.StoreIndexRepository
 import com.multistore.core.data.repository.StoreTaxonomy
 import com.multistore.core.model.StoreAppRef
@@ -29,6 +30,7 @@ data class AppDetailWithTaxonomy(
 class GetAppDetailUseCase @Inject constructor(
     private val details: AppDetailRepository,
     private val index: StoreIndexRepository,
+    private val installedApps: InstalledAppsRepository,
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -47,6 +49,33 @@ class GetAppDetailUseCase @Inject constructor(
      */
     suspend fun loadVersionHistory(storeId: StoreId, ref: StoreAppRef): Outcome<Unit> =
         details.loadVersionHistory(storeId, ref)
+
+    /**
+     * "Update it from here from now on."
+     *
+     * ### What this changes, and what it deliberately does not
+     *
+     * It writes `installed_apps.update_channel_listing_id` and nothing else. **Provenance stays**:
+     * `source_store_id` and `source_ref` record where the APK on the device actually came from, and
+     * that is a historical fact a later decision cannot rewrite. The two columns have been distinct
+     * since M3 for exactly this, and this is the first caller that makes them differ.
+     *
+     * Nothing is downloaded and nothing is installed. The app on the device is untouched; what
+     * changes is which listing the next check looks at.
+     *
+     * ### `false` means the listing is not in the catalogue
+     *
+     * A channel pointing at nothing would not fail visibly — it would simply stop updating that app,
+     * for good, with nothing saying so. The repository refuses it, and the caller has to be able to
+     * tell that apart from success, which is why this returns a `Boolean` and not `Unit`.
+     *
+     * **The signature warning is not here.** Two stores redistributing one app almost never sign it
+     * with the same key, and an update across that boundary is refused by the operating system. That
+     * has to be said **before** this is called, on the screen where the person is deciding — which
+     * is why `AppDetail.updateChannel` carries the installed signer to compare against.
+     */
+    suspend fun setUpdateChannel(packageName: String, storeId: StoreId, ref: StoreAppRef): Boolean =
+        installedApps.setUpdateChannel(packageName, storeId, ref)
 
     /**
      * `true` if the listing is **on disk now**, read without going through the flow.

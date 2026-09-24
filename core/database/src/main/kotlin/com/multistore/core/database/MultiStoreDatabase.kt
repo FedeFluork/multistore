@@ -7,12 +7,14 @@ import com.multistore.core.database.dao.CatalogDao
 import com.multistore.core.database.dao.DownloadDao
 import com.multistore.core.database.dao.IndexDao
 import com.multistore.core.database.dao.InstalledAppDao
+import com.multistore.core.database.dao.SearchHistoryDao
 import com.multistore.core.database.dao.StoreDao
 import com.multistore.core.database.entity.AppEntity
 import com.multistore.core.database.entity.AppVersionEntity
 import com.multistore.core.database.entity.DownloadEntity
 import com.multistore.core.database.entity.HealthEventEntity
 import com.multistore.core.database.entity.IdentityOverrideEntity
+import com.multistore.core.database.entity.SearchHistoryEntity
 import com.multistore.core.database.entity.InstalledAppEntity
 import com.multistore.core.database.entity.ListingScreenshotEntity
 import com.multistore.core.database.entity.StoreAntiFeatureEntity
@@ -48,6 +50,7 @@ import com.multistore.core.database.entity.StoreOfficialSignerEntity
         ListingScreenshotEntity::class,
         AppVersionEntity::class,
         IdentityOverrideEntity::class,
+        SearchHistoryEntity::class,
         InstalledAppEntity::class,
         DownloadEntity::class,
     ],
@@ -59,6 +62,8 @@ abstract class MultiStoreDatabase : RoomDatabase() {
 
     abstract fun storeDao(): StoreDao
 
+    abstract fun searchHistoryDao(): SearchHistoryDao
+
     abstract fun indexDao(): IndexDao
 
     abstract fun catalogDao(): CatalogDao
@@ -68,7 +73,7 @@ abstract class MultiStoreDatabase : RoomDatabase() {
     abstract fun downloadDao(): DownloadDao
 
     companion object {
-        const val VERSION: Int = 6
+        const val VERSION: Int = 9
         const val NAME: String = "multistore.db"
     }
 }

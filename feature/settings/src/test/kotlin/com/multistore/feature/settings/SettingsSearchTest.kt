@@ -3,6 +3,7 @@ package com.multistore.feature.settings
 import com.google.common.truth.Truth.assertThat
 import com.multistore.core.common.net.StoreHealth
 import com.multistore.core.data.repository.StoreEntry
+import com.multistore.core.model.StoreCategory
 import com.multistore.core.model.StoreId
 import org.junit.Test
 
@@ -47,6 +48,7 @@ class SettingsSearchTest {
         displayName = name,
         host = host,
         enabled = true,
+        category = StoreCategory.ORIGINAL,
         health = StoreHealth(storeId),
     )
 

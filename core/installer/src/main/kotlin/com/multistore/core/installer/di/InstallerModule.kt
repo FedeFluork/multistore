@@ -9,7 +9,9 @@ import com.multistore.core.installer.shell.RootShell
 import com.multistore.core.installer.shell.ShellInstaller
 import com.multistore.core.installer.shell.ShizukuShell
 import com.multistore.core.installer.verify.ApkArchiveReader
+import com.multistore.core.installer.verify.ApkPermissionsReader
 import com.multistore.core.installer.verify.ApksigApkArchiveReader
+import com.multistore.core.installer.verify.PackageManagerPermissionsReader
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -36,6 +38,16 @@ abstract class InstallerModule {
      */
     @Binds
     abstract fun bindContainerReader(reader: ZipContainerReader): ContainerReader
+
+    /**
+     * Whoever reads what a downloaded archive asks the system for.
+     *
+     * An interface for the same reason as the two above: the caller has to be provable without a
+     * real APK on disk for every case — a manifest that lists nothing, one that cannot be read, one
+     * that lists twenty — and those three are the whole behaviour.
+     */
+    @Binds
+    abstract fun bindApkPermissionsReader(reader: PackageManagerPermissionsReader): ApkPermissionsReader
 
     companion object {
         /**

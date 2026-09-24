@@ -70,6 +70,14 @@ class FakeIndexedStoreAdapter(
     private val clientFilters: Set<FilterCapability> = emptySet(),
     /** Whether it declares a version history. See `AppDetailRepository.loadVersionHistory`. */
     private val versionHistory: Boolean = true,
+    /**
+     * How often this store publishes a file hash.
+     *
+     * A constructor parameter since 0.8.0 because the comparison table shows it, and it is the one
+     * column that is known even for a listing nobody has opened: a fake stuck on `ALWAYS` could not
+     * tell a table that reads the declaration from one that draws a constant.
+     */
+    private val hashAvailability: HashAvailability = HashAvailability.ALWAYS,
 ) : IndexedStoreAdapter {
 
     /** What the next [openIndex] will serve. The test sets it. */
@@ -115,9 +123,11 @@ class FakeIndexedStoreAdapter(
         providesRating = false,
         providesScreenshots = false,
         providesChangelog = false,
-        providesHash = HashAvailability.ALWAYS,
+        providesHash = hashAvailability,
         providesSignerFingerprint = true,
         supportsSplits = false,
+        redistributesModifiedBuilds = false,
+        openSourceOnly = false,
         downloadMode = DownloadMode.DIRECT,
         networkTier = NetworkTier.OKHTTP,
         userAgent = "MultiStoreTest/1.0",
@@ -181,6 +191,10 @@ class FakeIndexedStoreAdapter(
                 ref = StoreAppRef(name),
                 title = obj.string(FIELD_TITLE) ?: name,
                 packageName = name,
+                // The publisher, which the local-index search can filter on exactly — it is written
+                // to `apps.developer_norm` when the row is saved, and it is the one column the other
+                // eight stores have no equivalent of.
+                developer = obj.string(FIELD_DEVELOPER),
                 summary = obj.string(FIELD_SUMMARY)?.let { LocalizedText.of(it) } ?: LocalizedText.EMPTY,
                 categories = obj.string(FIELD_CATEGORY)?.let(::listOf).orEmpty(),
                 // The type is carried by the **entry**, as in the real index: F-Droid derives it from
@@ -234,6 +248,7 @@ class FakeIndexedStoreAdapter(
 
         const val FIELD_ID = "id"
         const val FIELD_TITLE = "title"
+        const val FIELD_DEVELOPER = "developer"
         const val FIELD_SUMMARY = "summary"
         const val FIELD_CATEGORY = "category"
         const val FIELD_VERSION_CODE = "versionCode"

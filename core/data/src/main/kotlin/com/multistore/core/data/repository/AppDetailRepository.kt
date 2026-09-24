@@ -4,8 +4,11 @@ import com.multistore.core.common.result.Outcome
 import com.multistore.core.common.version.VersionSelection
 import com.multistore.core.model.AppVersion
 import com.multistore.core.model.InstalledPackage
+import com.multistore.core.model.Sha256
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
+import com.multistore.core.model.UsesPermission
+import com.multistore.core.model.VersionRef
 import com.multistore.core.model.StoreListingDetail
 import kotlinx.coroutines.flow.Flow
 
@@ -42,6 +45,47 @@ data class AppDetail(
      * page — none of the nine today, but the contract allows it.
      */
     val listingUrl: String? = null,
+    /**
+     * Where the next update for this app will come from, when MultiStore installed it.
+     *
+     * ### It is not the same thing as where it came from
+     *
+     * `installed_apps` has carried `update_channel_listing_id` apart from `source_ref` since M3, and
+     * the two coincide until somebody changes channel — i.e. they differ at exactly the moment the
+     * difference matters. Until 0.8.0 **no screen changed it**: the column existed, the model kept
+     * it distinct from provenance, and the gesture that gives it meaning did not exist.
+     *
+     * `null` when the app is not installed, when it was installed outside MultiStore, or when the
+     * channel points at a listing a sync has since deleted. The last is deliberate and no foreign
+     * key prevents it: a package withdrawn from a store is no reason to forget the user has it.
+     */
+    val updateChannel: InstalledUpdateChannel? = null,
+)
+
+/**
+ * The listing an installed app updates from.
+ *
+ * The name says *installed*, because `UpdateRepository` already has an `UpdateChannel` and the two
+ * answer different questions: that one describes an update **row** — listing id, title, icon, for
+ * whoever draws "update available" — while this one is the pointer plus the signature to compare
+ * against, which is what deciding to *change* channel needs.
+ *
+ * A type of its own rather than three nullable fields on [AppDetail], because they are only ever
+ * meaningful together: a store with no ref points at nothing, and a screen holding one without the
+ * other would have to invent what to do about it.
+ */
+data class InstalledUpdateChannel(
+    val storeId: StoreId,
+    val ref: StoreAppRef,
+    /**
+     * The signer of the app **as it is installed**, from the `PackageManager`.
+     *
+     * It rides here rather than being looked up again by whoever offers the channel switch, because
+     * this is the value the warning compares against: two stores redistributing one app almost never
+     * sign it with the same key, and an update across that boundary is refused by the operating
+     * system — after the download, with a message about the archive.
+     */
+    val installedSignerSha256: Sha256? = null,
 )
 
 /** A version from the history, and what can be done with it on **this** device. */
@@ -105,4 +149,31 @@ interface AppDetailRepository {
      * even when the data is formally fresh.
      */
     suspend fun refresh(storeId: StoreId, ref: StoreAppRef, force: Boolean = false): Outcome<Unit>
+
+    /**
+     * Records what a build asks the operating system for, read from the archive we just verified.
+     *
+     * ### Why it is written back at all, instead of being shown and forgotten
+     *
+     * Eight stores of nine publish nothing about permissions, so the file is the only source — and
+     * the file exists for the length of one installation. Writing it into `app_versions` turns a
+     * fact known once into a fact the listing carries: the next time somebody opens that version, or
+     * compares it against another store's, the answer is there without a download.
+     *
+     * ### It is not part of the pipeline, and it must not become part of it
+     *
+     * Nothing here refuses an installation. The list is information, and a caller ignoring its
+     * result loses nothing but a cached answer — which is exactly why it is a separate call rather
+     * than a field verification returns. F-Droid never needs it: the index publishes the list, so
+     * the catalogue already has it before anything is downloaded.
+     *
+     * A version that is not (or no longer) in the catalogue writes nothing. That is ordinary — the
+     * self-update installs an APK that belongs to no listing at all — and not a failure.
+     */
+    suspend fun recordPermissions(
+        storeId: StoreId,
+        ref: StoreAppRef,
+        versionRef: VersionRef,
+        permissions: List<UsesPermission>,
+    )
 }

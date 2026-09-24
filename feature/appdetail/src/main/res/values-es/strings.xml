@@ -91,7 +91,8 @@
     <string name="appdetail_state_reading_store">Leyendo la página de esta tienda…</string>
     <string name="appdetail_stores_title">Otras tiendas</string>
     <string name="appdetail_stores_none">MultiStore aún no ha visto esta aplicación en ninguna otra tienda.</string>
-    <string name="appdetail_stores_lookup_action">Buscar en las otras tiendas</string>
+    <string name="appdetail_stores_lookup_action">Buscar en otras</string>
+    <string name="appdetail_stores_compare_action">Comparar</string>
     <string name="appdetail_stores_lookup_running">Preguntando a las otras tiendas…</string>
     <string name="appdetail_possible_match_title">Posible coincidencia</string>
     <string name="appdetail_possible_match_message">Parecen la misma aplicación, pero MultiStore no puede demostrarlo: las tiendas publican nombres de paquete distintos, o ninguno. Unir las equivocadas te ofrecería el APK de otra aplicación, así que la decisión es tuya.</string>
@@ -146,4 +147,55 @@
     <string name="appdetail_link_changelog">Registro de cambios</string>
     <string name="appdetail_link_translation">Ayuda a traducir</string>
     <string name="appdetail_link_donate">Hacer una donaci\u00f3n</string>
+
+    <!-- The store comparison table (0.8.0). Its empty cells say **which** kind of empty
+         they are: a source that publishes nothing is not the same as a listing nobody has
+         read yet, and only one of the two is a statement about the store. -->
+    <string name="comparison_title">Comparar tiendas</string>
+    <string name="comparison_open_action">Abrir en %1$s</string>
+    <string name="comparison_current_marker">Estás aquí</string>
+    <string name="comparison_column_version">Última publicada</string>
+    <string name="comparison_column_updated">Actualizada</string>
+    <string name="comparison_column_size">Tamaño</string>
+    <string name="comparison_column_hash">Publica un hash</string>
+    <string name="comparison_column_package">Declara el paquete</string>
+    <string name="comparison_column_build">Compilación</string>
+    <string name="comparison_not_published">No lo publica</string>
+    <string name="comparison_not_read_yet">Aún no leída</string>
+    <string name="comparison_reading">Leyendo…</string>
+    <string name="comparison_read_failed">No se ha podido leer</string>
+    <string name="comparison_hash_always">Siempre</string>
+    <string name="comparison_hash_sometimes">A veces</string>
+    <string name="comparison_hash_never">Nunca</string>
+    <string name="comparison_build_original">Tal como se publicó</string>
+    <string name="comparison_build_declared">Modificada</string>
+    <string name="comparison_build_possible">Puede estar modificada</string>
+    <string name="comparison_empty_title">Solo una tienda tiene esta aplicación</string>
+    <string name="comparison_empty_message">Todavía no hay nada que comparar. Desde la ficha de la aplicación puedes preguntar a las tiendas que no han respondido.</string>
+    <string name="comparison_footnote_unexplored">A otras %1$d tiendas no se les ha preguntado nada sobre esta aplicación. El botón está en la ficha: preguntar cuesta una petición a cada una.</string>
+    <string name="comparison_footnote_verification">Lo que la verificación previa a la instalación puede demostrar depende de estas tres columnas: un hash publicado permite comparar el archivo con el anunciado, un nombre de paquete declarado permite rechazar la aplicación equivocada, y una compilación modificada no tiene una firma del desarrollador original con la que compararse.</string>
+
+    <!-- The permissions section (0.8.0). The three states are a list, an empty list and
+         **no list at all**, and the third has its own sentence: eight stores of nine publish
+         nothing, so 'asks for nothing' must never be produced by not having looked. The
+         permission names themselves are not here — Android localises its own. -->
+    <string name="appdetail_permissions_title">Qué pide esta aplicación</string>
+    <string name="appdetail_permissions_none">Esta compilación no pide nada al sistema.</string>
+    <string name="appdetail_permissions_unknown">Aún no se sabe. Esta tienda no publica la lista, así que solo puede leerse del archivo: aparecerá aquí una vez descargada esta versión.</string>
+    <string name="appdetail_permissions_sensitive">Sensible</string>
+    <string name="appdetail_permissions_expand">Mostrar los %1$d</string>
+    <string name="appdetail_permissions_collapse">Mostrar menos</string>
+
+    <!-- Changing which store an installed app updates from (0.8.0). The column has existed
+         since M3 and no screen changed it. The warning is shown **before** the switch, not
+         after: a signer that differs makes the update impossible, and finding out later
+         costs a download and a refusal about the archive. -->
+    <string name="appdetail_channel_title">Actualizarla desde aquí</string>
+    <string name="appdetail_channel_message">Esta aplicación se actualiza desde %1$s. A partir de ahora se actualizaría desde esta tienda: la aplicación del dispositivo no se toca, y de dónde vino sigue registrado.</string>
+    <string name="appdetail_channel_signer_warning">La firma de esta tienda no es la de la copia que tienes instalada. Android rechaza una actualización cuyo firmante ha cambiado, así que la única salida sería desinstalar la aplicación y perder sus datos.</string>
+    <string name="appdetail_channel_action">Actualizar desde aquí</string>
+
+    <!-- The accessibility action on the publisher's name (0.8.0): a screen reader
+         announcing a name gives no hint that it leads anywhere. -->
+    <string name="appdetail_developer_search">Otras aplicaciones de %1$s</string>
 </resources>

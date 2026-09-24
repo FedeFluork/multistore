@@ -19,6 +19,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.multistore.core.designsystem.theme.MultiStoreTheme
 import com.multistore.core.model.AggregatedApp
 import com.multistore.core.model.AggregatedListing
+import com.multistore.core.model.ModifiedBuild
 import com.multistore.core.model.ResultOrigin
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
@@ -74,6 +75,7 @@ class SearchScrollTest {
                             uiState = results,
                             preferredLanguageTags = listOf("en"),
                             storeDisplayName = { it.wireName },
+                            modifiedBuildOf = { _, _ -> ModifiedBuild.NONE },
                             onQueryChange = {},
                             onAppClick = { _, _ -> },
                             onLoadMore = {},
@@ -145,6 +147,7 @@ class SearchScrollTest {
                             uiState = state,
                             preferredLanguageTags = listOf("en"),
                             storeDisplayName = { it.wireName },
+                            modifiedBuildOf = { _, _ -> ModifiedBuild.NONE },
                             onQueryChange = {},
                             onAppClick = { _, _ -> },
                             onLoadMore = {},

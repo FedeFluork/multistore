@@ -44,6 +44,57 @@ class PackageProjectionTest {
             .containsAtLeast("NonFreeNet", "Tracking")
     }
 
+    // --- The permissions, which the index publishes and nothing read until 0.8.0 --------------
+
+    @Test
+    @DisplayName("the two permission lists become one, because minSdk 26 requests both")
+    fun bothPermissionListsAreRead() {
+        val detail = requireNotNull(project(Fixtures.PKG_FDROID))
+        // 1023052 is the version F-Droid actually suggests — the highest, 2000040, is a Beta.
+        val version = detail.versions.first { it.versionCode == 1_023_052L }
+        val names = requireNotNull(version.permissions).map { it.name }
+
+        // `usesPermission` and `usesPermissionSdk23` mirror the two manifest tags. The second is
+        // `<uses-permission-sdk-23>`, requested from API 23 upward — and this app's `minSdk` is 26,
+        // so on every device it runs on both are requested. Reading one would silently drop the
+        // other, and it is the runtime-permission one: location, in this very fixture.
+        assertThat(names).contains("android.permission.ACCESS_WIFI_STATE")
+        assertThat(names).contains("android.permission.ACCESS_COARSE_LOCATION")
+
+        // And the ceiling travels with it. This build declares storage access only up to API 28,
+        // which is the canonical case of the whole field: `WRITE_EXTERNAL_STORAGE` is the permission
+        // scoped storage retired, and thousands of apps still list it with a ceiling. Dropping
+        // `maxSdkVersion` would make the screen accuse an app of wanting something it stopped
+        // wanting seven Android versions ago.
+        val storage = version.permissions!!
+            .single { it.name == "android.permission.WRITE_EXTERNAL_STORAGE" }
+        assertThat(storage.maxSdk).isEqualTo(28)
+        assertThat(storage.isRequestedOn(sdkInt = 28)).isTrue()
+        assertThat(storage.isRequestedOn(sdkInt = 36)).isFalse()
+
+        // The one from the second list carries no ceiling in this build, and `null` there means "no
+        // ceiling" — it is requested on every device. That is not the same `null` as
+        // `AppVersion.permissions`'s, and the two live one field apart.
+        val location = version.permissions!!
+            .single { it.name == "android.permission.ACCESS_COARSE_LOCATION" }
+        assertThat(location.maxSdk).isNull()
+        assertThat(location.isRequestedOn(sdkInt = 36)).isTrue()
+    }
+
+    @Test
+    @DisplayName("a build declaring none gets the empty list, not 'unknown'")
+    fun aBuildWithNoPermissionsIsEmptyAndNotNull() {
+        // The distinction the whole column is shaped around: `null` means nobody has read this
+        // build's manifest, and on F-Droid somebody always has — the index is generated from the
+        // APKs. So a version with neither list asks for nothing, and that is a real answer rather
+        // than an absence of one. Every projected version must therefore be non-null.
+        val projected = Fixtures.slicePackages().keys.mapNotNull { project(it) }
+        assertThat(projected).isNotEmpty()
+        val versions = projected.flatMap { it.versions }
+        assertThat(versions).isNotEmpty()
+        assertThat(versions.filter { it.permissions == null }).isEmpty()
+    }
+
     // --- Trap 2: the three .zip entries ------------------------------------------------------
 
     @Test

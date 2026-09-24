@@ -85,6 +85,14 @@ internal class ModyoloDetailParser {
             // worth a second request, and the capability declares it absent.
             rating = null,
             lastUpdated = TextValues.utcDateTime(post.updatedAt),
+            // modyolo's own declaration that this build is a rework, and it says *how*:
+            // `mod_info` reads "Mega Menu, Unlocked" on the committed detail fixture and is empty
+            // on the single-download one. `modNotes` is the same value the "what's new" section
+            // already shows — read once so the badge and the text cannot disagree.
+            //
+            // `mod_features` is **not** it: measured empty on every post seen, which is why the
+            // field is parsed and unused.
+            declaredModified = modNotes(post) != null,
         )
 
         return StoreResult.Success(

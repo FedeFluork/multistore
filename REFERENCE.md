@@ -95,6 +95,17 @@ The criterion was never "booleans are written negatively" — it is **the zero v
 behaviour**. `show_nsfw_content`, `diagnostics_log_enabled` and `allow_preview_channels` are written
 positively precisely because for them "off" *is* the prudent behaviour, and off is zero.
 
+`block_search_history` lands on the negative name while `diagnostics_log_enabled` lands on the
+positive one, and the rule is the same one applied to two records that are not comparable. The
+diagnostic log holds the address of **every** request, search terms included, and exists in order to
+be *exported* and sent to somebody: its prudent state is off. The search record is at most ten strings
+that never leave the device, that the person who typed them is looking at, and that they can delete
+one at a time. What "off" would cost there is not privacy but **requests to other people's sites**: one
+aggregated search is up to nine of them, and retyping a query because there was no way to recall it
+pays that twice. Switching it off also **clears** what is already kept — a switch that promised to
+forget and left the record behind would be a control that lies — and those two writes live in the
+ViewModel rather than in the settings repository, because clearing is another repository's job.
+
 Numeric fields hide the same trap where it is hardest to see. `search_timeout_seconds` at zero would
 mean "wait for no store at all"; `image_cache_max_mb` at zero would mean "no icons on disk", which is
 worse because it is *plausible* — an app that re-downloads every icon does not look broken, it looks
@@ -224,6 +235,70 @@ work*. What did require core work was a **new feature** none of them brought alo
 filter (`SearchFilters.includeNsfw`, `FilterCapability.NSFW_CONTENT`). That distinction is the one
 that matters: if the contract widens because *an adapter does not fit*, the contract is incomplete; if
 it widens because the app does something more, that is ordinary development.
+
+### Two declarations for a modified build, and three states
+
+Five stores of nine redistribute APKs reworked by somebody other than the developer, and until 0.8.0
+the only place that said so was the **title** — written by the store, in whatever words it chose. A
+badge read off a title would be a guess about other people's naming, which is the family of defect
+`[Official] Atomy shop` already cost one red canary night. So both declarations are explicit:
+`StoreCapabilities.redistributesModifiedBuilds` is the **store's**, `StoreListingSummary.declaredModified`
+is **this listing's**, and `ModifiedBuild.of` composes them into three states.
+
+Censused on the committed fixtures on 06/09/2026 — and re-counted on pdalife after the 16/09/2026
+redesign replaced three of them — which of the five mark a single listing *structurally*, that is
+somewhere other than the title:
+
+| store | per-listing declaration |
+|---|---|
+| an1 | `div.item_app.mod` on search rows — 5 of the 10 in the fixture |
+| modyolo | `mod_info` non-empty on the detail — filled on one fixture, empty on another |
+| pdalife | `p.game-versions__downloads-mod` in the file list — 0 on the plain fixture, 3 on the MOD one |
+| apkmody | **only in the title** |
+| liteapks | **only in the title** |
+
+Hence the third state, which is the one the mechanism exists for: **`POSSIBLE` is not the absence of
+`DECLARED`.** A store that redistributes reworks and says nothing about *this* listing has not said the
+build is clean — it has said nothing, and on apkmody and liteapks that is true of **every** listing.
+Flattening it onto `NONE` would put the reassuring answer on the entire catalogue of two stores out of
+five. It is the same distinction as `UpToDate.comparable`: the absence of the datum does not disguise
+itself as an answer. For the same reason `NONE` draws nothing — a "not modified" badge would be a claim
+whose only evidence is somebody else's silence.
+
+**The contract test checks one direction only, and the asymmetry is the point.** If a row comes back
+with `declaredModified`, the capability must be `true`. The converse cannot be read off a fixture — "no
+row is marked" is exactly what apkmody and liteapks look like — and stays a declaration, under the same
+honesty rule as the rest.
+
+The composition lives in exactly one place, `StoreRegistry.modifiedBuildOf`, with three callers: the
+search row, the listing header and the comparison table. Written at each call site it would be three
+copies of one `when`, and the first to diverge would do so silently — a badge that stops appearing looks
+exactly like a store that stopped publishing reworks.
+
+This is also the **fifth** time the adapter contract has widened, and the first time since M4 that it
+widened for the right reason: not because an adapter did not fit, but because the app does something
+more. `StoreListingSummary` gained `declaredModified` and `AppVersion` gained `permissions`; nothing
+else in the contract changed, and the nine adapters only had to declare the capability.
+
+### `openSourceOnly`, and why the categories are three
+
+`StoreCapabilities.openSourceOnly` is the second catalogue-level declaration, true on one store of
+nine: f-droid. It is **not** the negation of `redistributesModifiedBuilds` — three of the nine are
+neither, because apkcombo, apkmirror and uptodown mirror the developer's own builds without being
+open-source-only — and that is exactly why `StoreCategory` has three values and not two.
+
+`StoreCategory.of` composes them in one place, in `:core:data`: the two declarations live on the
+adapter, which a `:feature:*` cannot see, and a second `when` elsewhere would be a second place to
+diverge from. The three **partition** the nine, and that is not an accident of the current catalogue —
+it is what makes the tab labels honest: "All 5/9" has to be the sum of the others, or a count beside a
+tab name is a number the reader has to distrust. Where a store were both, the composition checks the
+rework first: a tab is read as a guarantee, so it is filed under the claim that promises **less**.
+
+Like the other catalogue declarations it is **not checkable from a fixture** — "everything this store
+publishes is open source" is a claim about a catalogue and a fixture is one page of it — and the same
+honesty rule governs it.
+
+---
 
 ---
 
@@ -488,6 +563,79 @@ handing the file to `PackageInstaller` opens a TOCTOU window: the installers com
 **Known limitation, not to be forgotten:** for sources that redistribute modified APKs there is no
 original developer signature to compare against. The pipeline protects against package substitution,
 not against tampering upstream.
+
+### The permissions the build asks for: three states, and the third cannot stay quiet
+
+The app already opens the archive with `apksig` to read package, version, `minSdk` and signers. The
+permissions are in the same manifest and nobody read them, so until 0.8.0 there was no moment at which
+one could know what an app demanded before it was installed — the modern system dialog no longer lists
+them.
+
+`AppVersion.permissions` is **nullable**, and every other list column in this schema is
+`NOT NULL DEFAULT '[]'`. The difference is the only thing keeping the section honest: here the empty
+list is a **claim** — "this app asks for nothing" — and on F-Droid it is ordinary. `null` is the other
+thing: nobody has read this build's manifest. Flattening the two would put the most reassuring sentence
+in the app on every listing of **eight stores out of nine**, produced by not having looked.
+
+**The two sources are asymmetric, and that is why the feature exists.** F-Droid publishes the list in
+the index (`manifest.usesPermission` **plus** `usesPermissionSdk23`), so there it is known **before
+anything is downloaded** — the only place in the app where that is true. On the other eight the only
+source is the file, and the file exists between the verification passing and the session closing: it is
+read there, written into `app_versions`, and from then on the listing has it.
+
+Four things not to change:
+
+- **F-Droid's two lists are one list.** `usesPermissionSdk23` is `<uses-permission-sdk-23>`, requested
+  from API 23 upward, and `minSdk` is **26**: on every device this app runs on both are requested.
+  Reading only one would silently lose exactly the runtime-permission list;
+- **`maxSdkVersion` is kept, and not invented where it is absent.** `WRITE_EXTERNAL_STORAGE` up to API
+  28 is the canonical case: on a modern device it is not requested at all, and showing it would be the
+  screen accusing an app of wanting something it stopped wanting. From the APK the ceiling does not
+  arrive — `getPackageArchiveInfo` returns names — so there it is `null`, meaning "still requested",
+  which is the prudent of the two errors;
+- **the read from the APK is not `ApkArchiveReader`.** That one exists to decide whether an
+  installation may *begin*, and every field it returns is non-nullable on purpose. This one refuses
+  nothing: on an unreadable manifest it answers `null` and the pipeline carries on. Two questions with
+  opposite failure modes do not belong behind one interface. The warning about
+  `getPackageArchiveInfo` concerns **signatures** — it does not verify, and `GET_SIGNING_CERTIFICATES`
+  is API 28 — while `GET_PERMISSIONS` has been there since API 1 and by that point the archive has
+  already been through `apksig`;
+- **"sensitive" is the platform's judgement, not a table of ours.** `PROTECTION_DANGEROUS` is exactly
+  the class Android itself gates behind a prompt, and the labels come from `PermissionInfo.loadLabel`,
+  translated by the system into the device's language. A table of our own would be several hundred
+  strings in five languages contradicting what the system says a minute later.
+
+**And that one line hid two defects at once, of which lint saw only the first.**
+`PermissionInfo.getProtection()` exists **from API 28** with `minSdk` 26 — the `longVersionCode`
+family, caught the same way. Correcting it towards `protectionLevel` surfaced the second: the first
+draft wrote `(level and PROTECTION_DANGEROUS) != 0`, which reads like a bit test and is not one — the
+base level is an **enumeration** (`NORMAL` 0, `DANGEROUS` 1, `SIGNATURE` 2) and
+`PROTECTION_SIGNATURE_OR_SYSTEM` is **3**, so `3 and 1` is `1` and every permission of that class
+would have been flagged sensitive. It needs equality on the masked base, and it needs a **constructed**
+permission to prove it: no real listing declares one of that class, so without a built case the wrong
+version stays green.
+
+### Restarting a transfer is not resuming a file
+
+`InstallAppUseCase.resume` has existed since M1 and **skips resolution** deliberately: it is for a file
+that is already whole, where asking the store again would be a request for nothing. The Downloads tab's
+"Resume" button is the opposite case and therefore has an entrance of its own, `restart`:
+
+- **the address is re-resolved.** The R2 signature on an apkcombo URL is valid for **four hours**:
+  continuing a download paused the evening before with the stored address is a guaranteed 403, which
+  reaches the user as "this store is broken" about a store that is perfectly well;
+- **it resolves that row's version**, not the one the rule would pick now. With a different
+  `versionRef`, `enqueue` would open a **second** row instead of continuing this one, and the paused
+  megabytes would sit on disk with nothing claiming them — the exact dead end "Delete" was extended to
+  paused rows to avoid, recreated by the button meant to resolve it;
+- **two outcomes cannot be closed from there**, and become a sign rather than an error: a download
+  wanting a human tap (uptodown, pdalife) and a signature conflict. The first because the WebView that
+  performs it lives on the app's page; the second because it is a decision about an app's data, and it
+  is not taken under a row one row high. The row says where to go, which is what the restart could not
+  do on its behalf;
+- **every paused row can be restarted, including one with no file.** The one with a partial is the case
+  the button was asked for; the one **without** is the row that had no button at all — not even
+  "Delete", which requires a file — and sat there forever.
 
 ### Installer channels
 
@@ -885,6 +1033,38 @@ installed it**, and it is in `installed_apps`. Hence
 `InstalledAppsRepository.forListing(storeId, ref)`, the inverse path of `get`. It looks at both the
 origin and the channel, because after a channel change the listing the user is on is the second one.
 
+### Changing where the next update will come from
+
+`installed_apps.update_channel_listing_id` has been separate from `source_ref` since M3, and this
+document has said since then that the user may change channel and must be warned about the possible
+signature conflict. The model kept the two apart, the periodic check read the right one — and **the
+gesture that makes them differ did not exist**. Since 0.8.0 it does, on the listing of the store one
+would rather update from.
+
+Four things that do not move:
+
+- **the provenance stays.** `source_store_id` and `source_ref` record where the APK on the device
+  actually came from: that is a historical fact, and a decision taken later does not rewrite it. All
+  that changes is which listing the next check reads;
+- **the signature warning comes before, not after.** Two stores redistributing the same app almost
+  never sign it with the same key, and Android refuses an update from a different signer. Finding out
+  afterwards would mean a whole download and a refusal — with a message about the archive — for a
+  decision taken minutes earlier;
+- **an absent signature is not a conflict.** Four stores of nine publish no signer, and neither does an
+  app installed before this app could read one: demanding a conflict where a value is missing would put
+  the warning on almost the whole catalogue. Nothing is being let through — step 5 of the pipeline still
+  compares the two and still refuses: only the **warning** is withheld where nothing supports it;
+- **the offer does not appear where it makes no sense**, and that is three conditions, not one. There
+  must be a channel to move away from (without one, MultiStore did not install that app and there is no
+  row to write); it must not already be this listing — and the comparison is on `(store, ref)` and not
+  on the store alone, because apkmirror publishes **one page per variant** and two of its listings are
+  two channels; and the package name is needed, taken from the channel and not from this listing's
+  summary, or the offer would vanish on exactly the four stores that do not publish it.
+
+**And "My apps" says where the next update will come from only when it differs** from where the app
+came from. The two columns coincide until somebody changes channel: naming the same store twice on
+every row would bury the one row where it matters.
+
 ### Self-update
 
 MultiStore is not on any store, so its own updates come through `index.json` — the same request the Home
@@ -952,6 +1132,70 @@ stable across recompositions.
 
 **General rule: before using a domain identifier as a list key, verify it is unique *in that list*.**
 Those are two different properties, and only one of them is guaranteed by whoever wrote the key.
+
+### The comparison table: an empty cell must say which kind of empty it is
+
+Since M5 the jump from one store's listing to another's **replaces** rather than stacks — decided on
+purpose, because four open listings were four back presses — which made comparing sources a job held
+entirely in the reader's head. `StoreComparisonScreen` puts them side by side, from data that is
+already in `store_listings` and `app_versions`: **no network request at all.**
+
+A card per store and not a grid: six columns over nine rows do not fit a phone, and a table scrolling
+in two directions is one where the row being read loses its heading. The columns are the ones that
+differ between two stores publishing the same app and that somebody actually decides on — version,
+date, size, whether a hash is published, whether the package is declared, whether the build is a
+rework. The last three say what the pre-install pipeline will be **able to prove**.
+
+The rule that keeps it honest: **"does not publish it" and "not read yet" are two different sentences,
+and only the first is about the store.** The distinction is already in the data — cross-store matching
+writes what it saw into a *result list* with `ttl_seconds = 0`, "born already expired", because a list
+is not a listing. Those rows have no versions and therefore no size, and printing "this store does not
+publish it" on one of them would be a claim about a source nobody has asked yet. It is the same
+discipline as `UpToDate.comparable`.
+
+Three consequences not to invert:
+
+- **the size is the highest version's, even when that one has none.** The first draft filtered
+  `size_bytes IS NOT NULL` in the sub-query and thereby fell back to an earlier version: a number next
+  to a version name it does not belong to. apkmody makes it concrete — it rounds its sizes (150.98 MB
+  declared against 158,310,989 real bytes) and its adapter leaves the field `null` on purpose. An empty
+  cell is the honest answer; somebody else's number is not;
+- **`providesHash` is the only column knowable even for a listing nobody has opened**, because it is an
+  adapter declaration and not a field of that row. And it is verified: the contract test compares it
+  against how many hashes the fixtures really carry;
+- **the package is written out in full, not as a yes.** uptodown redistributes Telegram as
+  `org.telegram.messenger.web` and apkcombo as `org.telegram.messenger`: two "yes"es would hide the one
+  difference that makes an update impossible.
+
+**The "maybes" stay out of the table.** A comparison invites the reader to pick a row and install from
+it, and a row that might be a different app is exactly what this project decided never to offer that
+way. They keep their own section on the listing, where the question is a different one.
+
+### The table reads the unread rows, and the rule it appears to break has not changed
+
+Opening the comparison fetches the listings nobody has opened. What the ban covers is
+**speculative** prefetch — opening a listing still queries no other store — and that is untouched.
+Nobody reaches this screen by scrolling: they press a button whose only purpose is to put the sources
+side by side, and a table most of whose cells say "not read yet" answers the question it was opened
+to answer with a shrug. The line worth holding is between "somebody asked" and "we got ahead of
+ourselves", not between one request and none.
+
+Four things that do not move:
+
+- **only the `availableOn` rows born in a result list are read**, the ones with `ttl_seconds = 0`
+  that carry no versions. Looking for stores never matched to this app is still `lookUp`, still
+  behind its own button: this refreshes what is already known to be there, it does not go knocking;
+- **success has no state of its own.** `ListingRead` is `IDLE`, `RUNNING`, `FAILED` and nothing else:
+  a listing that has been read has versions, so `listingRead` turns true through Room. A `DONE` would
+  be a second copy of that fact, free to contradict it;
+- **a source that refuses says so on its own card** and does not fail the screen. A table that
+  blanked itself because one store of eight said no would lose the seven that answered;
+- **a row that already failed is not re-knocked on.** Without that, every rotation would remake the
+  same refused request and the cell would flicker between "could not be read" and "reading" with
+  nobody having asked for either.
+
+The count of stores that have not **answered** is still said in words: those are not rows of the
+table, and asking them stays where it was.
 
 ---
 
@@ -1074,6 +1318,53 @@ the user typed. It is the difference between what the app *shows* and what the u
 The other five surfaces were each inspected and are clean. The same inspection found the case that shows
 why the container matters: a strip at the bottom of one ranking page contains unlabelled adult titles. It
 is not the one we read — the parser is anchored to a specific container, not to `.item`.
+
+### Searching by publisher is not searching for the publisher's name
+
+The developer's name is on every result row and in the listing header, and it was inert text. Since
+0.8.0 it opens a search, and the part that matters is that the nine sources do not answer the same
+question:
+
+- **one of them can search by publisher**, the locally-indexed one, which has `apps.developer_norm` to
+  compare against. `SearchFilters.developer` is read by **that path only**;
+- **the other eight receive the name as text**, and return whatever contains it. Across nine catalogues
+  a **namesake is not the same person**, and no result row can say which is which: a notice above the
+  list says so;
+- **it is not a `FilterCapability`.** A filter nobody declares means a store that is not queried at
+  all, and that is the right rule for "minimum rating" — but here it would give a publisher search
+  querying **one** store, which is worse than one querying nine and saying what it is doing;
+- **the publisher predicate replaces the title one**, it does not add to it. Together they would return
+  that publisher's apps *whose name contains the publisher's name* — "Mozilla Guide", which is somebody
+  else's, and not "Focus", which is theirs.
+
+**The request travels beside navigation and not inside it**, in `PendingSearch`. Search is a **tab**:
+the bottom bar reaches it with `popUpTo(start) { saveState }` plus `restoreState`, and giving it an
+argument would mean two back-stack entries for one tab — with the user, tapping Search afterwards,
+landing on whichever the stack restored. The argument would be compiler-checked and the behaviour would
+be wrong. The request is **consumed**: an event kept in state is an event that happens again, and here
+it would happen a week later, overwriting whatever had been typed since.
+
+### The last searches, and why keeping them is the prudent choice
+
+There was no history and no suggestions. One aggregated search is up to nine requests to third-party
+sites, and retyping a query because there was no way to recall it pays that twice — the opposite of the
+courtesy towards the stores this project practises everywhere else.
+
+The last ten sit under the empty field, in place of the sentence explaining what the screen is for —
+that is worth reading once. Two targets per row: the row runs the search again, the X forgets that one
+entry; "Forget them all" is last and hollow, because it is the only destructive control on the list.
+
+Three things not to change:
+
+- **switching it off clears**, it does not merely stop writing. A switch that promises to forget and
+  leaves the list where it was is worse than no switch. The two writes live in the ViewModel and not in
+  the settings repository, because clearing is another repository's job;
+- **a search is recorded when one really starts**, not on every keystroke. Written into `onQueryChange`
+  the list would fill with the word being refined — `f`, `fi`, `fir` — which is the opposite of
+  recalling anything;
+- **what was typed is kept**, not the normalised form: it goes back into the text field, and handing
+  back a lowercased, accent-stripped version of somebody's own words would be the app correcting them.
+  The primary key is the query itself, so the same search twice is **one** entry that moves to the top.
 
 ---
 
@@ -1374,6 +1665,66 @@ F-Droid showed `lastSuccess=never`: the index sync did not go through `recordSuc
 store that **is** the only request made. The failure, though, stays a diagnostic event and does **not** feed the
 circuit breaker, because the breaker would govern something other than what broke — the fallback search, which on
 F-Droid talks to a separate host.
+
+### Choosing the stores is a screen, not a dialog
+
+Nine stores with their descriptions did not fit the height a dialog has on a phone — the old one
+scrolled inside an `AlertDialog`, which is the shape of a control that has outgrown its container.
+It is a destination since 0.8.0, and the three things it gained are the ones a dialog could not hold:
+tabs by category, a search field, and a gesture acting on a whole group.
+
+Five decisions:
+
+- **the tab picks the group, the field narrows what is drawn inside it.** They are not the same
+  filter and must not be merged: the counts on the tabs belong to the **group**, so a search that
+  also changed them would make "Modified 2/5" mean "2 of the 5 whose name contains what I typed" — a
+  number nobody asked for, in the place a guarantee is read;
+- **the selected state is the card, not a control on it.** A switch on the right made the row's own
+  300 horizontal points inert: the description explaining what to expect from that source was the
+  largest target on screen and did nothing. Now the state is the card's **border and fill**, and
+  every point of it is the gesture;
+- **two signals, not one.** A tinted background alone is a contrast difference, which is exactly what
+  a reader who cannot rely on colour loses. The border carries the same fact in shape, and
+  `toggleable` gives the screen reader it in words;
+- **it writes as you tap, and the batching survives where it was actually needed.** The dialog
+  accumulated for a real reason — every write touches a Room row and makes the flow search observes
+  re-emit — and that reason lives on in `setAll`, which writes **only what changed**. The Save button
+  does not: a screen with Save is a screen that can be left without its changes, and a card that
+  highlights the instant it is tapped has already said the write happened;
+- **turning them all off is allowed.** A search with no store answers nothing, which is a state one
+  can see and undo in a tap. Forbidding it would be a control that refuses without explaining, on a
+  screen whose whole subject is choice.
+
+**The caption at the bottom counts the whole catalogue, not the open tab**: the tab already carries
+its own number in its label, and repeating it underneath would be the same number twice while the
+question this line answers — "how many am I searching?" — went unasked.
+
+### A store's state: two words do not answer the question
+
+`health_events` has recorded faults since M0 and has been exportable since M5. Inside the app it came
+down to one word beside the store's name in Settings — `OPEN` or `DEGRADED` — and that word cannot
+answer the only question anybody actually has: **is this today, or has it been going on for a week?**
+The first is worth waiting out; the second is worth switching the store off.
+
+Three things that make the answer honest:
+
+- **the duration is measured from the last success**, not from the oldest row in the table. A store
+  that answered an hour ago and broke afterwards is not a store broken for a week, even though last
+  week's fault is still recorded — and the second reading would make somebody switch off a store that
+  works;
+- **`NOT_FOUND` is not a store fault**, and it is the same rule the circuit breaker already applies:
+  "that app is not on this store" is a store answering correctly. Counting it would make a store look
+  broken for having been asked about something it does not have;
+- **the kind filter is passed from the enum, not written into the SQL.** `health_events.kind` is not
+  one vocabulary but three: the names of `FailureKind`, the `request` rows the diagnostic log writes
+  **when it is switched on**, and a few isolated markers. A `!= 'success'` would look right — and there
+  is no `success` kind — and would start reporting log rows as the store's last fault the day somebody
+  turns that switch on.
+
+**The dialog lives in `:core:ui` because two screens ask the same question**: the store's row in
+Settings, and the notice search already shows beside its results. A `:feature:*` never depends on
+another, so that is the only place they can share a sentence — and that is the point: "apkmirror has
+been failing since Tuesday" must not read one way on one screen and another way on the other.
 
 ---
 
@@ -1712,6 +2063,25 @@ migration and in `@ColumnInfo(defaultValue = …)`.
 the app in a wrong state: measured on an emulator, 4,278 rows out of 4,278 at `UNKNOWN`, that is a filter finding
 nothing until the next resync — seven days. Before closing a migration, the question to ask is **where that value
 is already written**: there it was in another table, and an `UPDATE` carried it over.
+
+**The schema is at v9, and the three migrations added in 0.8.0 are three different answers to that
+same question** — *where is this value already written?*:
+
+- **6 → 7** (`store_listings.declared_modified`): **nowhere.** The flag comes from a parse this build
+  performs for the first time. A pre-existing row reads `0`, which on the five stores that redistribute
+  reworks means *possible* and not *clean* — the same thing said of every apkmody and liteapks listing.
+  And the second half of the question, *who re-reads and when*, does not bite here: the three stores
+  that declare it are all scraped, with a listing TTL measured in hours;
+- **7 → 8** (`app_versions.permissions`): **nowhere yet, and the column is shaped to say so.** It is the
+  only list column in this schema that is **nullable**, because here the empty list is a *claim* — "this
+  app asks for nothing" — and a `NOT NULL DEFAULT '[]'` would have stamped it on every version already in
+  the catalogue, 4,269 of them on a device with the F-Droid index, without having looked. On F-Droid the
+  value is in the index, but back-filling would mean re-projecting 4,269 packages inside a migration from
+  JSON this module cannot parse without depending on a concrete store: `NULL` meanwhile claims nothing;
+- **8 → 9** (`search_history`): a new table, so there is nothing to fill. What matters is the **shape** —
+  a `CREATE TABLE` not matching the entity is the mismatch Room reports when it opens the database, that
+  is on somebody's phone — and the primary key, which is **the query**: the same search twice is one entry
+  that moves, not two rows.
 
 ### Fault injection, and its five faces
 

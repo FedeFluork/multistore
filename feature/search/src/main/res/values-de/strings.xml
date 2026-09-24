@@ -66,4 +66,21 @@
     </plurals>
     <string name="search_rating_count">\u2605 %1$s (%2$s)</string>
     <string name="search_downloads">%1$s Downloads</string>
+
+    <!-- Searching by publisher (0.8.0). The sentence is not decoration: only the local
+         index has a publisher column, so on the other eight stores these are text matches
+         and a namesake is not the same person. -->
+    <string name="search_developer_notice">Apps von %1$s. Nur der Store mit lokalem Index kann nach Herausgeber suchen; die anderen haben den Namen als gewöhnlichen Text erhalten, in ihren Ergebnissen kann also ein Namensvetter auftauchen.</string>
+
+    <!-- The last searches (0.8.0), offered back on an empty field. One aggregated search
+         is up to nine requests to other people's sites: retyping one because there was no
+         way to recall it pays that twice. -->
+    <string name="search_recent_title">Letzte Suchen</string>
+    <string name="search_recent_forget_one">„%1$s“ vergessen</string>
+    <string name="search_recent_clear">Alle vergessen</string>
+
+    <!-- The accessibility action on a shortfall line (0.8.0): it opens the same health
+         dialog Settings opens, and a screen reader announcing the sentence alone gives no
+         hint that it leads anywhere. -->
+    <string name="search_shortfall_explain">Warum %1$s nicht geantwortet hat</string>
 </resources>

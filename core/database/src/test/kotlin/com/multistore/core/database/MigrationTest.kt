@@ -8,7 +8,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.multistore.core.model.ContentKind
+import com.multistore.core.model.UsesPermission
 import java.io.File
+import kotlin.time.Instant
+import com.multistore.core.database.entity.SearchHistoryEntity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -601,6 +605,258 @@ class MigrationTest {
             ).single()
             assertThat(row.listing.translationUrl)
                 .isEqualTo("https://hosted.weblate.org/projects/f-droid/")
+        } finally {
+            database.close()
+        }
+    }
+
+    /**
+     * 6 → 7: the rework flag reaches an existing row as `0`, and `0` is the prudent answer.
+     *
+     * Two failures with one symptom are separated here. The `NOT NULL` column arriving without its
+     * `DEFAULT` would make `ALTER TABLE` refuse outright; the default declared in the migration and
+     * missing from the entity is the schema mismatch Room reports **when it opens the database**,
+     * i.e. on somebody's phone rather than here — which is why the row is read back through the DAO
+     * and not with raw SQL.
+     *
+     * And unlike 5 → 6 there is deliberately no back-fill: the flag comes from a parse this build
+     * performs for the first time, so `0` on a pre-existing row means "this store has not said"
+     * rather than "this build is clean" — on the five stores that redistribute reworks that reads as
+     * *possible*, which is the same thing said about every apkmody and liteapks listing anyway.
+     */
+    @Test
+    fun `from 6 to 7 an existing listing gets the rework flag unset`() = runTest {
+        createVersion(6) { db ->
+            db.insertOrThrow(
+                "apps",
+                null,
+                ContentValues().apply {
+                    put("app_key", "sig:0011223344556677")
+                    put("title", "Blockman Go")
+                    put("title_norm", "blockman go")
+                    put("content_kind", "GAME")
+                    put("updated_at", 1_700_000_000_000L)
+                },
+            )
+            db.insertOrThrow(
+                "store_listings",
+                null,
+                ContentValues().apply {
+                    put("app_key", "sig:0011223344556677")
+                    put("store_id", "an1")
+                    put("store_app_ref", "7112-blockman-go")
+                    put("title", "Blockman Go")
+                    put("title_norm", "blockman go")
+                    put("content_kind", "GAME")
+                    put("categories", "[]")
+                    put("donate_urls", "[]")
+                    put("match_confidence", 0.6)
+                    put("match_method", "TITLE_DEV")
+                    put("fetched_at", 1_700_000_000_000L)
+                    put("ttl_seconds", 21_600L)
+                },
+            )
+        }
+
+        val database = openWithMigrations()
+        try {
+            val listing = database.catalogDao()
+                .listing(com.multistore.core.model.StoreId.AN1, "7112-blockman-go")
+            assertThat(listing).isNotNull()
+            assertThat(listing!!.listing.declaredModified).isFalse()
+            // The row survives whole: a migration that recreated the table would take the
+            // catalogue with it, and the flag would be the least of it.
+            assertThat(listing.listing.title).isEqualTo("Blockman Go")
+        } finally {
+            database.close()
+        }
+    }
+
+    /** And after the migration the flag is written and read back, in both of its values. */
+    @Test
+    fun `after the migration the rework flag survives a round trip`() = runTest {
+        createVersion(6) { }
+
+        val database = openWithMigrations()
+        try {
+            val dao = database.catalogDao()
+            dao.saveListings(
+                listOf(
+                    listingWrite("sig:aaaa", "Money Mod", ContentKind.GAME).let { write ->
+                        write.copy(listing = write.listing.copy(declaredModified = true))
+                    },
+                    listingWrite("sig:bbbb", "Plain", ContentKind.GAME),
+                ),
+            )
+
+            // Both values asserted: with one, a column stuck at a constant would pass.
+            val marked = dao.search(
+                storeId = com.multistore.core.model.StoreId.APKMIRROR,
+                query = "money",
+                limit = 10,
+                offset = 0,
+            ).single()
+            assertThat(marked.listing.declaredModified).isTrue()
+
+            val plain = dao.search(
+                storeId = com.multistore.core.model.StoreId.APKMIRROR,
+                query = "plain",
+                limit = 10,
+                offset = 0,
+            ).single()
+            assertThat(plain.listing.declaredModified).isFalse()
+        } finally {
+            database.close()
+        }
+    }
+
+    /**
+     * 7 → 8: the permission column arrives `NULL`, and `NULL` is the only honest value.
+     *
+     * The temptation is a `NOT NULL DEFAULT '[]'`, matching every other list column in this schema.
+     * It would be wrong here in a way the others are not: an empty permission list is a **claim** —
+     * "this app asks for nothing" — and defaulting to it would stamp that claim on every version
+     * already in the catalogue, 4,269 of them on a device with the F-Droid index, with nothing
+     * having been read. It is the most reassuring sentence this app can produce, and it would be
+     * produced by not looking.
+     */
+    @Test
+    fun `from 7 to 8 an existing version has no permission list, rather than an empty one`() = runTest {
+        createVersion(7) { db ->
+            db.insertOrThrow(
+                "apps",
+                null,
+                ContentValues().apply {
+                    put("app_key", "pkg:org.fdroid.fdroid")
+                    put("title", "F-Droid")
+                    put("title_norm", "f-droid")
+                    put("content_kind", "APP")
+                    put("updated_at", 1_700_000_000_000L)
+                },
+            )
+            db.insertOrThrow(
+                "store_listings",
+                null,
+                ContentValues().apply {
+                    put("app_key", "pkg:org.fdroid.fdroid")
+                    put("store_id", "f-droid")
+                    put("store_app_ref", "org.fdroid.fdroid")
+                    put("title", "F-Droid")
+                    put("title_norm", "f-droid")
+                    put("content_kind", "APP")
+                    put("categories", "[]")
+                    put("donate_urls", "[]")
+                    put("declared_modified", 0)
+                    put("match_confidence", 1.0)
+                    put("match_method", "PACKAGE_NAME")
+                    put("fetched_at", 1_700_000_000_000L)
+                    put("ttl_seconds", 604_800L)
+                },
+            )
+            db.insertOrThrow(
+                "app_versions",
+                null,
+                ContentValues().apply {
+                    put("listing_id", 1L)
+                    put("version_ref", "v1")
+                    put("version_name", "1.23.2")
+                    put("version_code", 1_023_052L)
+                    put("abis", "[]")
+                    put("artifact_type", "APK")
+                    put("release_channels", "[]")
+                    put("anti_features", "[]")
+                    put("fetched_at", 1_700_000_000_000L)
+                },
+            )
+        }
+
+        val database = openWithMigrations()
+        try {
+            val listing = database.catalogDao()
+                .listing(com.multistore.core.model.StoreId.FDROID, "org.fdroid.fdroid")
+            val version = listing?.versions?.single()
+            assertThat(version).isNotNull()
+            // Not `isEmpty()`: the whole point is that it is absent, not empty.
+            assertThat(version!!.permissions).isNull()
+            // And the row is otherwise intact — a migration that recreated the table would take the
+            // version history with it.
+            assertThat(version.versionName).isEqualTo("1.23.2")
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun `after the migration a permission list round-trips, empty included`() = runTest {
+        createVersion(7) { }
+
+        val database = openWithMigrations()
+        try {
+            val dao = database.catalogDao()
+            dao.saveListings(listOf(listingWrite("pkg:org.example", "Example", ContentKind.APP)))
+            val listingId = requireNotNull(
+                dao.listingId(com.multistore.core.model.StoreId.APKMIRROR, "example"),
+            )
+
+            dao.upsertVersions(
+                listOf(
+                    versionRow(listingId, "asks", listOf(UsesPermission("android.permission.CAMERA", 28))),
+                    versionRow(listingId, "silent", emptyList()),
+                    versionRow(listingId, "unread", null),
+                ),
+            )
+
+            val stored = database.catalogDao()
+                .listing(com.multistore.core.model.StoreId.APKMIRROR, "example")
+                ?.versions
+                .orEmpty()
+                .associateBy { it.versionRef }
+
+            // All three, because the column has three states and a converter can flatten any pair of
+            // them into the third without anything else noticing.
+            assertThat(stored.getValue("asks").permissions)
+                .containsExactly(UsesPermission("android.permission.CAMERA", 28))
+            assertThat(stored.getValue("silent").permissions).isEmpty()
+            assertThat(stored.getValue("unread").permissions).isNull()
+        } finally {
+            database.close()
+        }
+    }
+
+    private fun versionRow(listingId: Long, ref: String, permissions: List<UsesPermission>?) =
+        com.multistore.core.database.entity.AppVersionEntity(
+            listingId = listingId,
+            versionRef = ref,
+            versionName = "1.0",
+            versionCode = 1L,
+            fetchedAt = Instant.fromEpochMilliseconds(1_700_000_000_000L),
+            permissions = permissions,
+        )
+
+    /**
+     * 8 → 9: the search history's table appears, and Room agrees with its shape.
+     *
+     * A new table has nothing to back-fill, so what this holds is the only thing that can go wrong
+     * with one: a `CREATE TABLE` that does not match the entity exactly is a mismatch Room reports
+     * **when it opens the database**, i.e. on somebody's phone rather than here. Reading and writing
+     * a row through the DAO is what proves the two agree.
+     */
+    @Test
+    fun `from 8 to 9 the search history table is created and usable`() = runTest {
+        createVersion(8) { }
+
+        val database = openWithMigrations()
+        try {
+            val dao = database.searchHistoryDao()
+            dao.record(SearchHistoryEntity("telegram", Instant.fromEpochMilliseconds(1_000)))
+            dao.record(SearchHistoryEntity("firefox", Instant.fromEpochMilliseconds(2_000)))
+            // The same search again: **one** row that moved to the top, not two. With a generated id
+            // the list would fill with the word being refined — `f`, `fi`, `fir` — which is the
+            // opposite of recalling anything.
+            dao.record(SearchHistoryEntity("telegram", Instant.fromEpochMilliseconds(3_000)))
+
+            val recent = dao.observeRecent(10).first().map { it.query }
+            assertThat(recent).containsExactly("telegram", "firefox").inOrder()
         } finally {
             database.close()
         }

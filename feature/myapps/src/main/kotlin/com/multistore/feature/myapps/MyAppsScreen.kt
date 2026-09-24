@@ -491,6 +491,18 @@ private fun InstalledAppRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            item.updateChannelName?.let { name ->
+                // Above "installed from", not below: what will happen next matters more on this
+                // screen than what already happened, and it is the line the reader came for after
+                // choosing the channel on the app's page.
+                Text(
+                    text = stringResource(R.string.myapps_updates_from, name),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             item.storeName?.let { name ->
                 Text(
                     text = stringResource(R.string.myapps_installed_from, name),
@@ -779,6 +791,7 @@ private fun MyAppsPreviewContent() {
                 InstalledAppItem(
                     app = previewApp("org.fdroid.fdroid", "F-Droid", "1.23.2"),
                     storeName = "F-Droid",
+                    updateChannelName = null,
                 ),
             ),
             uninstall = UninstallUiState.Idle,

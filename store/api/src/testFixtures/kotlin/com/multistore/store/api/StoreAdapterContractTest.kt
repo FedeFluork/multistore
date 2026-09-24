@@ -381,6 +381,38 @@ abstract class StoreAdapterContractTest {
         versions.forEach { assertThat(it.signerSha256).isNotNull() }
     }
 
+    /**
+     * A marked listing obliges the store-level declaration.
+     *
+     * Only this direction is checkable, and the asymmetry is the point. If any row or listing comes
+     * back with `declaredModified`, the adapter has said this store publishes reworks and
+     * `redistributesModifiedBuilds` must agree — the badge would otherwise read
+     * `ModifiedBuild.DECLARED` from a store the rest of the app treats as clean.
+     *
+     * The converse cannot be read off a fixture: "no row is marked" is exactly what apkmody and
+     * liteapks look like, and they are two of the five stores that do redistribute reworks. That
+     * half stays a declaration, like the rest of this class, under the same honesty rule.
+     */
+    @Test
+    @DisplayName("a listing declared modified obliges redistributesModifiedBuilds")
+    fun declaredModifiedObligesTheCapability() = runTest {
+        val adapter = adapter()
+        val marked = buildList {
+            if (adapter.capabilities.search) {
+                addAll(adapter.search(queryWithResults).expectSuccess("search").items)
+            }
+            detailFor(existingRef).let { if (it is StoreResult.Success) add(it.value.summary) }
+        }.filter { it.declaredModified }
+        if (marked.isEmpty()) return@runTest
+
+        assertWithMessage(
+            "${marked.size} listing(s) come back declaredModified — ${marked.take(3).map { it.ref.value }} — " +
+                "so this store publishes reworks and must declare redistributesModifiedBuilds. " +
+                "Without it the badge would call a listing a rework on a store the rest of the app " +
+                "treats as clean.",
+        ).that(adapter.capabilities.redistributesModifiedBuilds).isTrue()
+    }
+
     @Test
     @DisplayName("supportsSplits=false means no version is a split container")
     fun artifactTypeMatchesSplitSupport() = runTest {

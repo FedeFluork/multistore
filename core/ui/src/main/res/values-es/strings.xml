@@ -59,4 +59,49 @@
     <string name="myapps_sort_updatable">Actualizables primero</string>
     <string name="myapps_sort_recent">Instaladas recientemente</string>
     <string name="myapps_sort_store">Tienda de origen</string>
+
+    <!-- The rework badge: five stores of nine redistribute APKs somebody other than the
+         developer has changed. The two labels are the two declarations that exist; the dialog says
+         what the pre-install check can and cannot prove about such a file. -->
+    <string name="modified_build_declared_label">Compilación modificada</string>
+    <string name="modified_build_possible_label">Puede estar modificada</string>
+    <string name="modified_build_badge_action">Qué significa</string>
+    <string name="modified_build_dialog_title">Sobre esta compilación</string>
+    <string name="modified_build_dialog_declared">%1$s declara que este archivo es una reelaboración: alguien que no es el desarrollador modificó la aplicación y volvió a publicarla.</string>
+    <string name="modified_build_dialog_possible">%1$s redistribuye aplicaciones reelaboradas y no dice si esta lo es. Puede ser la compilación del desarrollador o la de otra persona.</string>
+    <string name="modified_build_dialog_verified">Lo que la verificación previa a la instalación puede demostrar: que el archivo es un paquete válido y firmado, que el nombre del paquete coincide con el que declara esta ficha y —donde la tienda publica un hash— que los bytes son los anunciados.</string>
+    <string name="modified_build_dialog_unverified">Lo que no puede demostrar: que la aplicación no haya sido alterada por quien la volvió a publicar. Una reelaboración no tiene una firma del desarrollador original con la que compararla, así que no hay nada contra lo que verificarla.</string>
+    <string name="modified_build_dialog_dismiss">Entendido</string>
+
+    <!-- A store's health, in a sentence (0.8.0). It lives here because two screens ask the
+         same question — Settings and the search's shortfall notice — and a `:feature:*`
+         never depends on another, so this is the only place they can share the wording. -->
+    <string name="store_diagnosis_state_ok">Esta tienda responde con normalidad.</string>
+    <string name="store_diagnosis_state_open">Esta tienda está en pausa tras fallos repetidos. Se reintentará sola.</string>
+    <string name="store_diagnosis_state_half_open">Esta tienda está a punto de reintentarse: la próxima petición es una sonda.</string>
+    <string name="store_diagnosis_state_degraded">Esta tienda responde, pero sus páginas no se leen como se esperaba.</string>
+    <string name="store_diagnosis_failing_for">Lleva fallando %1$s.</string>
+    <string name="store_diagnosis_last_success">Respondió por última vez hace %1$s.</string>
+    <string name="store_diagnosis_never_answered">Nunca ha respondido en este dispositivo.</string>
+    <string name="store_diagnosis_fault_transient">Último fallo: sin conexión, un tiempo de espera agotado o un error del sitio. Suelen resolverse solos.</string>
+    <string name="store_diagnosis_fault_rate_limited">Último fallo: la tienda pidió que se la consulte con menos frecuencia. Se resuelve sola, y esperar es lo único que ayuda.</string>
+    <string name="store_diagnosis_fault_blocked">Último fallo: la tienda rechazó la petición. Esperar no lo resuelve, e insistir lo empeora.</string>
+    <string name="store_diagnosis_fault_parse">Último fallo: la página no tenía la forma esperada. Es cosa de la aplicación, no de la tienda: esperar no lo arregla.</string>
+    <string name="store_diagnosis_parse_selectors">Partes que no se pudieron leer: %1$s</string>
+    <string name="store_diagnosis_dismiss">Cerrar</string>
+    <plurals name="store_diagnosis_days">
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <plurals name="store_diagnosis_hours">
+        <item quantity="one">%1$d hora</item>
+        <item quantity="many">%1$d horas</item>
+        <item quantity="other">%1$d horas</item>
+    </plurals>
+    <plurals name="store_diagnosis_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minutos</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
 </resources>

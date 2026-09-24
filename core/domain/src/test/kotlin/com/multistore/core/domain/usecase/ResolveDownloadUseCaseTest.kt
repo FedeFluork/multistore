@@ -12,6 +12,7 @@ import com.multistore.core.model.ArtifactType
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.Sha256
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.UsesPermission
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
 import com.multistore.core.model.StoreListingSummary
@@ -60,7 +61,7 @@ class ResolveDownloadUseCaseTest {
             search = true, trending = false, recent = false, versionHistory = true,
             providesPackageName = true, providesRating = false, providesScreenshots = false,
             providesChangelog = false, providesHash = HashAvailability.ALWAYS,
-            providesSignerFingerprint = true, supportsSplits = false,
+            providesSignerFingerprint = true, supportsSplits = false, redistributesModifiedBuilds = false, openSourceOnly = false,
             downloadMode = downloadMode, networkTier = NetworkTier.OKHTTP,
             userAgent = "MultiStoreTest/1.0", supportedFilters = emptySet(),
             contentKinds = setOf(ContentKind.APP),
@@ -91,6 +92,13 @@ class ResolveDownloadUseCaseTest {
             storeId: StoreId,
             ref: StoreAppRef,
         ): Outcome<Unit> = Outcome.Success(Unit)
+
+        override suspend fun recordPermissions(
+            storeId: StoreId,
+            ref: StoreAppRef,
+            versionRef: VersionRef,
+            permissions: List<UsesPermission>,
+        ) = Unit
 
         override suspend fun refresh(storeId: StoreId, ref: StoreAppRef, force: Boolean) =
             Outcome.Success(Unit)

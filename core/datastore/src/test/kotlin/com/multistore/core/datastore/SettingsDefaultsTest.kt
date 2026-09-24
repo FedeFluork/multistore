@@ -76,6 +76,16 @@ class SettingsDefaultsTest {
     }
 
     @Test
+    fun `recent searches are kept, on an empty store`() {
+        // `block_search_history` is negative so that the zero value keeps them, and this is the
+        // assertion that holds the name still: renamed to the positive form the field would start
+        // switched off, i.e. the courtesy towards the stores would be the exception rather than the
+        // rule — one aggregated search is up to nine requests to other people's sites, and retyping
+        // it because there was no way to recall it pays that twice.
+        assertThat(empty.toSearch().keepSearchHistory).isTrue()
+    }
+
+    @Test
     fun `the three earlier enums are still in the right place`() {
         // The same trap, and nothing else was holding them still: an accidental reorder breaks
         // them as silently as any other.

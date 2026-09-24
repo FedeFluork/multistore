@@ -70,4 +70,21 @@
     </plurals>
     <string name="search_rating_count">\u2605 %1$s (%2$s)</string>
     <string name="search_downloads">%1$s t\u00e9l\u00e9chargements</string>
+
+    <!-- Searching by publisher (0.8.0). The sentence is not decoration: only the local
+         index has a publisher column, so on the other eight stores these are text matches
+         and a namesake is not the same person. -->
+    <string name="search_developer_notice">Applications de %1$s. Seul le magasin à index local sait chercher par éditeur ; les autres ont reçu le nom comme texte ordinaire, un homonyme peut donc figurer dans leurs résultats.</string>
+
+    <!-- The last searches (0.8.0), offered back on an empty field. One aggregated search
+         is up to nine requests to other people's sites: retyping one because there was no
+         way to recall it pays that twice. -->
+    <string name="search_recent_title">Recherches récentes</string>
+    <string name="search_recent_forget_one">Oublier « %1$s »</string>
+    <string name="search_recent_clear">Tout oublier</string>
+
+    <!-- The accessibility action on a shortfall line (0.8.0): it opens the same health
+         dialog Settings opens, and a screen reader announcing the sentence alone gives no
+         hint that it leads anywhere. -->
+    <string name="search_shortfall_explain">Pourquoi %1$s n’a pas répondu</string>
 </resources>

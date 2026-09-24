@@ -157,6 +157,10 @@ class MyAppsArrangementTest {
             sourceStoreId = StoreId.FDROID,
         ),
         storeName = storeName,
+        // Not part of what this file is about — ordering and filtering read the name and the
+        // provenance, never the channel — and stated rather than defaulted so that adding a
+        // criterion over it later cannot inherit a value nobody chose.
+        updateChannelName = null,
         update = update,
     )
 }

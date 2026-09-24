@@ -149,6 +149,8 @@ class ApkMirrorStoreAdapter @Inject constructor(
         providesHash = HashAvailability.SOMETIMES,
         providesSignerFingerprint = false,
         supportsSplits = true,
+        redistributesModifiedBuilds = false,
+        openSourceOnly = false,
         downloadMode = DownloadMode.DIRECT,
         networkTier = NetworkTier.OKHTTP,
         userAgent = config.userAgent,

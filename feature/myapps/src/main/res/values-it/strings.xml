@@ -57,4 +57,9 @@
     <string name="myapps_search_clear">Cancella la ricerca</string>
     <string name="myapps_no_matches_title">Nessuna corrispondenza</string>
     <string name="myapps_no_matches_message">Nessuna app installata si chiama \u00ab%1$s\u00bb. Le tue app ci sono ancora tutte: cancella la ricerca per rivederle.</string>
+
+    <!-- Shown only where the update channel differs from where the app came from: the two
+         coincide until somebody changes it on the app's page, and naming the same store
+         twice on every row would bury the one line that matters. -->
+    <string name="myapps_updates_from">Si aggiorna da %1$s</string>
 </resources>

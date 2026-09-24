@@ -17,11 +17,13 @@ import com.multistore.core.model.InstalledPackage
 import com.multistore.core.model.LocalizedText
 import com.multistore.core.model.MatchMethod
 import com.multistore.core.model.Sha256
+import com.multistore.core.model.ModifiedBuild
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
 import com.multistore.core.model.StoreListingSummary
 import com.multistore.core.model.ThemeMode
+import com.multistore.core.model.UsesPermission
 import com.multistore.core.model.VersionRef
 import com.multistore.core.testing.ScreenshotTest
 import kotlin.time.Instant
@@ -62,6 +64,24 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
     @Test
     fun installedDark() = capture(INSTALLED_SCREEN_NAME, ThemeMode.DARK) { Installed() }
 
+    @Test
+    fun modifiedLight() = capture(MODIFIED_SCREEN_NAME, ThemeMode.LIGHT) { Modified() }
+
+    @Test
+    fun modifiedDark() = capture(MODIFIED_SCREEN_NAME, ThemeMode.DARK) { Modified() }
+
+    @Test
+    fun permissionsLight() = capture(PERMISSIONS_SCREEN_NAME, ThemeMode.LIGHT) { Permissions() }
+
+    @Test
+    fun permissionsDark() = capture(PERMISSIONS_SCREEN_NAME, ThemeMode.DARK) { Permissions() }
+
+    @Test
+    fun channelLight() = capture(CHANNEL_SCREEN_NAME, ThemeMode.LIGHT) { Channel() }
+
+    @Test
+    fun channelDark() = capture(CHANNEL_SCREEN_NAME, ThemeMode.DARK) { Channel() }
+
     /**
      * The app is here, it is current, and the page has an **Open** button.
      *
@@ -80,6 +100,84 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
             // a wallpaper — which is common enough on F-Droid to be the reason the parameter exists.
             onOpenApp = {},
         )
+    }
+
+    /**
+     * The offer to make this listing the app's update channel, **with** the signature warning.
+     *
+     * The warning half is the one photographed, because it is the one that changes the card: a
+     * differing signer turns it into a `WARNING` container with a second paragraph, and that is the
+     * variant where a colour choice can be wrong in a way only a picture shows. The quiet half is a
+     * neutral card with one paragraph, which every other informing card on this page already covers.
+     *
+     * The store named is APKMirror rather than the one this fixture's listing comes from, because
+     * the sentence's whole job is to say what is **changing** — a card naming the same store twice
+     * would read as though nothing were.
+     */
+    @Composable
+    private fun Channel() {
+        Content(
+            installedVersionCode = 1_023_051,
+            channelSwitch = ChannelSwitch(
+                packageName = "org.fdroid.fdroid",
+                currentStoreName = "APKMirror",
+                signerConflict = true,
+            ),
+        )
+    }
+
+    /**
+     * The permission list, with a sensitive one in it.
+     *
+     * A golden of its own because the four that exist all photograph the **third** state of that
+     * section — no list, which is what the eight scraped stores show until a version has been
+     * downloaded once — and the third state is a sentence, not rows. What only a picture can hold
+     * here is that the "Sensitive" chip is legible on its error container in both palettes, that a
+     * permission and its system-written description do not collide, and that the section does not
+     * push the author's links off the page.
+     *
+     * The names are real Android permissions on purpose: their labels and descriptions come from the
+     * platform, not from `strings.xml`, so a made-up name would photograph the fallback path instead
+     * of the one every real listing takes.
+     *
+     * **What the picture is not evidence of:** Robolectric's `PackageManager` knows only part of the
+     * platform's permission table, so some of these come back unlabelled and unclassified here and
+     * are drawn by their identifier — `CAMERA` is *dangerous* on a device and is not marked in this
+     * golden. That makes the picture more useful rather than less, because it holds both paths at
+     * once; the classification itself is asserted where it can be, in `PermissionCatalogTest`.
+     */
+    @Composable
+    private fun Permissions() {
+        Content(
+            permissions = listOf(
+                UsesPermission("android.permission.CAMERA"),
+                UsesPermission("android.permission.READ_CONTACTS"),
+                UsesPermission("android.permission.INTERNET"),
+                UsesPermission("android.permission.ACCESS_NETWORK_STATE"),
+                // Declared only up to API 28, and the golden is captured on 34: it must **not**
+                // appear. A permission shown that this device would never be asked for is the screen
+                // accusing an app of wanting something it stopped wanting.
+                UsesPermission("android.permission.WRITE_EXTERNAL_STORAGE", maxSdk = 28),
+            ),
+        )
+    }
+
+    /**
+     * A listing from a source that republishes reworked apps.
+     *
+     * A golden of its own rather than a badge added to the four that exist, because the four are all
+     * F-Droid — a store that publishes no reworks, and where the correct picture is one with **no**
+     * badge at all. Both pictures are needed: the header must be able to say this and to say
+     * nothing, and only having them side by side makes a badge that stopped drawing distinguishable
+     * from a store that stopped publishing reworks.
+     *
+     * What only this picture can catch is the placement: the chip sits between the facts line and
+     * "newer elsewhere", which is where the reader is already weighing this store against the
+     * others, and it must not push the summary or the install button off the fold.
+     */
+    @Composable
+    private fun Modified() {
+        Content(modifiedBuild = ModifiedBuild.DECLARED)
     }
 
     /**
@@ -168,6 +266,16 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
         onOpenApp: (() -> Unit)? = null,
         versionHistorySupported: Boolean = false,
         versionHistory: VersionHistoryUiState = VersionHistoryUiState(),
+        modifiedBuild: ModifiedBuild = ModifiedBuild.NONE,
+        /**
+         * `null` by default, which is the **third** state and the one the other goldens show: eight
+         * stores of nine publish nothing, so "not known yet" is what a listing says until a version
+         * has been downloaded once. It is deliberately not `emptyList()` — that would be the claim
+         * "asks for nothing" on every existing golden.
+         */
+        permissions: List<UsesPermission>? = null,
+        /** `null` on every other golden: the offer only exists where a channel is already set. */
+        channelSwitch: ChannelSwitch? = null,
     ) {
         val version = AppVersion(
             versionName = "1.23.2",
@@ -176,6 +284,7 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
             sizeBytes = 9_400_000,
             minSdk = 23,
             antiFeatures = listOf(AntiFeature(id = "NonFreeNet")),
+            permissions = permissions,
         )
         val published = versions ?: listOf(version)
         val device = DeviceProfile(sdkInt = 34, supportedAbis = listOf("arm64-v8a"))
@@ -251,6 +360,8 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
                     ),
                 ),
                 storeName = "F-Droid",
+                modifiedBuild = modifiedBuild,
+                channelSwitch = channelSwitch,
                 install = InstallUiState.Idle,
                 verification = verification,
                 crossStore = crossStore,
@@ -275,6 +386,9 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
             onUserAssistedDownload = {},
             storeDisplayName = { it.wireName },
             onOpenListing = { _, _ -> },
+            onCompareStores = {},
+            onSwitchUpdateChannel = {},
+            onSearchDeveloper = {},
             onLookUpOtherStores = {},
             onConfirmMatch = {},
             onRejectMatch = {},
@@ -290,5 +404,8 @@ class AppDetailScreenScreenshotTest : ScreenshotTest() {
         const val VERIFIED_SCREEN_NAME = "AppDetailScreen_verification"
         const val CROSS_STORE_SCREEN_NAME = "AppDetailScreen_store"
         const val INSTALLED_SCREEN_NAME = "AppDetailScreen_installed"
+        const val MODIFIED_SCREEN_NAME = "AppDetailScreen_modified"
+        const val PERMISSIONS_SCREEN_NAME = "AppDetailScreen_permissions"
+        const val CHANNEL_SCREEN_NAME = "AppDetailScreen_channel"
     }
 }

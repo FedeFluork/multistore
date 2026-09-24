@@ -7,6 +7,16 @@ import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.domain.usecase.ActiveInstallDrivers
 import com.multistore.core.domain.usecase.InstallAppUseCase
 import com.multistore.core.domain.usecase.ResolveDownloadUseCase
+import com.multistore.core.common.version.VersionSelection
+import com.multistore.core.data.repository.AppDetail
+import com.multistore.core.model.AppVersion
+import com.multistore.core.model.StoreListingDetail
+import com.multistore.core.model.StoreListingSummary
+import com.multistore.core.testing.FakeStoreAdapter
+import com.multistore.store.api.DownloadHint
+import com.multistore.store.api.DownloadResolution
+import com.multistore.store.api.StoreAdapter
+import com.multistore.store.api.StoreResult
 import com.multistore.core.model.DownloadState
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
@@ -40,10 +50,14 @@ class DownloadsViewModelTest {
     private val settings = FakeSettingsRepository()
     private val details = FakeAppDetailRepository()
 
-    private fun viewModel() = DownloadsViewModel(
+    private fun viewModel(assisted: StoreId? = null) = DownloadsViewModel(
         downloads = downloads,
         installApp = InstallAppUseCase(
-            resolve = ResolveDownloadUseCase(StoreRegistry(emptySet()), details, settings),
+            resolve = ResolveDownloadUseCase(
+                StoreRegistry(assisted?.let { setOf<StoreAdapter>(assistedAdapter(it)) }.orEmpty()),
+                details,
+                settings,
+            ),
             downloads = downloads,
             installs = installs,
             details = details,
@@ -260,6 +274,97 @@ class DownloadsViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
         return requireNotNull(ready)
+    }
+
+    // --- Restarting a stopped transfer -----------------------------------------------------------
+
+    @Test
+    fun `a paused row offers a restart, and the states around it do not`() = runTest {
+        downloads.active.value = listOf(
+            row(id = 1, state = DownloadState.RUNNING),
+            row(id = 2, state = DownloadState.PAUSED, file = File("2.apk")),
+            // Paused with **nothing** on disk: the row that until 0.8.0 had no button at all, not
+            // even Delete — which is gated on there being a file — so it sat here permanently with
+            // nothing that could be done to it. Restarting is what it needs.
+            row(id = 3, state = DownloadState.PAUSED),
+            row(id = 4, state = DownloadState.READY, file = File("4.apk")),
+            row(id = 5, state = DownloadState.DONE, installedAt = AT),
+        )
+
+        viewModel().uiState.test {
+            val state = awaitItem() as DownloadsUiState.Ready
+            val resumable = (state.active + state.readyToInstall + state.history)
+                .filter { it.resumable }
+                .map { it.id }
+
+            // Both halves. Only the paused ones — including the one with no file — and none of the
+            // others: `READY` has a whole file and offers Install, a running row is already moving,
+            // and history is a record.
+            assertThat(resumable).containsExactly(2L, 3L)
+        }
+    }
+
+    @Test
+    fun `a restart that needs the store's page says so instead of failing`() = runTest {
+        // uptodown and pdalife resolve their file behind a human tap, and this screen has no WebView
+        // to carry that out. The row must therefore say **where to go**, not that something broke:
+        // an error's wording would send the reader looking for a fault that is not there.
+        val store = StoreId.UPTODOWN
+        val ref = StoreAppRef("app-2")
+        details.details.value = detailWith(store, ref)
+        downloads.active.value = listOf(
+            row(id = 2, state = DownloadState.PAUSED, file = File("2.apk")).copy(storeId = store),
+        )
+
+        val viewModel = viewModel(assisted = store)
+        viewModel.uiState.test {
+            val paused = (awaitItem() as DownloadsUiState.Ready).active.single()
+            viewModel.restart(paused)
+
+            // Skip the transient `Working` and settle on what the row ends up saying.
+            var settled = awaitItem() as DownloadsUiState.Ready
+            while (settled.active.single().install == RowInstallState.Working) {
+                settled = awaitItem() as DownloadsUiState.Ready
+            }
+            assertThat(settled.active.single().install).isEqualTo(RowInstallState.NeedsListing)
+        }
+    }
+
+    /** A listing with one version, whose ref matches what [row] says the download was fetching. */
+    private fun detailWith(storeId: StoreId, ref: StoreAppRef): AppDetail {
+        val version = AppVersion(versionName = "1.0", versionCode = 1, ref = VersionRef("v1"))
+        return AppDetail(
+            listing = StoreListingDetail(
+                summary = StoreListingSummary(
+                    storeId = storeId,
+                    ref = ref,
+                    title = "Telegram",
+                    packageName = "org.telegram.messenger.web",
+                ),
+                versions = listOf(version),
+            ),
+            installed = null,
+            selection = VersionSelection.Outcome.Offer(version, isUpdate = false),
+            stale = false,
+        )
+    }
+
+    /**
+     * A store whose download needs a human tap, so `resolve` answers `UserAssisted`.
+     *
+     * Built rather than taken from a fixture, because the behaviour under test is the **screen's**
+     * reaction to that outcome and no double in `:core:testing` produces it by default.
+     */
+    private fun assistedAdapter(storeId: StoreId) = object : FakeStoreAdapter(id = storeId) {
+        override suspend fun getDownloadLink(
+            ref: StoreAppRef,
+            version: VersionRef?,
+        ): StoreResult<DownloadResolution> = StoreResult.Success(
+            DownloadResolution.UserAssisted(
+                pageUrl = "https://en.uptodown.com/android/telegram",
+                hint = DownloadHint.SOLVE_CAPTCHA,
+            ),
+        )
     }
 
     private fun row(

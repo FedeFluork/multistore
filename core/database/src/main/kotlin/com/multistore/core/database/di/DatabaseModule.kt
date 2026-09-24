@@ -8,6 +8,7 @@ import com.multistore.core.database.dao.CatalogDao
 import com.multistore.core.database.dao.DownloadDao
 import com.multistore.core.database.dao.IndexDao
 import com.multistore.core.database.dao.InstalledAppDao
+import com.multistore.core.database.dao.SearchHistoryDao
 import com.multistore.core.database.dao.StoreDao
 import dagger.Module
 import dagger.Provides
@@ -45,4 +46,7 @@ object DatabaseModule {
     @Provides fun provideInstalledAppDao(db: MultiStoreDatabase): InstalledAppDao = db.installedAppDao()
 
     @Provides fun provideDownloadDao(db: MultiStoreDatabase): DownloadDao = db.downloadDao()
+
+    @Provides fun provideSearchHistoryDao(db: MultiStoreDatabase): SearchHistoryDao =
+        db.searchHistoryDao()
 }

@@ -8,6 +8,7 @@ import com.multistore.core.model.LocalizedText
 import com.multistore.core.model.Screenshot
 import com.multistore.core.model.ScreenshotKind
 import com.multistore.core.model.Sha256
+import com.multistore.core.model.UsesPermission
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
 import com.multistore.core.model.StoreListingSummary
@@ -181,8 +182,42 @@ class PackageProjection(
                 ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNullIfNotString() }
                 ?.toSet()
                 .orEmpty(),
+            permissions = permissionsOf(manifest),
         )
     }
+
+    /**
+     * What this build asks the system for — the one place in the app where that is known **before**
+     * anything is downloaded.
+     *
+     * ### The two lists are one list
+     *
+     * F-Droid publishes `usesPermission` and `usesPermissionSdk23` separately, mirroring the two
+     * manifest tags. The second is `<uses-permission-sdk-23>`: requested only from API 23 upward.
+     * MultiStore's `minSdk` is **26**, so on every device this app runs on both are requested, and
+     * showing them apart would be a distinction that cannot apply to any reader.
+     *
+     * ### It never returns `null`, and that is a statement rather than an omission
+     *
+     * `AppVersion.permissions` is nullable to mean "nobody has read this build's manifest", and here
+     * somebody has: the caller has already given up on any version without a `manifest` block — the
+     * three `.zip` OTA entries — so by this point one exists. A manifest carrying neither list is
+     * therefore the **empty** list, i.e. the true statement "this build asks for nothing", which is
+     * ordinary on F-Droid. The index is generated from the APKs by `fdroidserver`, so an absent list
+     * is an absence of permissions and not an absence of information.
+     */
+    private fun permissionsOf(manifest: JsonObject): List<UsesPermission> =
+        listOf("usesPermission", "usesPermissionSdk23")
+            .flatMap { key -> (manifest[key] as? JsonArray).orEmpty() }
+            .mapNotNull { entry ->
+                val obj = entry as? JsonObject ?: return@mapNotNull null
+                val name = obj.string("name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                UsesPermission(name = name, maxSdk = obj.int("maxSdkVersion"))
+            }
+            // The same permission can appear in both lists. `distinctBy` on the name and not on the
+            // pair: two entries differing only in their ceiling are one permission, and keeping both
+            // would print it twice.
+            .distinctBy { it.name }
 
     private fun projectScreenshots(element: JsonElement?): List<Screenshot> {
         val byKind = element as? JsonObject ?: return emptyList()

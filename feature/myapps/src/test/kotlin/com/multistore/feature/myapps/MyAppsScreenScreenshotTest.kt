@@ -115,6 +115,17 @@ class MyAppsScreenScreenshotTest : ScreenshotTest() {
                         storeName = "F-Droid",
                         iconUrl = null,
                     ),
+                    // The row where the two differ: installed from F-Droid, updated from
+                    // APKMirror because somebody said so on the app's page. It is in the golden
+                    // beside two rows that do **not** carry the line, because the whole design of
+                    // that line is that it appears only where a choice was made.
+                    item(
+                        "org.mozilla.firefox",
+                        "Firefox",
+                        "154.0",
+                        storeName = "F-Droid",
+                        updateChannelName = "APKMirror",
+                    ),
                     item("org.example.orphan", "No origin", "0.9", storeName = null),
                 ),
                 uninstall = UninstallUiState.Idle,
@@ -165,6 +176,14 @@ class MyAppsScreenScreenshotTest : ScreenshotTest() {
         versionName: String,
         storeName: String?,
         iconUrl: String? = "https://example.test/$packageName.png",
+        /**
+         * The store the **next** update would come from, when it is not the one above.
+         *
+         * `null` on almost every row and that is the point: the extra line appears exactly where
+         * somebody chose a different channel, and a golden in which every row carried it would
+         * photograph the noisy version of the screen rather than the real one.
+         */
+        updateChannelName: String? = null,
     ) = InstalledAppItem(
         app = InstalledApp(
             packageName = packageName,
@@ -177,8 +196,11 @@ class MyAppsScreenScreenshotTest : ScreenshotTest() {
             sourceStoreId = StoreId.FDROID.takeIf { storeName != null },
             sourceRef = StoreAppRef(packageName).takeIf { storeName != null },
             iconUrl = iconUrl,
+            updateChannelStoreId = StoreId.APKMIRROR.takeIf { updateChannelName != null },
+            updateChannelRef = StoreAppRef(packageName).takeIf { updateChannelName != null },
         ),
         storeName = storeName,
+        updateChannelName = updateChannelName,
     )
 
     private companion object {

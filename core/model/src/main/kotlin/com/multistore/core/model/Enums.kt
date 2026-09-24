@@ -34,6 +34,74 @@ enum class ArtifactType {
 enum class ContentKind { APP, GAME, UNKNOWN }
 
 /**
+ * Whether the file a store hands over is the developer's build or somebody else's rework.
+ *
+ * Five of the nine stores redistribute modified APKs, and until now the only place that said so was
+ * the **title** — written by the store, in whatever words it chose. A badge read off a title would be
+ * a guess about other people's naming, which is the family of defect `[Official] Atomy shop` already
+ * cost this project one red canary night; so the three values are all declarations, and each says who
+ * declared what.
+ *
+ * ### Why "possible" is a value and not an absence
+ *
+ * [DECLARED] and [NONE] are the two easy ones. The third exists because a store that redistributes
+ * modified builds and says nothing about *this* listing has not told us the build is clean — it has
+ * told us nothing. Collapsing that into [NONE] would put the reassuring answer on every row of the
+ * five stores that never mark, and collapsing it into [DECLARED] would call somebody's untouched
+ * upload a rework. It is the same distinction as `UpToDate.comparable`: the absence of the datum does
+ * not disguise itself as an answer.
+ *
+ * Measured on the committed search and detail fixtures, 06/09/2026 — which of the five mark a single
+ * listing structurally, i.e. somewhere other than the title:
+ *
+ * | store | per-listing declaration |
+ * |---|---|
+ * | an1 | `div.item_app.mod` on search rows — 5 of the 10 in the fixture |
+ * | modyolo | `mod_info` non-empty on the detail — filled on one fixture, empty on another |
+ * | pdalife | `p.game-versions__downloads-mod` in the file list — 0 on the plain fixture, 3 on the MOD one |
+ * | apkmody | **only in the title** |
+ * | liteapks | **only in the title** |
+ *
+ * So on three stores a row can reach [DECLARED], and on the other two every row stops at [POSSIBLE].
+ * That is not a gap to be filled by reading titles: it is what those two stores actually publish.
+ */
+enum class ModifiedBuild {
+    /** The source does not redistribute modified builds. */
+    NONE,
+
+    /**
+     * This store redistributes modified builds and says nothing about **this** listing.
+     *
+     * Either it never marks single listings (apkmody, liteapks) or it marks only some of them and
+     * this is not one — and those two cases are indistinguishable from outside, which is why they
+     * share a value.
+     */
+    POSSIBLE,
+
+    /** The store marked **this** listing as a rework, in its own markup. */
+    DECLARED,
+    ;
+
+    /** `true` where the badge has something to say. [NONE] is the silent one. */
+    val isFlagged: Boolean get() = this != NONE
+
+    companion object {
+        /**
+         * What to show for one listing, from the two declarations that exist.
+         *
+         * The row's flag can only ever raise the verdict: a store that marks *some* listings has not
+         * cleared the ones it did not mark. See the class doc.
+         */
+        fun of(storeRedistributesModifiedBuilds: Boolean, listingDeclaredModified: Boolean): ModifiedBuild =
+            when {
+                listingDeclaredModified -> DECLARED
+                storeRedistributesModifiedBuilds -> POSSIBLE
+                else -> NONE
+            }
+    }
+}
+
+/**
  * How to order a list of results.
  *
  * It lives here rather than in `:store:api` because it has two readers that cannot see each

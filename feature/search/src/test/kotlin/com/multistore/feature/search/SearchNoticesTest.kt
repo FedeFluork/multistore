@@ -18,6 +18,7 @@ import com.multistore.core.model.AggregatedApp
 import com.multistore.core.model.AggregatedListing
 import com.multistore.core.model.ResultOrigin
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.ModifiedBuild
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
 import com.multistore.core.model.ThemeMode
@@ -145,6 +146,7 @@ class SearchNoticesTest {
                     uiState = state.value,
                     preferredLanguageTags = listOf("en"),
                     storeDisplayName = { it.wireName },
+                    modifiedBuildOf = { _, _ -> ModifiedBuild.NONE },
                     onQueryChange = {},
                     onAppClick = { _, _ -> },
                     onLoadMore = {},

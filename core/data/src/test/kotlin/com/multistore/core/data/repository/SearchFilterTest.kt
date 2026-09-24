@@ -330,6 +330,65 @@ class SearchFilterTest {
         )
     }
 
+    /**
+     * A publisher search: exact on the index, and it stops matching titles.
+     *
+     * The two predicates cannot both apply, and this is the case that shows why. "Focus" is
+     * Mozilla's and its name contains nothing of "Mozilla"; "Mozilla Guide" is somebody else's and
+     * its name contains all of it. Keeping the title match would return exactly the wrong one of the
+     * two, and the list would look plausible.
+     */
+    @Test
+    fun `a publisher search on the index is exact, and ignores the title`() = runTest {
+        val indexed = FakeIndexedStoreAdapter(StoreId.FDROID)
+        val repository = build(setOf(indexed))
+        // **None of the refs contains the publisher's name**, and that is deliberate: the search
+        // predicate matches `title_norm` OR `store_app_ref`, so with `org.mozilla.firefox` the title
+        // match would find these rows anyway and the two variants of this code would agree. The
+        // package names are neutral so that only the publisher column can produce the answer.
+        populateWithDevelopers(
+            indexed,
+            Triple("org.example.browser", "Firefox", "Mozilla"),
+            Triple("org.example.privacy", "Focus", "Mozilla"),
+            Triple("com.example.guide", "Mozilla Guide", "Somebody Else"),
+        )
+
+        val page = repository.search("Mozilla", filters = SearchFilters(developer = "Mozilla"))
+
+        assertThat(page.apps.map { it.displaySummary.title })
+            .containsExactly("Firefox", "Focus")
+        // No network: the index answered, which is the only store that could have.
+        assertThat(indexed.searchedFor).isEmpty()
+    }
+
+    private suspend fun populateWithDevelopers(
+        adapter: FakeIndexedStoreAdapter,
+        vararg entries: Triple<String, String, String>,
+    ) {
+        val registry = StoreRegistry(setOf(adapter))
+        val health = StoreHealthRepositoryImpl(registry, db.storeDao(), clock, Dispatchers.Unconfined)
+        val index = StoreIndexRepositoryImpl(
+            registry = registry,
+            indexDao = db.indexDao(),
+            catalogDao = db.catalogDao(),
+            health = health,
+            clock = clock,
+            io = Dispatchers.Unconfined,
+        )
+        val records = entries.map { (id, title, developer) ->
+            val payload = FakeIndexedStoreAdapter.payload(
+                id,
+                FakeIndexedStoreAdapter.FIELD_TITLE to title,
+                FakeIndexedStoreAdapter.FIELD_DEVELOPER to developer,
+            )
+            IndexRecord.Full(StoreAppRef(id), payload, adapter.projectEntry(payload))
+        }
+        adapter.nextSnapshot = {
+            StoreResult.Success(FakeSnapshot(IndexToken("1"), IndexSyncMode.FULL, records))
+        }
+        index.sync(adapter.id)
+    }
+
     private suspend fun populate(
         adapter: FakeIndexedStoreAdapter,
         vararg entries: Pair<String, ContentKind>,

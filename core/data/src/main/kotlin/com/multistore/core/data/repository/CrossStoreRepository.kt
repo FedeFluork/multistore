@@ -114,6 +114,46 @@ interface CrossStoreRepository {
 
     fun observe(storeId: StoreId, ref: StoreAppRef): Flow<CrossStoreAvailability>
 
+    /**
+     * The same listings as [observe]'s `availableOn`, plus the anchor, side by side.
+     *
+     * ### Why it lives here and not in a repository of its own
+     *
+     * Everything it needs is what this interface already answers — which stores have this app, at
+     * what confidence, and which of them a person has confirmed. A second repository would have to
+     * re-derive the 0.85 rule and the `identity_overrides` exceptions, and the day the two derivations
+     * disagreed the table would offer a row the listing refuses to merge, or the reverse. It is the
+     * "two answers to the same question" this project forbids elsewhere, applied to identity.
+     *
+     * It costs **no request**: version, date, package name and rework flag are columns of
+     * `store_listings`, the size is a sub-query over `app_versions`, and whether a store publishes a
+     * hash is the adapter's own declaration. Asking the stores that have not spoken stays where it
+     * already is, behind [lookUp] and a person's tap.
+     */
+    fun compare(storeId: StoreId, ref: StoreAppRef): Flow<StoreComparison>
+
+    /**
+     * Reads the listings in a comparison that nobody has opened, so the table is a comparison.
+     *
+     * ### What it does and does not go looking for
+     *
+     * Only the stores already matched to this app — [CrossStoreAvailability.availableOn] — and among
+     * those only the rows born in a **result list**, which carry no versions and therefore no size,
+     * no version name and no package. Finding new stores is still [lookUp]'s job and is still behind
+     * a button of its own: this refreshes what is already known to be there, it does not go
+     * knocking.
+     *
+     * ### It is a request per unread row, and the caller is a deliberate gesture
+     *
+     * Up to eight fetches to third-party sites. That is affordable here and would not be on the
+     * listing, and the difference is who asked: nobody reaches this screen except by pressing
+     * "Compare". Rows already read cost nothing — the TTL decides, exactly as it does everywhere
+     * else — and a store that fails says so on its own card rather than failing the screen.
+     *
+     * Calling it twice for the same app while the first call is in flight does nothing.
+     */
+    suspend fun readListings(storeId: StoreId, ref: StoreAppRef)
+
     /** Asks the stores that have not yet spoken. On the user's request, never by itself. */
     suspend fun lookUp(storeId: StoreId, ref: StoreAppRef)
 

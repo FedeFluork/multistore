@@ -18,6 +18,8 @@ import com.multistore.core.model.ContentKind
 import com.multistore.core.model.DeviceProfile
 import com.multistore.core.model.InstallerKind
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.UsesPermission
+import com.multistore.core.model.VersionRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.data.FakeIndexedStoreAdapter
 import com.multistore.store.api.IndexSyncMode
@@ -290,6 +292,13 @@ class UpdateRepositoryTest {
             storeId: StoreId,
             ref: StoreAppRef,
         ): Outcome<Unit> = Outcome.Success(Unit)
+
+        override suspend fun recordPermissions(
+            storeId: StoreId,
+            ref: StoreAppRef,
+            versionRef: VersionRef,
+            permissions: List<UsesPermission>,
+        ) = Unit
 
         override suspend fun refresh(
             storeId: StoreId,

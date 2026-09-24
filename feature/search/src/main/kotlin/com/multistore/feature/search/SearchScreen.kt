@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterList
@@ -32,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,7 +61,13 @@ import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
 import java.text.NumberFormat
 import com.multistore.core.model.ThemeMode
+import com.multistore.core.model.ModifiedBuild
+import com.multistore.core.common.net.StoreDiagnosis
+import com.multistore.core.ui.component.StoreDiagnosisDialog
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import com.multistore.core.ui.component.AppListItem
+import com.multistore.core.ui.component.ModifiedBuildBadge
 import com.multistore.core.ui.component.EmptyState
 import com.multistore.core.ui.component.MultiStoreTopAppBar
 import com.multistore.core.ui.component.appErrorMessage
@@ -84,12 +93,14 @@ fun SearchScreen(
     // `SearchViewModel.queryText`. They differ exactly while a search is in flight — which is when
     // someone is still typing.
     val query by viewModel.queryText.collectAsStateWithLifecycle()
+    val history by viewModel.history.collectAsStateWithLifecycle()
     SearchScreen(
         uiState = uiState,
         query = query,
         filters = filters,
         preferredLanguageTags = rememberPreferredLanguageTags(),
         storeDisplayName = viewModel::storeDisplayName,
+        modifiedBuildOf = viewModel::modifiedBuildOf,
         onQueryChange = viewModel::onQueryChange,
         onAppClick = onAppClick,
         onLoadMore = viewModel::loadMore,
@@ -100,6 +111,11 @@ fun SearchScreen(
         onStoreToggle = viewModel::toggleStore,
         onResetFilters = { viewModel.resetFilters() },
         onSubmit = viewModel::searchNow,
+        onStoreDiagnosis = viewModel::storeDiagnosis,
+        history = history,
+        onQuerySubmitted = viewModel::searchAgain,
+        onForgetSearch = viewModel::forgetSearch,
+        onClearHistory = viewModel::clearSearchHistory,
         modifier = modifier,
     )
 }
@@ -111,6 +127,7 @@ internal fun SearchScreen(
     uiState: SearchUiState,
     preferredLanguageTags: List<String>,
     storeDisplayName: (StoreId) -> String,
+    modifiedBuildOf: (StoreId, Boolean) -> ModifiedBuild,
     onQueryChange: (String) -> Unit,
     onAppClick: (StoreId, StoreAppRef) -> Unit,
     onLoadMore: () -> Unit,
@@ -123,6 +140,19 @@ internal fun SearchScreen(
      */
     query: String = uiState.query,
     onSubmit: () -> Unit = {},
+    /**
+     * Why a store is not answering, read at the moment somebody taps its line in the notice.
+     *
+     * `suspend` and on demand: it is one store out of nine, and keeping nine queries warm to answer
+     * a question nobody has asked would be nine queries for nothing.
+     */
+    onStoreDiagnosis: suspend (StoreId) -> StoreDiagnosis? = { null },
+    /** The last searches, newest first. Empty where the record is switched off in Settings. */
+    history: List<String> = emptyList(),
+    /** Runs one of them again: it fills the field and searches, in one gesture. */
+    onQuerySubmitted: (String) -> Unit = {},
+    onForgetSearch: (String) -> Unit = {},
+    onClearHistory: () -> Unit = {},
     filters: SearchFilterState = SearchFilterState(),
     onContentKindChange: (ContentKind?) -> Unit = {},
     onMinRatingChange: (Float?) -> Unit = {},
@@ -147,6 +177,13 @@ internal fun SearchScreen(
     // one at a time, so an X that undid itself a second later because a ninth store fell over would
     // read as a broken button rather than as an update.
     var noticesDismissedFor by rememberSaveable { mutableStateOf<String?>(null) }
+    // The store whose health is being read, and `null` for none. A dialog's visibility is screen
+    // state, not a fact about the app, so it stays here — keyed by id because the diagnosis is
+    // fetched **for** that store.
+    var explaining by remember { mutableStateOf<StoreId?>(null) }
+    var diagnosis by remember { mutableStateOf<StoreDiagnosis?>(null) }
+    LaunchedEffect(explaining) { diagnosis = explaining?.let { onStoreDiagnosis(it) } }
+
     val noticesHidden = noticesDismissedFor == uiState.query
     val dismissNotices = { noticesDismissedFor = uiState.query }
 
@@ -198,12 +235,22 @@ internal fun SearchScreen(
             )
 
             when (uiState) {
-                is SearchUiState.Idle -> EmptyState(
-                    icon = Icons.Rounded.Search,
-                    title = stringResource(R.string.search_idle_title),
-                    description = stringResource(R.string.search_idle_message),
-                    modifier = Modifier.weight(1f),
-                )
+                is SearchUiState.Idle -> if (history.isEmpty()) {
+                    EmptyState(
+                        icon = Icons.Rounded.Search,
+                        title = stringResource(R.string.search_idle_title),
+                        description = stringResource(R.string.search_idle_message),
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    RecentSearches(
+                        queries = history,
+                        onSearch = onQuerySubmitted,
+                        onForget = onForgetSearch,
+                        onClearAll = onClearHistory,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
                 is SearchUiState.Searching -> Column(
                     modifier = Modifier
@@ -229,11 +276,13 @@ internal fun SearchScreen(
                 }
 
                 is SearchUiState.NoResults -> Column(modifier = Modifier.weight(1f)) {
+                    DeveloperSearchNotice(filters.developer)
                     FilteredOutBanner(uiState.shortfalls, storeDisplayName)
                     if (!noticesHidden) {
                         ShortfallBanner(
                             shortfalls = uiState.shortfalls,
                             storeDisplayName = storeDisplayName,
+                            onExplainStore = { explaining = it },
                             onRetry = onRetry,
                             onDismiss = dismissNotices,
                         )
@@ -246,6 +295,7 @@ internal fun SearchScreen(
                 }
 
                 is SearchUiState.Results -> Column(modifier = Modifier.weight(1f)) {
+                    DeveloperSearchNotice(filters.developer)
                     FilteredOutBanner(uiState.shortfalls, storeDisplayName)
                     // One X for both, because they are one piece of news read together: how many
                     // stores answered, and which did not. Two separate controls on two stacked
@@ -254,6 +304,7 @@ internal fun SearchScreen(
                         ShortfallBanner(
                             shortfalls = uiState.shortfalls,
                             storeDisplayName = storeDisplayName,
+                            onExplainStore = { explaining = it },
                             onRetry = onRetry,
                             onDismiss = dismissNotices,
                         )
@@ -275,6 +326,7 @@ internal fun SearchScreen(
                         state = uiState,
                         preferredLanguageTags = preferredLanguageTags,
                         storeDisplayName = storeDisplayName,
+                        modifiedBuildOf = modifiedBuildOf,
                         onAppClick = onAppClick,
                         onLoadMore = onLoadMore,
                     )
@@ -292,6 +344,17 @@ internal fun SearchScreen(
             onStoreToggle = onStoreToggle,
             onReset = onResetFilters,
             onDismiss = { showFilters = false },
+        )
+    }
+
+    diagnosis?.let { current ->
+        StoreDiagnosisDialog(
+            diagnosis = current,
+            storeName = storeDisplayName(current.storeId),
+            onDismiss = {
+                explaining = null
+                diagnosis = null
+            },
         )
     }
 }
@@ -340,6 +403,120 @@ private fun FilterBar(
             )
         }
     }
+}
+
+/**
+ * The last searches, offered back where the empty field used to show a sentence.
+ *
+ * ### It replaces the empty state rather than sitting under it
+ *
+ * "Search across nine stores" is worth reading once. On every later opening the useful thing on an
+ * empty field is what was searched for last, and stacking the two would push the list below the
+ * fold on the screen where it is meant to be one tap away.
+ *
+ * ### Each row is a search, and its X is not
+ *
+ * The row runs the search; the X forgets that one entry. They are two targets because they do two
+ * unrelated things, and a single row with a swipe would hide the second behind a gesture with no
+ * affordance. "Forget all" is last and hollow, because it is the destructive one and nothing else
+ * on this list is.
+ */
+@Composable
+private fun RecentSearches(
+    queries: List<String>,
+    onSearch: (String) -> Unit,
+    onForget: (String) -> Unit,
+    onClearAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = LocalSpacing.current
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.search_recent_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(
+                start = spacing.screenHorizontal,
+                end = spacing.screenHorizontal,
+                top = spacing.medium,
+                bottom = spacing.small,
+            ),
+        )
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(items = queries, key = { it }) { query ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSearch(query) }
+                        .padding(
+                            start = spacing.screenHorizontal,
+                            end = spacing.small,
+                            top = spacing.small,
+                            bottom = spacing.small,
+                        ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.History,
+                        // Null: the row's text is its label, and a screen reader announcing both
+                        // would say "recent search" before every entry.
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = query,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = spacing.large),
+                    )
+                    IconButton(onClick = { onForget(query) }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = stringResource(
+                                R.string.search_recent_forget_one,
+                                query,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        TextButton(
+            onClick = onClearAll,
+            modifier = Modifier
+                .align(Alignment.End)
+                .padding(horizontal = spacing.small, vertical = spacing.small),
+        ) {
+            Text(text = stringResource(R.string.search_recent_clear))
+        }
+    }
+}
+
+/**
+ * "These are results for a publisher, and eight stores of nine could not take that literally."
+ *
+ * ### Why it is a notice and not a chip
+ *
+ * The distinction it draws is not a filter the user set and can unset: it is a **property of the
+ * answer**. Only the local index has a publisher column to compare against; the other eight received
+ * the name as ordinary search text and returned whatever contains that string, so among them a
+ * namesake is not the same person and no row can say which is which. That is a sentence, and a chip
+ * cannot be one.
+ *
+ * It sits above the results rather than below, for the reason every other notice on this screen does:
+ * it changes how the list underneath should be read, and read afterwards it changes nothing.
+ */
+@Composable
+private fun DeveloperSearchNotice(developer: String?, modifier: Modifier = Modifier) {
+    if (developer == null) return
+    InfoBanner(
+        text = stringResource(R.string.search_developer_notice, developer),
+        modifier = modifier,
+    )
 }
 
 /**
@@ -409,6 +586,7 @@ private fun ResultList(
     state: SearchUiState.Results,
     preferredLanguageTags: List<String>,
     storeDisplayName: (StoreId) -> String,
+    modifiedBuildOf: (StoreId, Boolean) -> ModifiedBuild,
     onAppClick: (StoreId, StoreAppRef) -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
@@ -477,6 +655,19 @@ private fun ResultList(
                     Column {
                         StoreProvenance(app = app, storeDisplayName = storeDisplayName)
                         Reputation(summary = app.displaySummary)
+                        // The badge describes **the listing the tap opens**, i.e. the primary one,
+                        // not the group: a search row can gather the same app from F-Droid and from
+                        // an1, and calling the whole row a rework would be wrong about half of it.
+                        // `displaySummary` copies the primary's own `declaredModified`, so the two
+                        // halves of the verdict come from the same listing.
+                        ModifiedBuildBadge(
+                            state = modifiedBuildOf(
+                                primary.storeId,
+                                app.displaySummary.declaredModified,
+                            ),
+                            storeDisplayName = storeDisplayName(primary.storeId),
+                            modifier = Modifier.padding(top = LocalSpacing.current.extraSmall),
+                        )
                     }
                 },
             )
@@ -597,6 +788,7 @@ private fun StoreProvenance(
 private fun ShortfallBanner(
     shortfalls: List<StoreShortfall>,
     storeDisplayName: (StoreId) -> String,
+    onExplainStore: (StoreId) -> Unit,
     onRetry: () -> Unit,
     onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -639,11 +831,20 @@ private fun ShortfallBanner(
                     shortfall.error != null -> appErrorMessage(shortfall.error!!)
                     else -> stringResource(R.string.search_shortfall_unknown)
                 }
+                // Tappable since 0.8.0, and it opens the same dialog Settings does: the notice
+                // says a store did not answer, and the question that follows — "is this today, or
+                // has it been going on for a week" — is the one that decides between retrying and
+                // switching the store off. Two screens, one sentence, because the component lives
+                // in `:core:ui`.
+                val explain = stringResource(R.string.search_shortfall_explain, name)
                 Text(
                     text = stringResource(R.string.search_shortfall_entry, name, detail),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = spacing.extraSmall),
+                    modifier = Modifier
+                        .clickable { onExplainStore(shortfall.storeId) }
+                        .semantics { onClick(label = explain, action = null) }
+                        .padding(top = spacing.extraSmall),
                 )
             }
             TextButton(
@@ -744,6 +945,7 @@ private fun SearchPreviewContent() {
         ),
         preferredLanguageTags = listOf("en"),
         storeDisplayName = { it.wireName },
+        modifiedBuildOf = { _, _ -> ModifiedBuild.NONE },
         onQueryChange = {},
         onAppClick = { _, _ -> },
         onLoadMore = {},

@@ -55,4 +55,9 @@
     <string name="myapps_search_clear">Suche l\u00f6schen</string>
     <string name="myapps_no_matches_title">Keine Treffer</string>
     <string name="myapps_no_matches_message">Keine installierte App hei\u00dft \u201e%1$s\u201c. Deine Apps sind alle noch da \u2014 l\u00f6sche die Suche, um sie zu sehen.</string>
+
+    <!-- Shown only where the update channel differs from where the app came from: the two
+         coincide until somebody changes it on the app's page, and naming the same store
+         twice on every row would bury the one line that matters. -->
+    <string name="myapps_updates_from">Update über %1$s</string>
 </resources>

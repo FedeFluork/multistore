@@ -44,11 +44,18 @@ class MultiStoreDatabaseTest {
     @After
     fun tearDown() = db.close()
 
-    private fun app(key: String, title: String, iconUrl: String? = null) = AppEntity(
+    private fun app(
+        key: String,
+        title: String,
+        iconUrl: String? = null,
+        developer: String? = null,
+    ) = AppEntity(
         appKey = key,
         packageName = key,
         title = title,
         titleNorm = title.lowercase(),
+        developer = developer,
+        developerNorm = developer?.lowercase(),
         iconUrl = iconUrl,
         contentKind = ContentKind.APP,
         updatedAt = now,
@@ -150,6 +157,36 @@ class MultiStoreDatabaseTest {
         // "Calculator" contains "tor" but nobody typing "tor" is looking for a calculator.
         assertThat(results).containsExactly("Tor", "Torrent Client", "Calculator").inOrder()
         assertThat(dao.searchCount(StoreId.FDROID, "tor")).isEqualTo(3)
+    }
+
+    @Test
+    fun `searching by publisher matches the publisher and not the title`() = runTest {
+        val dao = db.catalogDao()
+        listOf(
+            Triple("firefox", "Firefox", "Mozilla"),
+            Triple("focus", "Focus", "Mozilla"),
+            // Same word in the title, different publisher: the case that separates a publisher
+            // search from a text search, and the reason the two predicates cannot both apply.
+            Triple("mozillaguide", "Mozilla Guide", "Somebody Else"),
+        ).forEach { (ref, title, developer) ->
+            dao.upsertApps(listOf(app(ref, title, developer = developer)))
+            dao.saveListing(listing(ref, title), emptyList(), emptyList())
+        }
+
+        // The query is empty on purpose: that is what the repository passes when a publisher is set,
+        // because keeping the title match as well would return only the publisher's apps whose
+        // **name contains the publisher's name** — here "Focus" would vanish and "Mozilla Guide",
+        // which is somebody else's, would stay.
+        val byPublisher = dao
+            .search(StoreId.FDROID, query = "", limit = 10, offset = 0, developer = "mozilla")
+            .map { it.listing.title }
+        assertThat(byPublisher).containsExactly("Firefox", "Focus")
+
+        // The count sees the same predicate, or `hasMore` would promise a page that is not there.
+        assertThat(dao.searchCount(StoreId.FDROID, query = "", developer = "mozilla")).isEqualTo(2)
+
+        // And with no publisher nothing is filtered: `null` is "any", not "none".
+        assertThat(dao.searchCount(StoreId.FDROID, query = "", developer = null)).isEqualTo(3)
     }
 
     @Test

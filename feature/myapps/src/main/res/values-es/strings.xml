@@ -57,4 +57,9 @@
     <string name="myapps_search_clear">Borrar la b\u00fasqueda</string>
     <string name="myapps_no_matches_title">Sin coincidencias</string>
     <string name="myapps_no_matches_message">Ninguna aplicaci\u00f3n instalada se llama \u00ab%1$s\u00bb. Tus aplicaciones siguen ah\u00ed: borra la b\u00fasqueda para verlas.</string>
+
+    <!-- Shown only where the update channel differs from where the app came from: the two
+         coincide until somebody changes it on the app's page, and naming the same store
+         twice on every row would bury the one line that matters. -->
+    <string name="myapps_updates_from">Se actualiza desde %1$s</string>
 </resources>

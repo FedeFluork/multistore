@@ -99,6 +99,8 @@ internal class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setDefaultContentKind(kind: ContentKind?) = local.setDefaultContentKind(kind)
 
+    override suspend fun setKeepSearchHistory(keep: Boolean) = local.setKeepSearchHistory(keep)
+
     override suspend fun setMyAppsSort(sort: MyAppsSort) = local.setMyAppsSort(sort)
 
     override suspend fun setMuteDownloadNotifications(mute: Boolean) =

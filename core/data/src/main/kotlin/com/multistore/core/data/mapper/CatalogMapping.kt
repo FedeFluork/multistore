@@ -74,6 +74,7 @@ fun StoreListingDetail.toRows(now: Instant, ttl: Duration): ListingWrite {
             matchMethod = if (summary.packageName != null) MatchMethod.PACKAGE_NAME else MatchMethod.TITLE_DEV,
             addedAt = addedAt,
             lastUpdated = summary.lastUpdated,
+            declaredModified = summary.declaredModified,
             fetchedAt = now,
             ttlSeconds = ttl.inWholeSeconds,
         ),
@@ -143,6 +144,7 @@ fun StoreListingSummary.toDiscoveredRows(
             matchConfidence = confidence,
             matchMethod = method,
             lastUpdated = lastUpdated,
+            declaredModified = declaredModified,
             fetchedAt = now,
             ttlSeconds = 0,
         ),
@@ -179,6 +181,7 @@ private fun AppVersion.toEntity(now: Instant) = AppVersionEntity(
     // and live in `store_anti_features`, one row per anti-feature instead of a copy inside every
     // version carrying it. On F-Droid that is 2,666 occurrences for some twenty identifiers.
     antiFeatures = antiFeatures.map { it.id },
+    permissions = permissions,
     // A version is as old as the listing carrying it: the same instant, so that a version row cannot
     // come out fresher than the listing it was read from.
     fetchedAt = now,
@@ -209,6 +212,7 @@ fun StoreListingEntity.toSummary(): StoreListingSummary = StoreListingSummary(
     ratingCount = ratingCount,
     downloadsLabel = downloadsLabel,
     lastUpdated = lastUpdated,
+    declaredModified = declaredModified,
 )
 
 /**
@@ -271,6 +275,11 @@ fun AppVersionEntity.toModel(): AppVersion = AppVersion(
     // Only the id: whoever shows the listing resolves name and description from the store's taxonomy.
     antiFeatures = antiFeatures.map { AntiFeature(id = it) },
     releaseChannels = releaseChannels.toSet(),
+    // `null` travels intact in both directions: it is the difference between "this build asks for
+    // nothing" and "nobody has read its manifest", and a mapper turning it into an empty list would
+    // put the first sentence on every version of the eight stores that can only answer after a
+    // download.
+    permissions = permissions,
 )
 
 /** `true` if the row is past its TTL and needs refreshing in the background. */

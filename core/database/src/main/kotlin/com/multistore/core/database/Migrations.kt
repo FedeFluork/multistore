@@ -263,6 +263,104 @@ private val FDROID_SCREENSHOT_DIRECTORIES = listOf(
     "wearScreenshots",
 )
 
+/**
+ * `store_listings.declared_modified` — "this store marked **this** listing as a rework".
+ *
+ * ### Nothing is back-filled, and this time that is the answer rather than the omission
+ *
+ * Migration 5 → 6 established the question to ask before closing one: *where is this value already
+ * written?* There it was written in the screenshot URL, and a draft that left the column `NULL`
+ * would have shipped the defect. Here the honest answer is **nowhere**: the flag comes from a parse
+ * this build performs for the first time — an1's `item_app mod` class, modyolo's `mod_info`,
+ * pdalife's `downloads-mod` label — and no earlier column, address or index holds it.
+ *
+ * And the second half of that question, *who re-reads, and when*, has an answer that costs nothing
+ * here: the three stores that declare it are all scraped, with a listing TTL measured in hours, so
+ * a row refreshes on the next visit. It is not the indexed-store trap, where a diff sync can leave
+ * an untouched entry alone for months.
+ *
+ * What a not-yet-re-read row says meanwhile is the prudent thing rather than a wrong one. `0` on
+ * one of the five stores that redistribute reworks reads as *possible*, not *clean* — the same
+ * thing said about every apkmody and liteapks listing, which never carry a per-row mark at all.
+ *
+ * `NOT NULL` therefore needs its `DEFAULT`, in both places: `ALTER TABLE` will not add a non-null
+ * column without one, and a default declared here and missing from the entity is the schema
+ * mismatch Room reports when it opens the database on somebody's phone.
+ */
+internal val MIGRATION_6_7: Migration = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE `store_listings` ADD COLUMN `declared_modified` INTEGER NOT NULL DEFAULT 0",
+        )
+    }
+}
+
+/**
+ * `app_versions.permissions` — what a build asks the operating system for.
+ *
+ * ### Nullable, and this is the migration where that matters most
+ *
+ * Every other list column in this schema is `NOT NULL DEFAULT '[]'`. This one is not, because here
+ * the empty list is a **claim**: "this app asks for nothing". Filling existing rows with `[]` would
+ * put that claim on every version already in the catalogue — 4,269 of them on a device with the
+ * F-Droid index — and it would be the single most reassuring thing the permissions screen can say,
+ * produced entirely by not having looked.
+ *
+ * ### Where the value already is, asked in both halves
+ *
+ * The question 5 → 6 taught is "where is this value already written", and its follow-up is "who
+ * re-reads, and when". Here the answers split by store, and both are acceptable:
+ *
+ *  - **F-Droid**: in the signed index, which is already on the device. A diff sync only touches
+ *    changed entries, so an untouched app could stay `NULL` for months — but that is *correct*
+ *    here, because `NULL` means "not read yet" and the screen says exactly that. Nothing is claimed
+ *    while waiting. A back-fill would mean re-projecting 4,269 packages inside a migration, from
+ *    JSON this module cannot parse without depending on a concrete store.
+ *  - **the other eight**: nowhere. It comes from the archive, and the archive arrives when somebody
+ *    installs. `NULL` until then is the truth.
+ *
+ * So this is the third kind of answer to "where is this value written", after 5 → 6's *in the URL*
+ * and 4 → 5's *nowhere, and rightly so*: **nowhere yet, and the column is shaped to say so.**
+ */
+internal val MIGRATION_7_8: Migration = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `app_versions` ADD COLUMN `permissions` TEXT")
+    }
+}
+
+/**
+ * `search_history` — the last searches, so they can be offered back.
+ *
+ * A new table, so there is nothing to back-fill and nothing to interpret: the question 5 → 6 taught
+ * to ask has no subject here. What matters instead is the shape, and it has to match the entity
+ * exactly or Room refuses to open the database on somebody's phone.
+ *
+ * **The query is the primary key.** Searching the same thing twice is one entry that moves to the
+ * top, not two rows — with a generated id the list would fill with the word being refined, `f`,
+ * `fi`, `fir`, `fire`, `firefox`, which is the opposite of recalling anything.
+ */
+internal val MIGRATION_8_9: Migration = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `search_history` (
+                `query` TEXT NOT NULL,
+                `at` INTEGER NOT NULL,
+                PRIMARY KEY(`query`)
+            )
+            """.trimIndent(),
+        )
+    }
+}
+
 /** Every migration, in the order Room would apply them. */
-internal val MULTISTORE_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+internal val MULTISTORE_MIGRATIONS: Array<Migration> = arrayOf(
+    MIGRATION_1_2,
+    MIGRATION_2_3,
+    MIGRATION_3_4,
+    MIGRATION_4_5,
+    MIGRATION_5_6,
+    MIGRATION_6_7,
+    MIGRATION_7_8,
+    MIGRATION_8_9,
+)

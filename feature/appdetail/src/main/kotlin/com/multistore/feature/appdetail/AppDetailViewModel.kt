@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.multistore.core.common.result.AppError
+import com.multistore.core.common.version.VersionSelection
 import com.multistore.core.data.repository.AppDetail
 import com.multistore.core.common.result.Outcome
 import com.multistore.core.data.repository.CrossStoreAvailability
@@ -13,6 +14,7 @@ import com.multistore.core.data.repository.DownloadStatus
 import com.multistore.core.data.repository.ContainerProblem
 import com.multistore.core.data.repository.InstallStep
 import com.multistore.core.data.repository.StoreTaxonomy
+import com.multistore.core.data.store.PendingSearch
 import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.domain.usecase.AppDetailWithTaxonomy
 import com.multistore.core.domain.usecase.GetAppDetailUseCase
@@ -24,6 +26,7 @@ import com.multistore.core.installer.verify.PreInstallVerifier
 import com.multistore.core.model.AppVersion
 import com.multistore.core.model.BundleSummary
 import com.multistore.core.model.DownloadState
+import com.multistore.core.model.ModifiedBuild
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.VersionRef
@@ -213,6 +216,32 @@ private sealed interface Load {
 private val Load.stillArriving: Boolean
     get() = this is Load.InFlight || (this is Load.Settled && rowOnDisk)
 
+/**
+ * Making **this** listing the one an installed app updates from.
+ *
+ * ### Why the signature is part of the offer and not of the outcome
+ *
+ * Two stores redistributing one app almost never sign it with the same key, and Android refuses an
+ * update whose signer differs from the installed one. Discovering that after the switch would mean a
+ * download, a verification and a refusal — with a message about the archive — for a decision taken
+ * minutes earlier. [signerConflict] says it while the person is deciding, which is what `CLAUDE.md`
+ * has asked for since M3: "the user can change channel explicitly, and in that case must be warned
+ * of the possible signature conflict".
+ *
+ * It is `false` rather than "unknown" where nothing can be compared, and that is the honest reading
+ * of a real gap: **four stores of nine publish no signer at all**, and neither does an app installed
+ * before this one could read one. Claiming a conflict on the strength of a missing value would put a
+ * warning over most of the catalogue. Nothing is waved through by that: the pre-install pipeline
+ * still compares the two for real and still refuses — only the warning is withheld where there is no
+ * evidence for it.
+ */
+data class ChannelSwitch(
+    val packageName: String,
+    /** The store this app updates from **now**, for the sentence that says what is changing. */
+    val currentStoreName: String,
+    val signerConflict: Boolean,
+)
+
 sealed interface AppDetailUiState {
 
     data object Loading : AppDetailUiState
@@ -264,6 +293,24 @@ sealed interface AppDetailUiState {
          */
         val verification: PreInstallVerifier.VerificationOutcome.Ok? = null,
         /**
+         * Whether this listing comes from a source that republishes reworked apps.
+         *
+         * A resolved adapter fact on the state, like [storeName] and [versionHistorySupported],
+         * rather than something the screen computes: it joins the **store's** declaration, which
+         * only the registry has, with the **listing's**, which travels on the row — and two screens
+         * doing that join by hand would be two places for it to drift.
+         */
+        val modifiedBuild: ModifiedBuild = ModifiedBuild.NONE,
+        /**
+         * Whether this listing can be made the one this app updates from, and what it would cost.
+         *
+         * `null` where the offer makes no sense — the app is not installed through MultiStore, or
+         * this listing already **is** the channel. Not a disabled button in those cases: a greyed-out
+         * "update it from here" on the page one is already updated from is a control that has to be
+         * understood before it can be ignored.
+         */
+        val channelSwitch: ChannelSwitch? = null,
+        /**
          * Whether this store publishes a history, and what the screen is doing about it.
          *
          * [versionHistorySupported] is the adapter's `versionHistory` capability, and this is the first
@@ -292,11 +339,23 @@ class AppDetailViewModel @Inject constructor(
     private val installApp: InstallAppUseCase,
     private val uninstallApp: UninstallAppUseCase,
     private val registry: StoreRegistry,
+    private val pending: PendingSearch,
 ) : ViewModel() {
 
     private val route: AppDetailRoute = savedStateHandle.toRoute()
-    private val storeId: StoreId? = route.storeIdOrNull()
-    private val ref: StoreAppRef = route.appRef()
+    /**
+     * Which listing this screen is, read from the route.
+     *
+     * `internal` rather than private since 0.8.0: the comparison table is opened **for this
+     * listing**, and the screen would otherwise have to re-derive the pair from the loaded state —
+     * which is `null` in exactly the frames where the state has not arrived, i.e. the button would
+     * be dead precisely while the page is still filling in.
+     *
+     * `storeId` is nullable because a route can name a store this build does not have: a link from a
+     * version with one more adapter. That is not an error to draw, it is a page with nothing on it.
+     */
+    internal val storeId: StoreId? = route.storeIdOrNull()
+    internal val ref: StoreAppRef = route.appRef()
 
     private val storeName: String = storeId
         ?.let { registry.adapter(it)?.metadata?.displayName }
@@ -380,6 +439,11 @@ class AppDetailViewModel @Inject constructor(
                     detail = loaded.detail,
                     taxonomy = loaded.taxonomy,
                     storeName = storeName,
+                    modifiedBuild = registry.modifiedBuildOf(
+                        loaded.detail.listing.storeId,
+                        loaded.detail.listing.summary.declaredModified,
+                    ),
+                    channelSwitch = channelSwitchFor(loaded.detail),
                     install = installState.orDownloadInFlight(download),
                     verification = verified,
                     crossStore = visible.stores,
@@ -517,6 +581,71 @@ class AppDetailViewModel @Inject constructor(
      */
     fun storeDisplayName(storeId: StoreId): String =
         registry.adapter(storeId)?.metadata?.displayName ?: storeId.wireName
+
+    /**
+     * "Show me this publisher's other apps."
+     *
+     * It leaves a request rather than navigating, because navigating is the shell's job and the
+     * Search destination is a **tab**: giving its route an argument would give one tab two back-stack
+     * entries. See `PendingSearch`.
+     *
+     * The name comes from the listing and is used verbatim as the query. On the local index it is
+     * matched against `apps.developer_norm` exactly; on the other eight it is ordinary search text,
+     * and the search screen says so — a namesake is not the same person, and nothing in a result row
+     * can tell the two apart.
+     */
+    fun searchDeveloper(name: String) {
+        pending.request(PendingSearch.Request(query = name, byDeveloper = true))
+    }
+
+    /**
+     * Makes this listing the one the app updates from.
+     *
+     * It writes one column and touches nothing else: the app on the device stays as it is, and its
+     * **provenance** stays as it was, because where an APK came from is a fact and not a preference.
+     * What changes is which listing the next check reads.
+     */
+    fun switchUpdateChannel() {
+        val id = storeId ?: return
+        val switch = (uiState.value as? AppDetailUiState.Ready)?.channelSwitch ?: return
+        viewModelScope.launch { getDetail.setUpdateChannel(switch.packageName, id, ref) }
+    }
+
+    /**
+     * The offer, or `null` when there is nothing to offer.
+     *
+     * Three conditions, and each removes a different kind of nonsense:
+     *
+     *  - **a channel to move away from.** Without one this app was not installed through MultiStore,
+     *    and there is no row to write into;
+     *  - **it is not this listing already.** Offering to move to where one already is would be a
+     *    button that does nothing, on the page most likely to be open;
+     *  - **the package is known.** It is the key of the row being written, and it comes from the
+     *    channel rather than from this listing's summary — four stores of nine publish no package
+     *    name, and this offer must not vanish on exactly those.
+     */
+    private fun channelSwitchFor(detail: AppDetail): ChannelSwitch? {
+        val channel = detail.updateChannel ?: return null
+        val here = storeId ?: return null
+        if (channel.storeId == here && channel.ref == ref) return null
+        val packageName = detail.installed?.packageName
+            ?: detail.listing.summary.packageName
+            ?: return null
+
+        // The signer this listing would hand over: the offered version's if it names one, otherwise
+        // the one the store recommends for a fresh install. Both can be absent, and then there is
+        // nothing to compare and nothing to claim.
+        val offered = (detail.selection as? VersionSelection.Outcome.Offer)?.version?.signerSha256
+            ?: detail.listing.preferredSignerSha256
+        val installed = channel.installedSignerSha256
+
+        return ChannelSwitch(
+            packageName = packageName,
+            currentStoreName = registry.adapter(channel.storeId)?.metadata?.displayName
+                ?: channel.storeId.wireName,
+            signerConflict = offered != null && installed != null && offered != installed,
+        )
+    }
 
     /** "No, these are two different apps." It will not be proposed for this app again. */
     fun rejectMatch(listingId: Long) {

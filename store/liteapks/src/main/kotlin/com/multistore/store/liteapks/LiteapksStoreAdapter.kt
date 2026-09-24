@@ -156,6 +156,8 @@ class LiteapksStoreAdapter @Inject constructor(
         providesHash = HashAvailability.NONE,
         providesSignerFingerprint = false,
         supportsSplits = true,
+        redistributesModifiedBuilds = true,
+        openSourceOnly = false,
         downloadMode = DownloadMode.DIRECT,
         // Rung 0. Cloudflare **really does challenge** here — unlike pdalife, where it sits in
         // passive CDN mode — but it challenges whoever does not resemble a browser: with a Chrome

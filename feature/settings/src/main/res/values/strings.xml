@@ -57,6 +57,17 @@
     <string name="settings_stores_description">Which stores MultiStore searches. Turning one off hides it from results and stops every request to it.</string>
     <string name="settings_stores_choose_label">Choose the stores</string>
     <string name="settings_stores_active_count">%1$d of %2$d active</string>
+    <string name="settings_stores_search_label">Search stores</string>
+    <string name="settings_stores_search_clear">Clear the search</string>
+    <string name="settings_stores_tab_label">%1$s %2$d/%3$d</string>
+    <string name="settings_stores_search_empty_title">No store matches</string>
+    <string name="settings_stores_search_empty_message">No store in this tab has that in its name or address.</string>
+    <string name="settings_stores_select_all">Select them all</string>
+    <string name="settings_stores_deselect_all">Deselect them all</string>
+    <string name="settings_stores_tab_all">All</string>
+    <string name="settings_stores_tab_open_source">Open source</string>
+    <string name="settings_stores_tab_original">Original</string>
+    <string name="settings_stores_tab_modified">Modified</string>
     <string name="settings_stores_save">Save</string>
     <string name="settings_store_state_open">Temporarily unreachable — MultiStore will try again on its own.</string>
     <string name="settings_store_state_degraded">Responding, but its pages have changed: results may be incomplete.</string>
@@ -240,4 +251,10 @@
     <string name="settings_section_my_apps">My apps</string>
     <string name="settings_my_apps_sort_label">Order of the list</string>
     <string name="settings_my_apps_sort_description">How the apps you installed through MultiStore are arranged. It applies to the list only \u2014 it changes nothing about updates.</string>
+
+    <!-- The record of recent searches (0.8.0). Phrased as "do not keep", because the proto
+         field is negative: the zero value has to be the prudent behaviour, and here that is
+         remembering — one search costs up to nine requests to other people's sites. -->
+    <string name="settings_search_history_label">Do not keep recent searches</string>
+    <string name="settings_search_history_description">The empty search field offers back the last ten searches. Turning this on stops recording them and forgets the ones already there. They never leave the device.</string>
 </resources>

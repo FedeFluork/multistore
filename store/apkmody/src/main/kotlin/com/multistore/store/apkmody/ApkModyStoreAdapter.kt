@@ -121,6 +121,8 @@ class ApkModyStoreAdapter @Inject constructor(
         // split-container formats: the type is read from the file name, and declaring `false`
         // would be a promise the first container would break.
         supportsSplits = true,
+        redistributesModifiedBuilds = true,
+        openSourceOnly = false,
         downloadMode = DownloadMode.DIRECT,
         networkTier = NetworkTier.OKHTTP,
         userAgent = config.userAgent,

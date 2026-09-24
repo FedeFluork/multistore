@@ -169,6 +169,19 @@ data class An1Selectors(
     // empty-search fixture: zero occurrences, and no sidebar reusing the same markup — unlike
     // apkmirror, where 38 sidebar rows are identical to results.
     val searchItem: String = "div.item_app",
+    /**
+     * The subset of [searchItem] an1 marks as a rework.
+     *
+     * Measured on the committed fixture: `class="item_app mod"` on 5 rows of 10, `class="item_app"`
+     * on the other 5. It is the store's own markup and not a word read off a title, which is the
+     * only kind of declaration the badge accepts.
+     *
+     * It selects **rows**, not a marker inside one, because there is no marker inside one: the class
+     * is on the row element itself, and `HtmlPage` selects descendants. Matching them here and
+     * intersecting by ref is what that costs — one extra pass over a page already parsed, no new
+     * shared helper for a problem exactly one store has.
+     */
+    val searchModItem: String = "div.item_app.mod",
     val searchLink: String = ".cont .data .name a[href]",
     val searchIcon: String = ".img img[src]",
     val searchDeveloper: String = ".cont .data .developer",

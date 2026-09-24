@@ -59,4 +59,49 @@
     <string name="myapps_sort_updatable">Mises à jour en premier</string>
     <string name="myapps_sort_recent">Installées récemment</string>
     <string name="myapps_sort_store">Magasin d’origine</string>
+
+    <!-- The rework badge: five stores of nine redistribute APKs somebody other than the
+         developer has changed. The two labels are the two declarations that exist; the dialog says
+         what the pre-install check can and cannot prove about such a file. -->
+    <string name="modified_build_declared_label">Build modifiée</string>
+    <string name="modified_build_possible_label">Peut-être modifiée</string>
+    <string name="modified_build_badge_action">Ce que cela signifie</string>
+    <string name="modified_build_dialog_title">À propos de cette build</string>
+    <string name="modified_build_dialog_declared">%1$s indique que ce fichier est une version retravaillée : quelqu’un d’autre que le développeur a modifié l’application et l’a republiée.</string>
+    <string name="modified_build_dialog_possible">%1$s redistribue des applications retravaillées et ne dit pas si celle-ci l’est. Ce peut être la build du développeur, ou celle de quelqu’un d’autre.</string>
+    <string name="modified_build_dialog_verified">Ce que la vérification avant installation peut prouver : que le fichier est une archive valide et signée, que le nom du paquet correspond à celui déclaré par cette fiche et — là où le magasin publie une empreinte — que les octets sont ceux annoncés.</string>
+    <string name="modified_build_dialog_unverified">Ce qu’elle ne peut pas prouver : que l’application n’a pas été altérée par celui qui l’a republiée. Une version retravaillée n’a pas de signature du développeur d’origine à laquelle la comparer, il n’y a donc rien contre quoi la vérifier.</string>
+    <string name="modified_build_dialog_dismiss">J’ai compris</string>
+
+    <!-- A store's health, in a sentence (0.8.0). It lives here because two screens ask the
+         same question — Settings and the search's shortfall notice — and a `:feature:*`
+         never depends on another, so this is the only place they can share the wording. -->
+    <string name="store_diagnosis_state_ok">Ce magasin répond normalement.</string>
+    <string name="store_diagnosis_state_open">Ce magasin est en pause après des échecs répétés. Il sera réessayé tout seul.</string>
+    <string name="store_diagnosis_state_half_open">Ce magasin va être réessayé : la prochaine requête est un test.</string>
+    <string name="store_diagnosis_state_degraded">Ce magasin répond, mais ses pages ne se lisent pas comme prévu.</string>
+    <string name="store_diagnosis_failing_for">Il échoue depuis %1$s.</string>
+    <string name="store_diagnosis_last_success">Il a répondu pour la dernière fois il y a %1$s.</string>
+    <string name="store_diagnosis_never_answered">Il n’a jamais répondu sur cet appareil.</string>
+    <string name="store_diagnosis_fault_transient">Dernier incident : pas de connexion, un délai dépassé, ou une erreur du site. Cela se règle en général tout seul.</string>
+    <string name="store_diagnosis_fault_rate_limited">Dernier incident : le magasin a demandé à être interrogé moins souvent. Cela se règle tout seul, et attendre est la seule chose utile.</string>
+    <string name="store_diagnosis_fault_blocked">Dernier incident : le magasin a refusé la requête. Attendre n’y change rien, et insister aggrave la situation.</string>
+    <string name="store_diagnosis_fault_parse">Dernier incident : la page n’avait pas la forme attendue. Cela vient de l’application, pas du magasin : attendre n’y changera rien.</string>
+    <string name="store_diagnosis_parse_selectors">Parties illisibles : %1$s</string>
+    <string name="store_diagnosis_dismiss">Fermer</string>
+    <plurals name="store_diagnosis_days">
+        <item quantity="one">%1$d jour</item>
+        <item quantity="many">%1$d jours</item>
+        <item quantity="other">%1$d jours</item>
+    </plurals>
+    <plurals name="store_diagnosis_hours">
+        <item quantity="one">%1$d heure</item>
+        <item quantity="many">%1$d heures</item>
+        <item quantity="other">%1$d heures</item>
+    </plurals>
+    <plurals name="store_diagnosis_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="many">%1$d minutes</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
 </resources>

@@ -124,6 +124,8 @@ class FdroidStoreAdapter @Inject constructor(
         providesHash = HashAvailability.ALWAYS,
         providesSignerFingerprint = true,
         supportsSplits = false,
+        redistributesModifiedBuilds = false,
+        openSourceOnly = true,
         downloadMode = DownloadMode.DIRECT,
         networkTier = NetworkTier.OKHTTP,
         userAgent = config.userAgent,

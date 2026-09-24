@@ -18,6 +18,7 @@ import com.multistore.core.database.entity.StoreListingEntity
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.MatchMethod
 import com.multistore.core.model.StoreId
+import com.multistore.core.model.UsesPermission
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -58,6 +59,26 @@ data class ListingRow(
     @Embedded val listing: StoreListingEntity,
     @ColumnInfo(name = "icon_url") val iconUrl: String?,
 )
+
+/**
+ * A listing seen from the comparison table: how big its offered file is, and whether it was read.
+ *
+ * A projection rather than the whole entity, because the table draws nine rows and the entity
+ * carries a description, a summary and a "what's new" per row — text nobody on that screen reads.
+ */
+data class ComparableListing(
+    @ColumnInfo(name = "store_id") val storeId: StoreId,
+    @ColumnInfo(name = "store_app_ref") val ref: String,
+    @ColumnInfo(name = "ttl_seconds") val ttlSeconds: Long,
+    @ColumnInfo(name = "size_bytes") val sizeBytes: Long?,
+) {
+    /**
+     * `true` if this row came from reading the **listing**, not from a result list.
+     *
+     * See `comparableListings`: a discovered row is written with a TTL of zero on purpose.
+     */
+    val listingRead: Boolean get() = ttlSeconds > 0
+}
 
 /**
  * A listing's row identity: its id and the aggregated app's key.
@@ -258,6 +279,71 @@ interface CatalogDao {
     suspend fun listingTitle(listingId: Long): String?
 
     /**
+     * What the comparison table needs and a listing row does not carry: the file size, and whether
+     * the row was ever read as a **listing** at all.
+     *
+     * ### Why the size is a sub-query and not a join
+     *
+     * A join over `app_versions` would return one line per version — 31 for a liteapks listing — and
+     * the caller would fold them back down. The correlated sub-query does the fold in SQLite and
+     * returns one row per listing, which is also what makes the result usable as a map.
+     *
+     * ### The size is the highest version's, even when that one has none
+     *
+     * There is deliberately **no** `size_bytes IS NOT NULL` in the sub-query, and the first draft had
+     * one. With it, a listing whose newest version publishes no size falls back to an older version
+     * that does — and the table would then print a number next to a version name it does not belong
+     * to. apkmody makes that concrete: it rounds its sizes (150.98 MB declared against 158,310,989
+     * real bytes) and its adapter therefore leaves the field `null` on purpose. An empty cell is the
+     * honest answer; somebody else's number is not.
+     *
+     * `version_code IS NULL` first in the ordering is written out, and it is **not** what carries the
+     * weight — measured rather than assumed: SQLite already sorts `NULL` last under `DESC`, so
+     * removing the clause changes nothing and an injection against it stays green. It stays because
+     * four stores of nine publish no version code and the intent is worth stating; what actually
+     * decides is `DESC`, and `ASC` in its place does turn the test red.
+     *
+     * ### Keyed by `(store, ref)` and not by listing id, and that was a defect
+ *
+ * The first version took listing ids, which is the natural key of the table and the wrong one here.
+ * A comparison row that cross-store matching found in the **last search's results** rather than in
+ * `store_listings` carries no id — `compose` builds it straight from the remembered summary — so its
+ * size could not be looked up. That was harmless while the table fetched nothing, and became a
+ * defect the moment it did: the listing was read, saved and had a size, and the cell went back to
+ * saying "not read yet" because the row asking had no id to ask with. Measured on AN1, which
+ * publishes no package name and therefore rarely shares the anchor's `app_key`.
+ *
+ * `(store, ref)` is how the rest of this screen identifies a row, so this is also the one that
+ * cannot drift from it. The filter is on the ref alone and the pair is matched by the caller: a ref
+ * is a store's own string and two stores can in principle mint the same one, which is exactly the
+ * confusion the pair prevents.
+ *
+ * ### `ttl_seconds` is the honest answer to a cell with nothing in it
+     *
+     * A row born from a **result list** carries `ttl_seconds = 0` — see `toDiscoveredRows`, where
+     * that zero is documented as "born already expired", because a list is not a listing. Such a row
+     * has no versions and therefore no size, and printing "this store does not publish it" there
+     * would be a claim about the store when the truth is that nobody has asked it yet. The two are
+     * different sentences and this column is what tells them apart.
+     */
+    @Query(
+        """
+        SELECT l.store_id AS store_id,
+               l.store_app_ref AS store_app_ref,
+               l.ttl_seconds AS ttl_seconds,
+               (
+                   SELECT v.size_bytes FROM app_versions AS v
+                   WHERE v.listing_id = l.id
+                   ORDER BY v.version_code IS NULL, v.version_code DESC
+                   LIMIT 1
+               ) AS size_bytes
+        FROM store_listings AS l
+        WHERE l.store_app_ref IN (:refs)
+        """,
+    )
+    suspend fun comparableListings(refs: List<String>): List<ComparableListing>
+
+    /**
      * The icons the catalogue already knows for these listings.
      *
      * Used by search, on the rows a store does not supply an icon for — on apkmody, all of them.
@@ -301,6 +387,37 @@ interface CatalogDao {
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertVersions(versions: List<AppVersionEntity>)
+
+    /**
+     * Records what one build asks the operating system for, learned from the archive itself.
+     *
+     * ### An `UPDATE` of one column, not an upsert of the row
+     *
+     * Everything else about that version — its size, its hash, its channel — came from the store and
+     * is the store's to say. This one column came from the file, and it is the only thing this write
+     * is entitled to change: an upsert would let a read of the APK quietly overwrite fields the
+     * catalogue holds for a reason, and the two sources would take turns winning.
+     *
+     * Nothing is written where the version is not (or no longer) in the catalogue: a `WHERE` that
+     * matches nothing is the right answer, because a permission list belonging to a row that does
+     * not exist would be read by nobody.
+     *
+     * @return how many rows changed — zero is ordinary, not a failure.
+     */
+    @Query(
+        """
+        UPDATE app_versions SET permissions = :permissions
+        WHERE version_ref = :versionRef AND listing_id IN (
+            SELECT id FROM store_listings WHERE store_id = :storeId AND store_app_ref = :ref
+        )
+        """,
+    )
+    suspend fun recordPermissions(
+        storeId: StoreId,
+        ref: String,
+        versionRef: String,
+        permissions: List<UsesPermission>,
+    ): Int
 
     /**
      * Adds versions to a listing **without deleting the ones already there**.
@@ -465,6 +582,7 @@ interface CatalogDao {
           AND (l.title_norm LIKE '%' || :query || '%' OR l.store_app_ref LIKE '%' || :query || '%')
           AND (:kind IS NULL OR l.content_kind = :kind)
           AND (:minRating IS NULL OR (l.rating IS NOT NULL AND l.rating >= :minRating))
+          AND (:developer IS NULL OR a.developer_norm = :developer)
         ORDER BY
           CASE WHEN :orderByName THEN 0
                WHEN l.title_norm = :query THEN 0
@@ -482,6 +600,14 @@ interface CatalogDao {
         kind: ContentKind? = null,
         minRating: Float? = null,
         orderByName: Boolean = false,
+        /**
+         * The publisher, already normalised, or `null` for "any".
+         *
+         * Compared against `apps.developer_norm`, which is why it is the aggregated app's column and
+         * not the listing's `author_name`: the normalisation is `TextNormalizer`'s and is applied
+         * once, when the row is written.
+         */
+        developer: String? = null,
     ): List<ListingRow>
 
     /**
@@ -493,11 +619,13 @@ interface CatalogDao {
      */
     @Query(
         """
-        SELECT COUNT(*) FROM store_listings
-        WHERE store_id = :storeId
-          AND (title_norm LIKE '%' || :query || '%' OR store_app_ref LIKE '%' || :query || '%')
-          AND (:kind IS NULL OR content_kind = :kind)
-          AND (:minRating IS NULL OR (rating IS NOT NULL AND rating >= :minRating))
+        SELECT COUNT(*) FROM store_listings AS l
+        LEFT JOIN apps AS a ON a.app_key = l.app_key
+        WHERE l.store_id = :storeId
+          AND (l.title_norm LIKE '%' || :query || '%' OR l.store_app_ref LIKE '%' || :query || '%')
+          AND (:kind IS NULL OR l.content_kind = :kind)
+          AND (:minRating IS NULL OR (l.rating IS NOT NULL AND l.rating >= :minRating))
+          AND (:developer IS NULL OR a.developer_norm = :developer)
         """,
     )
     suspend fun searchCount(
@@ -505,6 +633,7 @@ interface CatalogDao {
         query: String,
         kind: ContentKind? = null,
         minRating: Float? = null,
+        developer: String? = null,
     ): Int
 
     /** Recently updated apps: feeds Home without a single network request. */

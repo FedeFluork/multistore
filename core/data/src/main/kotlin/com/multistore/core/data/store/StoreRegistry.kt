@@ -1,5 +1,6 @@
 package com.multistore.core.data.store
 
+import com.multistore.core.model.ModifiedBuild
 import com.multistore.core.model.StoreId
 import com.multistore.store.api.IndexedStoreAdapter
 import com.multistore.store.api.SearchSource
@@ -52,4 +53,26 @@ class StoreRegistry @Inject constructor(
         as? IndexedStoreAdapter
 
     val indexedStores: List<IndexedStoreAdapter> = all.mapNotNull { indexed(it.id) }
+
+    /**
+     * What to say about one listing's provenance: developer build, rework, or unknown.
+     *
+     * It lives here, in one place with three callers — the search row, the listing header and the
+     * comparison table — rather than in each of them, because it is a join of two facts that sit in
+     * two different modules: the **store's** declaration, which only an adapter has, and the
+     * **listing's**, which travels on the row through Room. Written out at each call site it would
+     * be three copies of a `when`, and the first to drift would drift silently: a badge that stops
+     * appearing looks exactly like a store that stopped publishing reworks.
+     *
+     * A store with no wired adapter falls back to the row's own flag alone. That is not a
+     * hypothetical branch — `adapter` is nullable because `:tools:index` and the tests build partial
+     * registries — and it is the prudent reading: what the row says is kept, what the missing
+     * adapter would have added is not invented.
+     */
+    fun modifiedBuildOf(storeId: StoreId, declaredModified: Boolean): ModifiedBuild =
+        ModifiedBuild.of(
+            storeRedistributesModifiedBuilds =
+                byId[storeId]?.capabilities?.redistributesModifiedBuilds == true,
+            listingDeclaredModified = declaredModified,
+        )
 }

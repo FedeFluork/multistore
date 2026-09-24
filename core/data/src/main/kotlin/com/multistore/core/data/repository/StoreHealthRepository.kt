@@ -1,6 +1,8 @@
 package com.multistore.core.data.repository
 
+import com.multistore.core.common.net.StoreDiagnosis
 import com.multistore.core.common.net.StoreHealth
+import com.multistore.core.model.StoreCategory
 import com.multistore.core.model.StoreId
 import kotlin.time.Instant
 import com.multistore.store.api.StoreError
@@ -49,6 +51,14 @@ data class StoreEntry(
     val displayName: String,
     val host: String,
     val enabled: Boolean,
+    /**
+     * Which of the three kinds of source this is.
+     *
+     * Resolved from the adapter's own declarations rather than carried in the row: it is a property
+     * of the store, not of the user's choice, and a column would be a copy that a new build could
+     * contradict.
+     */
+    val category: StoreCategory,
     val health: StoreHealth,
 )
 
@@ -70,6 +80,18 @@ interface StoreHealthRepository {
     fun observeStores(): Flow<List<StoreEntry>>
 
     suspend fun health(storeId: StoreId): StoreHealth
+
+    /**
+     * Why this store is not answering, and for how long.
+     *
+     * Read on demand rather than observed: it is opened from a tap, on one store, and a flow per
+     * store would keep nine queries warm to answer a question nobody has asked yet.
+     *
+     * It reads `health_events`, which has recorded faults since M0 and which, inside the app, came
+     * down to one word beside the store's name — `OPEN` or `DEGRADED`. That word cannot say whether
+     * the trouble is an hour old or a week old, and those two lead to different decisions.
+     */
+    suspend fun diagnosis(storeId: StoreId): StoreDiagnosis
 
     /**
      * `true` if a call can be attempted now.

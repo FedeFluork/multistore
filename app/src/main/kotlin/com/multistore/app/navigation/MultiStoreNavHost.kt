@@ -16,6 +16,10 @@ import com.multistore.feature.home.HomeScreen
 import com.multistore.feature.myapps.MyAppsScreen
 import com.multistore.feature.search.SearchScreen
 import com.multistore.feature.settings.SettingsScreen
+import com.multistore.feature.settings.StoreChooserRoute
+import com.multistore.feature.settings.StoreChooserScreen
+import com.multistore.feature.appdetail.StoreComparisonRoute
+import com.multistore.feature.appdetail.StoreComparisonScreen
 import com.multistore.feature.storelisting.StoreListingRoute
 import com.multistore.feature.storelisting.StoreListingScreen
 import com.multistore.feature.webviewdownload.WebViewDownloadRoute
@@ -54,12 +58,46 @@ fun MultiStoreNavHost(
         composable<MyAppsRoute> {
             MyAppsScreen(onAppClick = navController::navigateToAppDetail)
         }
-        composable<DownloadsRoute> { DownloadsScreen() }
-        composable<SettingsRoute> { SettingsScreen() }
+        composable<DownloadsRoute> {
+            DownloadsScreen(
+                // Not `navigateToAnotherListing`: that one **replaces**, because it exists for
+                // hopping between two stores' pages of the same app. From here the listing is a
+                // detour — the reader came to restart a transfer and is being sent somewhere to
+                // finish it — so it stacks, and Back returns to the row they were looking at.
+                onOpenListing = navController::navigateToAppDetail,
+            )
+        }
+        composable<SettingsRoute> {
+            SettingsScreen(
+                // Stacks rather than replaces: the chooser is a detour from Settings and Back has to
+                // return to the row it was opened from, halfway down a long screen.
+                onOpenStoreChooser = { navController.navigate(StoreChooserRoute) { launchSingleTop = true } },
+            )
+        }
+        composable<StoreChooserRoute> {
+            StoreChooserScreen(onBack = { navController.popBackStack() })
+        }
         composable<AppDetailRoute> {
             AppDetailScreen(
                 onBack = { navController.popBackStack() },
                 onUserAssistedDownload = navController::navigateToWebViewDownload,
+                onOpenListing = navController::navigateToAnotherListing,
+                onCompareStores = navController::navigateToStoreComparison,
+                // The tab, exactly as the bottom bar reaches it: `saveState`/`restoreState` on one
+                // entry. What to search for was left in `PendingSearch` by the ViewModel — a query
+                // in the route would give this tab a second back-stack entry, and the bar would then
+                // restore whichever of the two it happened to have.
+                onOpenSearch = { navController.navigateToTopLevel(TopLevelDestination.SEARCH) },
+            )
+        }
+        composable<StoreComparisonRoute> {
+            StoreComparisonScreen(
+                onBack = { navController.popBackStack() },
+                // Opening a store from the table goes through the **same** replacement rule as the
+                // listing's own cross-store jumps: `popUpTo<AppDetailRoute>` climbs to the nearest
+                // match, which is the listing this table was opened from, so the table closes behind
+                // the reader instead of sitting under the page it just sent them to. Without it,
+                // comparing and then choosing would leave a stale table one Back away.
                 onOpenListing = navController::navigateToAnotherListing,
             )
         }
@@ -135,6 +173,16 @@ internal fun NavHostController.navigateToWebViewDownload(request: UserAssistedRe
             hint = request.hint,
         ),
     ) { launchSingleTop = true }
+}
+
+/**
+ * From a listing to the table that puts every store's answer about it side by side.
+ *
+ * `launchSingleTop`: the button that opens it sits in a scrolling page and a double tap must not
+ * push two identical tables, which would then need closing twice.
+ */
+internal fun NavHostController.navigateToStoreComparison(storeId: StoreId, ref: StoreAppRef) {
+    navigate(StoreComparisonRoute.of(storeId, ref)) { launchSingleTop = true }
 }
 
 internal fun NavHostController.navigateToAppDetail(storeId: StoreId, ref: StoreAppRef) {

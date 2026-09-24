@@ -29,7 +29,7 @@
     <string name="downloads_status_progress">%1$s of %2$s</string>
     <string name="downloads_status_progress_unknown">%1$s downloaded</string>
     <string name="downloads_status_queued">Waiting to start</string>
-    <string name="downloads_status_paused">Paused · resume it from the app page</string>
+    <string name="downloads_status_paused">Paused · what came down is kept</string>
     <string name="downloads_status_verifying">Checking the file…</string>
     <string name="downloads_status_failed">The download failed.</string>
     <string name="downloads_status_installed">From %1$s · installed</string>
@@ -40,4 +40,12 @@
     <string name="downloads_open">Open</string>
     <string name="downloads_share_text">%1$s, downloaded from %2$s with MultiStore.</string>
     <string name="downloads_share_hash">SHA-256 verified on download: %1$s</string>
+
+    <!-- Restarting a stopped transfer (0.8.0). "Resume" re-resolves the address rather
+         than reusing the stored one — an apkcombo URL is signed for four hours — and where
+         the store wants a human tap the row says so and points at the app's page instead of
+         failing. -->
+    <string name="downloads_resume">Resume</string>
+    <string name="downloads_open_listing">Go to the app</string>
+    <string name="downloads_status_needs_listing">This one has to be finished on the app’s page: the store asks for a tap of yours, or the signature does not match the installed app.</string>
 </resources>

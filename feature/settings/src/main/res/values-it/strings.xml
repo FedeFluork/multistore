@@ -54,6 +54,17 @@
     <string name="settings_stores_description">Quali store interroga MultiStore. Spegnerne uno lo nasconde dai risultati e ferma ogni richiesta verso di lui.</string>
     <string name="settings_stores_choose_label">Scegli gli store</string>
     <string name="settings_stores_active_count">%1$d attivi su %2$d</string>
+    <string name="settings_stores_search_label">Cerca fra gli store</string>
+    <string name="settings_stores_search_clear">Cancella la ricerca</string>
+    <string name="settings_stores_tab_label">%1$s %2$d/%3$d</string>
+    <string name="settings_stores_search_empty_title">Nessuno store corrisponde</string>
+    <string name="settings_stores_search_empty_message">Nessuno store di questa scheda ha quel testo nel nome o nell’indirizzo.</string>
+    <string name="settings_stores_select_all">Selezionali tutti</string>
+    <string name="settings_stores_deselect_all">Deselezionali tutti</string>
+    <string name="settings_stores_tab_all">Tutti</string>
+    <string name="settings_stores_tab_open_source">Open source</string>
+    <string name="settings_stores_tab_original">Originali</string>
+    <string name="settings_stores_tab_modified">Modificati</string>
     <string name="settings_stores_save">Salva</string>
     <string name="settings_store_state_open">Temporaneamente irraggiungibile: MultiStore riprovera\u00e0 da solo.</string>
     <string name="settings_store_state_degraded">Risponde, ma le sue pagine sono cambiate: i risultati possono essere incompleti.</string>
@@ -242,4 +253,10 @@
     <string name="settings_section_my_apps">Le mie app</string>
     <string name="settings_my_apps_sort_label">Ordine dell\u2019elenco</string>
     <string name="settings_my_apps_sort_description">Come sono disposte le app che hai installato con MultiStore. Vale solo per l\u2019elenco: non cambia niente degli aggiornamenti.</string>
+
+    <!-- The record of recent searches (0.8.0). Phrased as "do not keep", because the proto
+         field is negative: the zero value has to be the prudent behaviour, and here that is
+         remembering — one search costs up to nine requests to other people's sites. -->
+    <string name="settings_search_history_label">Non tenere le ricerche recenti</string>
+    <string name="settings_search_history_description">Il campo di ricerca vuoto ripropone le ultime dieci ricerche. Accendendo questa voce smette di registrarle e dimentica quelle già presenti. Non escono mai dal dispositivo.</string>
 </resources>

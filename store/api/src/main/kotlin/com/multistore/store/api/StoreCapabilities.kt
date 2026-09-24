@@ -26,6 +26,51 @@ data class StoreCapabilities(
     val providesHash: HashAvailability,
     val providesSignerFingerprint: Boolean,
     val supportsSplits: Boolean,
+    /**
+     * `true` if this source redistributes APKs somebody other than the developer has reworked.
+     *
+     * Five of the nine: apkmody, modyolo, an1, pdalife, liteapks. It is a fact about the **store**,
+     * not about a file, and it is what lets a listing say something before a byte is downloaded —
+     * until now the only place it was written was the title, in the store's own words.
+     *
+     * ### What it costs the user, and why it is not a warning
+     *
+     * It is the same limit `PreInstallVerifier` already declares: for a rework there is no original
+     * developer signature to compare against, so the pipeline protects against the package being
+     * **substituted** and not against the archive being **tampered with upstream**. The badge exists
+     * to say that in a sentence, at the moment the choice between two stores is made, instead of
+     * after the download.
+     *
+     * ### Only one direction of this is checkable, and the contract test checks that one
+     *
+     * If any fixture row comes back with [StoreListingSummary.declaredModified], this must be
+     * `true`: an adapter cannot mark a single listing as a rework while denying that its store
+     * publishes any. The converse — a store that redistributes reworks and marks none of them —
+     * cannot be read off a fixture, because "no row is marked" is exactly what apkmody and liteapks
+     * look like. That half is a declaration, like every other capability here, and the honesty rule
+     * that governs the rest of this class governs it too.
+     */
+    val redistributesModifiedBuilds: Boolean,
+    /**
+     * `true` if this source distributes **only** free and open-source software.
+     *
+     * One of the nine: f-droid. It is a fact about the store's catalogue and not about any one
+     * listing, which is why it sits here beside [redistributesModifiedBuilds] rather than on a
+     * summary — and it is the other half of the same question a person asks when choosing where to
+     * install from: *who built this file, and can anybody check?*
+     *
+     * ### It is a declaration, and it is not checkable from a fixture
+     *
+     * Like most of this class. There is no property of a downloaded page that says "everything this
+     * store publishes is open source": the claim is about a catalogue, and a fixture is one page of
+     * it. The honesty rule that governs the rest of the class governs this too — declaring it
+     * wrongly would file a store under a heading that promises something it does not.
+     *
+     * It is deliberately **not** the negation of [redistributesModifiedBuilds]. A store can do
+     * neither, and three of the nine do exactly that: apkcombo, apkmirror and uptodown mirror the
+     * developer's own builds without being open-source-only.
+     */
+    val openSourceOnly: Boolean,
     val downloadMode: DownloadMode,
     val networkTier: NetworkTier,
     /**

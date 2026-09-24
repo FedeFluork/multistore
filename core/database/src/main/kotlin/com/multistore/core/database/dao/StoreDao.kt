@@ -55,6 +55,51 @@ interface StoreDao {
     @Query("SELECT * FROM health_events ORDER BY at DESC LIMIT :limit")
     suspend fun recentEvents(limit: Int = 200): List<HealthEventEntity>
 
+    /**
+     * The most recent fault recorded for one store, if there is one.
+     *
+     * ### The kinds are a parameter, and that is not indirection
+     *
+     * `health_events.kind` is not one vocabulary but three: the `FailureKind` names, the
+     * `"request"` rows the diagnostic log writes when it is switched on, and the odd bespoke marker
+     * like `"index_stale"`. A `!= 'success'` filter would look right and be wrong — there is no
+     * `success` kind — and would start returning the log's own rows the day somebody turned
+     * diagnostics on. Passing the list from the caller means the caller's enum decides, so a kind
+     * added later is included without anybody having to remember this query.
+     */
+    @Query(
+        """
+        SELECT * FROM health_events
+        WHERE store_id = :storeId AND kind IN (:kinds)
+        ORDER BY at DESC LIMIT 1
+        """,
+    )
+    suspend fun lastFailure(storeId: StoreId, kinds: List<String>): HealthEventEntity?
+
+    /**
+     * When the current run of failures began: the **earliest** failure since the last success.
+     *
+     * It is what turns "this store is not answering" into something a person can act on. "It has
+     * been failing for ten minutes" is worth waiting out; "since last Tuesday" is worth switching
+     * the store off — and until now the screen could say neither, only `OPEN` or `DEGRADED`.
+     *
+     * `:since` is the last success, or zero where there has never been one. Anchoring on the last
+     * success rather than counting backwards from now is what makes it a **run**: a store that
+     * answered an hour ago and broke since is not a store that has been broken all week, even
+     * though a week-old failure is still in the table.
+     */
+    @Query(
+        """
+        SELECT MIN(at) FROM health_events
+        WHERE store_id = :storeId AND kind IN (:kinds) AND at > :since
+        """,
+    )
+    suspend fun failingSince(
+        storeId: StoreId,
+        kinds: List<String>,
+        since: kotlin.time.Instant,
+    ): kotlin.time.Instant?
+
     /** Old events serve nobody and the diagnostics are local: they are pruned. */
     @Query("DELETE FROM health_events WHERE at < :before")
     suspend fun pruneEventsBefore(before: kotlin.time.Instant)

@@ -91,6 +91,12 @@ internal class PdalifeDetailParser(private val config: PdalifeConfig) {
                     ?.filter(Char::isDigit)
                     ?.toIntOrNull(),
                 lastUpdated = versions.firstOrNull()?.publishedAt,
+                // pdalife names the rework on the file row itself ("Money Mod"). It is read from
+                // the whole page and not per version because the badge is a statement about the
+                // **listing**: a page offering one original file and one MOD is a page from which a
+                // rework can be installed, and saying nothing there would be the reassuring answer
+                // to a question nobody asked.
+                declaredModified = document.has(selectors.versionFileMod),
             )
 
             StoreListingDetail(

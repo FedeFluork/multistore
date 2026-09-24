@@ -148,6 +148,8 @@ class PdalifeStoreAdapter @Inject constructor(
         providesHash = HashAvailability.NONE,
         providesSignerFingerprint = false,
         supportsSplits = true,
+        redistributesModifiedBuilds = true,
+        openSourceOnly = false,
         downloadMode = DownloadMode.USER_ASSISTED_ONLY,
         // Search and listings are fetched with OkHttp with no obstacle at all: Cloudflare is there
         // (`server: cloudflare`, `cf-ray`) but in passive CDN mode, no challenge on any read. The

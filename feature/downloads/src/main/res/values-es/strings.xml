@@ -29,7 +29,7 @@
     <string name="downloads_status_progress">%1$s de %2$s</string>
     <string name="downloads_status_progress_unknown">%1$s descargados</string>
     <string name="downloads_status_queued">Esperando para empezar</string>
-    <string name="downloads_status_paused">En pausa · reanúdalo desde la ficha de la app</string>
+    <string name="downloads_status_paused">En pausa · lo que se descargó se conserva</string>
     <string name="downloads_status_verifying">Comprobando el archivo…</string>
     <string name="downloads_status_failed">La descarga falló.</string>
     <string name="downloads_status_installed">De %1$s · instalada</string>
@@ -40,4 +40,12 @@
     <string name="downloads_open">Abrir</string>
     <string name="downloads_share_text">%1$s, descargada de %2$s con MultiStore.</string>
     <string name="downloads_share_hash">SHA-256 verificado al descargar: %1$s</string>
+
+    <!-- Restarting a stopped transfer (0.8.0). "Resume" re-resolves the address rather
+         than reusing the stored one — an apkcombo URL is signed for four hours — and where
+         the store wants a human tap the row says so and points at the app's page instead of
+         failing. -->
+    <string name="downloads_resume">Reanudar</string>
+    <string name="downloads_open_listing">Ir a la aplicación</string>
+    <string name="downloads_status_needs_listing">Este hay que terminarlo desde la ficha de la aplicación: la tienda pide que toques tú, o la firma no coincide con la de la aplicación instalada.</string>
 </resources>

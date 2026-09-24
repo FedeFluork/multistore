@@ -2,6 +2,7 @@ package com.multistore.core.data.repository
 
 import android.content.Intent
 import com.multistore.core.installer.verify.PreInstallVerifier
+import com.multistore.core.model.UsesPermission
 import com.multistore.core.model.InstallerAvailability
 import com.multistore.core.model.InstallerKind
 import com.multistore.core.model.Sha256
@@ -131,7 +132,28 @@ sealed interface InstallStep {
      * of 9), and the same where it publishes no hash — and the difference has to be told to the
      * user instead of being left inside an object nobody reads.
      */
-    data class Verified(val outcome: PreInstallVerifier.VerificationOutcome.Ok) : InstallStep
+    data class Verified(
+        val outcome: PreInstallVerifier.VerificationOutcome.Ok,
+        /**
+         * What the archive asks the operating system for, or `null` if its manifest could not be
+         * read.
+         *
+         * ### It rides on this step because this is the only moment it exists
+         *
+         * The eight scraped stores publish nothing about permissions, so the only place the answer
+         * lives is the file — and the file exists between the verification passing and the session
+         * being committed. Reading it here and letting it travel out means the catalogue learns it
+         * once and the listing has it from then on, including before the next download.
+         *
+         * It is **not** a gate. Nothing about this list refuses an installation: it refuses nothing
+         * and tells the reader something, which is why an unreadable manifest is `null` and the
+         * pipeline carries on. The checks that do refuse are all in [outcome].
+         *
+         * The empty list is a real and common answer — "this build asks for nothing" — and must not
+         * be confused with `null`. See `AppVersion.permissions`.
+         */
+        val permissions: List<UsesPermission>? = null,
+    ) : InstallStep
 
     data class Writing(val bytesWritten: Long, val bytesTotal: Long) : InstallStep
 

@@ -103,6 +103,24 @@ data class DownloadItem(
         get() = state == DownloadState.QUEUED || state == DownloadState.RUNNING
 
     /**
+     * The transfer stopped and can be started again.
+     *
+     * ### Why the whole of `PAUSED`, and not only the rows with a partial file
+     *
+     * A paused row **with** a file is the one this button was asked for: the megabytes are already
+     * paid, and until now the only thing this screen could do with them was throw them away. A
+     * paused row **without** one is the case that had no button at all — not even Delete, which is
+     * gated on there being a file — so it sat here permanently with nothing that could be done to
+     * it. Restarting is exactly what it needs, and excluding it would leave the dead end this pair
+     * of buttons exists to close.
+     *
+     * The other states are all wrong for it and each for its own reason: `QUEUED` and `RUNNING` are
+     * already moving, `READY` has a whole file and offers Install, `INSTALLING` is being read by a
+     * `PackageInstaller` session right now, and a terminal row is history.
+     */
+    val resumable: Boolean get() = state == DownloadState.PAUSED
+
+    /**
      * There is a file to throw away and nothing is touching it.
      *
      * The paused half is what keeps [cancellable] from creating a dead end: cancelling parks the row
@@ -138,6 +156,22 @@ sealed interface RowInstallState {
     data object Working : RowInstallState
 
     data class Failed(val error: AppError) : RowInstallState
+
+    /**
+     * This one cannot be finished from here: it needs the app's page.
+     *
+     * Two things arrive at it, and both are real. **A download that needs a human tap** — uptodown
+     * and pdalife resolve their file behind a Turnstile or a reCAPTCHA — because the WebView that
+     * carries that out is reachable from the listing and not from a list of rows. And **a signature
+     * conflict**, whose only way through is uninstalling and losing the app's data: that is a
+     * decision, and it is taken on the page that can explain what is being given up, not under a
+     * one-line row.
+     *
+     * It is not [Failed]: nothing went wrong, and an error's wording would send the user looking for
+     * a fault that is not there. The row says where to go, which is what the restart could not do
+     * for them.
+     */
+    data object NeedsListing : RowInstallState
 
     /**
      * The pre-install verification refused the file, or the container could not be used.
@@ -265,6 +299,30 @@ class DownloadsViewModel @Inject constructor(
     }
 
     /**
+     * Starts a stopped transfer again.
+     *
+     * It goes through [InstallAppUseCase.restart], which **re-resolves the address** rather than
+     * reusing the stored one. That is the difference from [install] and it is not a detail: an
+     * apkcombo URL carries an R2 signature valid for four hours, so continuing a download paused
+     * overnight with the old address is a guaranteed 403 — which would reach the user as "this store
+     * is down" about a store that is fine.
+     *
+     * Two outcomes this screen cannot carry to the end reach [RowInstallState.NeedsListing] instead
+     * of an error: a download needing a human tap, and a signature conflict. Both are answered on
+     * the app's page, and the row says so.
+     */
+    fun restart(item: DownloadItem) {
+        if (jobs[item.id]?.isActive == true) return
+        installs.value += item.id to RowInstallState.Working
+        jobs[item.id] = viewModelScope.launch {
+            installApp.restart(storeId = item.storeId, ref = item.ref, downloadId = item.id)
+                .collect { step -> apply(item.id, step) }
+            if (installs.value[item.id] is RowInstallState.Working) installs.value -= item.id
+            jobs -= item.id
+        }
+    }
+
+    /**
      * Stops a transfer, at the user's request.
      *
      * It goes through [InstallAppUseCase.cancelDownload] — the same call the app's page makes — and
@@ -334,9 +392,17 @@ class DownloadsViewModel @Inject constructor(
             InstallProgressStep.Incompatible ->
                 installs.value += id to RowInstallState.Failed(AppError.NotFound)
 
-            // Resolving, downloading, the assisted path, a signature conflict: none of them can be
-            // reached from here — the file is on disk and `resume` skips resolution — and inventing
-            // a state for them would be drawing something that never happens.
+            // The two outcomes `restart` can reach and `resume` cannot, because `restart` resolves
+            // again. Neither is a failure and neither can be finished here: the assisted path needs
+            // a real tap on a page this screen does not host, and a signature conflict needs a
+            // decision about losing an app's data. Both are on the listing.
+            is InstallProgressStep.UserAssistedDownload ->
+                installs.value += id to RowInstallState.NeedsListing
+            is InstallProgressStep.SignerConflict ->
+                installs.value += id to RowInstallState.NeedsListing
+
+            // Resolving and downloading: the row is already showing "working", and the progress bar
+            // beside it is fed by Room rather than by this flow.
             else -> Unit
         }
     }

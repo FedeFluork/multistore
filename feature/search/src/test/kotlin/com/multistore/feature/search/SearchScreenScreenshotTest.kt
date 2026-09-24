@@ -8,9 +8,11 @@ import com.multistore.core.data.repository.StoreShortfall
 import com.multistore.core.model.AggregatedApp
 import com.multistore.core.model.AggregatedListing
 import com.multistore.core.model.LocalizedText
+import com.multistore.core.model.ModifiedBuild
 import com.multistore.core.model.ResultOrigin
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.StoreCategory
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
 import com.multistore.core.model.ThemeMode
@@ -39,6 +41,43 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
 
     @Test
     fun darkTheme() = capture(SCREEN_NAME, ThemeMode.DARK) { Content() }
+
+    /**
+     * The empty field, with the last searches under it.
+     *
+     * It is a state of this screen and not a variant, and it is the one seen **most**: every opening
+     * after the first starts here. Until 0.8.0 it was a sentence explaining what the screen is for,
+     * which is worth reading once; the golden holds the list that replaced it, including the two
+     * targets per row — the row runs the search, the X forgets that one entry — and the hollow
+     * "forget all" that is the only destructive control on it.
+     */
+    @Test
+    fun recentLight() = capture(RECENT_SCREEN_NAME, ThemeMode.LIGHT) { Recent() }
+
+    @Test
+    fun recentDark() = capture(RECENT_SCREEN_NAME, ThemeMode.DARK) { Recent() }
+
+    @Composable
+    private fun Recent() {
+        SearchScreen(
+            uiState = SearchUiState.Idle(),
+            preferredLanguageTags = listOf("en"),
+            storeDisplayName = { it.wireName },
+            modifiedBuildOf = { _, _ -> ModifiedBuild.NONE },
+            onQueryChange = {},
+            onAppClick = { _, _ -> },
+            onLoadMore = {},
+            onRetry = {},
+            filters = SearchFilterState(),
+            query = "",
+            onContentKindChange = {},
+            onMinRatingChange = {},
+            onSortChange = {},
+            onStoreToggle = { _, _ -> },
+            onResetFilters = {},
+            history = listOf("telegram", "firefox focus", "antennapod"),
+        )
+    }
 
     /**
      * The filter panel **open**, which is a state of the screen and not a variant.
@@ -98,6 +137,26 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
                             ),
                         ),
                     ),
+                    // A third row for the rework badge, and it has to be a row rather than a
+                    // component golden: what only this picture can catch is that the chip sits in
+                    // the row's supporting column without pushing the summary out or wrapping the
+                    // line. an1 is the store that marks single listings — `class="item_app mod"` on
+                    // five rows out of ten — so `declaredModified` here is what its parser really
+                    // produces and not an invented flag.
+                    AggregatedApp(
+                        appKey = "sig:0011223344556677",
+                        listings = listOf(
+                            listing(
+                                StoreId.AN1,
+                                "7112-blockman-go",
+                                "Blockman Go (MOD, Unlimited Money)",
+                                "",
+                                ResultOrigin.REMOTE,
+                                rating = 4.1f,
+                                declaredModified = true,
+                            ),
+                        ),
+                    ),
                 ),
                 shortfalls = listOf(
                     StoreShortfall(
@@ -122,6 +181,16 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
             ),
             preferredLanguageTags = listOf("en"),
             storeDisplayName = { it.wireName },
+            // The real join, not a constant: an1 both redistributes reworks and marked this row, so
+            // the golden shows `DECLARED`, while the two F-Droid rows show nothing at all. A lambda
+            // returning one value would photograph a badge on every row or on none, and either
+            // picture would be green against the wrong behaviour.
+            modifiedBuildOf = { storeId, declared ->
+                ModifiedBuild.of(
+                    storeRedistributesModifiedBuilds = storeId == StoreId.AN1,
+                    listingDeclaredModified = declared,
+                )
+            },
             onQueryChange = {},
             onAppClick = { _, _ -> },
             onLoadMore = {},
@@ -147,6 +216,7 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
         displayName = name,
         host = "${storeId.wireName}.example",
         enabled = true,
+        category = StoreCategory.ORIGINAL,
         health = StoreHealth(storeId),
     )
 
@@ -159,6 +229,7 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
         rating: Float? = null,
         ratingCount: Int? = null,
         downloadsLabel: String? = null,
+        declaredModified: Boolean = false,
     ) = AggregatedListing(
         summary = StoreListingSummary(
             storeId = storeId,
@@ -169,6 +240,7 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
             rating = rating,
             ratingCount = ratingCount,
             downloadsLabel = downloadsLabel,
+            declaredModified = declaredModified,
         ),
         origin = origin,
     )
@@ -176,5 +248,6 @@ class SearchScreenScreenshotTest : ScreenshotTest() {
     private companion object {
         const val SCREEN_NAME = "SearchScreen"
         const val FILTERS_SCREEN_NAME = "SearchScreen_filters"
+        const val RECENT_SCREEN_NAME = "SearchScreen_recent"
     }
 }

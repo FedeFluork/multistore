@@ -8,6 +8,7 @@ import com.multistore.core.data.repository.SearchPage
 import com.multistore.core.data.repository.SearchProgress
 import com.multistore.core.data.repository.StoreEntry
 import com.multistore.core.data.repository.StoreShortfall
+import com.multistore.core.data.store.PendingSearch
 import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.domain.usecase.SearchAppsUseCase
 import com.multistore.core.domain.usecase.SearchOptionsUseCase
@@ -18,6 +19,7 @@ import com.multistore.core.model.ResultOrigin
 import com.multistore.core.model.SearchSettings
 import com.multistore.core.model.SearchSort
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.StoreCategory
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
 import com.multistore.core.testing.FakeSearchRepository
@@ -31,6 +33,9 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
+import com.multistore.core.data.repository.SearchHistoryRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -67,11 +72,93 @@ class SearchViewModelTest {
         ),
     )
 
+    // --- A search another screen asked for --------------------------------------------------------
+
+    @Test
+    fun `a publisher search runs itself, and says it is one`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        val states = mutableListOf<SearchUiState>()
+        val collecting = launch { viewModel.uiState.toList(states) }
+        val filters = mutableListOf<SearchFilterState>()
+        val watchingFilters = launch { viewModel.filters.toList(filters) }
+
+        // Left **before** anybody subscribes to it, which is the ordinary order: the listing writes
+        // the request and the shell then switches tab, so this ViewModel is built afterwards.
+        pending.request(PendingSearch.Request(query = "Mozilla", byDeveloper = true))
+        advanceUntilIdle()
+
+        assertThat(viewModel.queryText.value).isEqualTo("Mozilla")
+        // The flag and not only the text: the notice on the screen exists because eight stores of
+        // nine received that name as ordinary search text, and without this they could not be told
+        // from a search somebody typed.
+        assertThat(filters.last().developer).isEqualTo("Mozilla")
+        assertThat(states.last()).isNotInstanceOf(SearchUiState.Idle::class.java)
+
+        collecting.cancel()
+        watchingFilters.cancel()
+    }
+
+    @Test
+    fun `the request is consumed once, and typing ends the publisher search`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        val collecting = launch { viewModel.uiState.collect { } }
+        pending.request(PendingSearch.Request(query = "Mozilla", byDeveloper = true))
+        advanceUntilIdle()
+
+        // Typing is a different search, so the exact-publisher predicate goes. Leaving it on would
+        // give a local index matching a publisher **and** a title, which finds almost nothing, under
+        // a notice explaining a search nobody asked for.
+        viewModel.onQueryChange("firefox")
+        advanceUntilIdle()
+        assertThat(viewModel.filters.value.developer).isNull()
+
+        // And the request does not come back. It is an event: kept in state it would re-run days
+        // later and overwrite whatever had been typed since.
+        assertThat(pending.requests.value).isNull()
+        assertThat(viewModel.queryText.value).isEqualTo("firefox")
+
+        collecting.cancel()
+    }
+
+    /** Where another screen leaves a search for this one to run. */
+    private val pending = PendingSearch()
+
+    /** Records what was searched for, so an empty field can offer it back. */
+    private val searchHistory = RecordingSearchHistory()
+
     private fun viewModel() = SearchViewModel(
         searchApps = SearchAppsUseCase(search),
         options = SearchOptionsUseCase(settings, health),
         registry = registry,
+        pending = pending,
+        searchHistory = searchHistory,
     )
+
+    /**
+     * A double that keeps the order, because the order is the behaviour.
+     *
+     * Newest first, and the same query twice is one entry that moved rather than two rows — the
+     * property that separates a history from a log of keystrokes.
+     */
+    private class RecordingSearchHistory : SearchHistoryRepository {
+        private val state = MutableStateFlow<List<String>>(emptyList())
+        val recorded = mutableListOf<String>()
+
+        override fun recent(): Flow<List<String>> = state
+
+        override suspend fun record(query: String) {
+            recorded += query
+            state.value = listOf(query) + state.value.filterNot { it == query }
+        }
+
+        override suspend fun forget(query: String) {
+            state.value = state.value.filterNot { it == query }
+        }
+
+        override suspend fun clear() {
+            state.value = emptyList()
+        }
+    }
 
     private companion object {
         /** The ViewModel's own debounce window, and the fake's gap between two store arrivals. */
@@ -84,6 +171,7 @@ class SearchViewModelTest {
         displayName = name,
         host = "${storeId.wireName}.example",
         enabled = true,
+        category = StoreCategory.ORIGINAL,
         health = StoreHealth(storeId),
     )
 

@@ -212,6 +212,11 @@ class SettingsLocalDataSource @Inject constructor(
         dataStore.updateData { it.toBuilder().setDefaultSort(sort.toProto()).build() }
     }
 
+    /** The domain field is positive and the proto one negative: the inversion lives here. */
+    suspend fun setKeepSearchHistory(keep: Boolean) {
+        dataStore.updateData { it.toBuilder().setBlockSearchHistory(!keep).build() }
+    }
+
     suspend fun setMyAppsSort(sort: MyAppsSort) {
         dataStore.updateData { it.toBuilder().setMyAppsSort(sort.toProto()).build() }
     }

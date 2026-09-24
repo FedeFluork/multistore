@@ -177,6 +177,8 @@ class FilterPlanTest {
         providesHash = HashAvailability.NONE,
         providesSignerFingerprint = false,
         supportsSplits = false,
+        redistributesModifiedBuilds = false,
+        openSourceOnly = false,
         downloadMode = DownloadMode.DIRECT,
         networkTier = NetworkTier.OKHTTP,
         userAgent = "Mozilla/5.0 (Android) MultiStoreTest",

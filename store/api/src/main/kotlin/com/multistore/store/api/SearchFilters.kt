@@ -33,6 +33,28 @@ data class SearchFilters(
     /** If `false`, results also include betas and non-default channels. */
     val onlyDefaultChannel: Boolean = true,
     /**
+     * "Only apps by this publisher", normalised — and **not** a [FilterCapability].
+     *
+     * ### Why it is not a capability, when everything else here is
+     *
+     * A filter no store declares is a store that is **not queried at all**, and its absence is
+     * announced: that is the third tier of [FilterPlan] and it is right for "minimum rating", where
+     * a store with no ratings has nothing to say. It would be wrong here. Eight of the nine cannot
+     * search by publisher, but they can all search for the publisher's **name as text**, and a
+     * developer search that queried one store would be worse than one that queried nine and said
+     * what it was doing.
+     *
+     * So this field is read by exactly one path — the local-index search, which has
+     * `apps.developer_norm` to compare against — and ignored by the other eight, which receive the
+     * name as the query. The screen declares the difference, because on those eight a **namesake is
+     * not the same person** and nothing in the results can tell them apart.
+     *
+     * Where it is set, the local search stops matching on the title as well: the two predicates
+     * together would return only that publisher's apps whose **name contains the publisher's name**,
+     * which is a handful of them by coincidence.
+     */
+    val developer: String? = null,
+    /**
      * If `false` — the default — results exclude what the store labels as adult.
      *
      * **The default is the safe one, and that is not a matter of style.** `SearchFilters.NONE` is

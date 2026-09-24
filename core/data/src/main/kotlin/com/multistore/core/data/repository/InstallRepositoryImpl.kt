@@ -14,6 +14,7 @@ import com.multistore.core.installer.container.ExtractionResult
 import com.multistore.core.installer.container.SplitSelection
 import com.multistore.core.installer.UninstallProgress
 import com.multistore.core.installer.session.InstallSessionReconciler
+import com.multistore.core.installer.verify.ApkPermissionsReader
 import com.multistore.core.installer.verify.PreInstallVerifier
 import com.multistore.core.model.DeviceProfile
 import com.multistore.core.model.InstallerAvailability
@@ -35,6 +36,7 @@ internal class InstallRepositoryImpl @Inject constructor(
     private val settings: SettingsRepository,
     private val sessions: InstallSessionReconciler,
     private val containers: ContainerReader,
+    private val permissionsReader: ApkPermissionsReader,
     private val extractor: ContainerExtractor,
     private val device: DeviceProfile,
 ) : InstallRepository {
@@ -163,7 +165,14 @@ internal class InstallRepositoryImpl @Inject constructor(
                 return@flow
             }
 
-        emit(InstallStep.Verified(ok))
+        // Read **here** and nowhere else: after the checks that can refuse and before the session is
+        // committed, from the base APK rather than the delivered container — a container's own zip
+        // has no manifest, and its base is the file whose permissions the system will grant.
+        //
+        // It cannot refuse anything, and that is why it is not part of `verify`: an unreadable
+        // manifest gives `null`, the installation continues, and the screen says "not known" instead
+        // of inventing "asks for nothing".
+        emit(InstallStep.Verified(ok, permissionsReader.read(payload.base)))
 
         // The user's preference is read **here**, in one place only. The plan can carry one of its
         // own — nobody does today — and that one wins: it is the choice made for this installation,

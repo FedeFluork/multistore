@@ -261,6 +261,23 @@ class PdalifeParsersTest {
             assertThat(detail.summary.latestVersionName).isEqualTo(Fixtures.MOD_VERSION)
         }
 
+        @Test
+        @DisplayName("the rework flag comes from the file list's label, not from the title")
+        fun readsTheModDeclaration() {
+            // `p.game-versions__downloads-mod` reads "Money Mod" and sits **inside**
+            // `ul.game-versions__downloads-list` — the same container the file rows are anchored
+            // to, for the reason this store makes unavoidable: two of three download buttons are
+            // adverts, so "the first element of that kind" is never the answer.
+            //
+            // Measured on the two committed fixtures, re-counted after the 16/09/2026 redesign
+            // replaced them: 0 occurrences on the plain listing, 3 on the MOD one — one per
+            // accordion item, where before the redesign there were 2. The number is the store's to
+            // move and the assertion does not depend on it; both halves are asserted, because
+            // either alone would pass with the flag wired to a constant.
+            assertThat(detail(Fixtures.DETAIL_MOD, Fixtures.MOD_REF).summary.declaredModified).isTrue()
+            assertThat(detail(Fixtures.DETAIL, Fixtures.APP_REF).summary.declaredModified).isFalse()
+        }
+
         /**
          * **The costliest defence to get wrong on this store.**
          *

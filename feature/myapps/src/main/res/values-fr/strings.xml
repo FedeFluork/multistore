@@ -57,4 +57,9 @@
     <string name="myapps_search_clear">Effacer la recherche</string>
     <string name="myapps_no_matches_title">Aucune correspondance</string>
     <string name="myapps_no_matches_message">Aucune application install\u00e9e ne s\u2019appelle \u00ab\u00a0%1$s\u00a0\u00bb. Vos applications sont toujours l\u00e0\u00a0: effacez la recherche pour les revoir.</string>
+
+    <!-- Shown only where the update channel differs from where the app came from: the two
+         coincide until somebody changes it on the app's page, and naming the same store
+         twice on every row would bury the one line that matters. -->
+    <string name="myapps_updates_from">Mise à jour depuis %1$s</string>
 </resources>

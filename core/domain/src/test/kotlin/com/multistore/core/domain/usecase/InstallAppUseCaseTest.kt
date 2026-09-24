@@ -21,6 +21,7 @@ import com.multistore.core.model.InstallerAvailability
 import com.multistore.core.model.InstallerKind
 import com.multistore.core.model.Sha256
 import com.multistore.core.model.StoreAppRef
+import com.multistore.core.model.UsesPermission
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
 import com.multistore.core.model.StoreListingSummary
@@ -76,7 +77,7 @@ class InstallAppUseCaseTest {
             search = true, trending = false, recent = false, versionHistory = true,
             providesPackageName = true, providesRating = false, providesScreenshots = false,
             providesChangelog = false, providesHash = HashAvailability.ALWAYS,
-            providesSignerFingerprint = true, supportsSplits = false,
+            providesSignerFingerprint = true, supportsSplits = false, redistributesModifiedBuilds = false, openSourceOnly = false,
             downloadMode = DownloadMode.DIRECT, networkTier = NetworkTier.OKHTTP,
             userAgent = "MultiStoreTest/1.0", supportedFilters = emptySet(),
             contentKinds = setOf(ContentKind.APP),
@@ -101,6 +102,13 @@ class InstallAppUseCaseTest {
             storeId: StoreId,
             ref: StoreAppRef,
         ): Outcome<Unit> = Outcome.Success(Unit)
+
+        override suspend fun recordPermissions(
+            storeId: StoreId,
+            ref: StoreAppRef,
+            versionRef: VersionRef,
+            permissions: List<UsesPermission>,
+        ) = Unit
 
         override suspend fun refresh(storeId: StoreId, ref: StoreAppRef, force: Boolean) =
             Outcome.Success(Unit)

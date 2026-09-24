@@ -166,4 +166,80 @@ class StoreHealthRepositoryTest {
         assertThat(events.single().selector).isEqualTo("div.title")
         assertThat(events.single().snippetHash).isEqualTo("abc123")
     }
+
+    // --- The diagnosis: how long, and what kind -----------------------------------------------
+
+    @Test
+    fun `the run of faults is measured from the last success, not from the oldest row`() = runTest {
+        // An old fault, then a success, then two recent ones. The oldest row is a week old and is
+        // still in the table; the **run** is minutes long, and telling the two apart is the whole
+        // point — one reading has somebody wait, the other has them switch off a store that works.
+        at(0) { repository.recordFailure(store, StoreError.Network(null)) }
+        at(7 * 24 * 60) { repository.recordSuccess(store) }
+        at(7 * 24 * 60 + 10) { repository.recordFailure(store, StoreError.Network(null)) }
+        at(7 * 24 * 60 + 20) { repository.recordFailure(store, StoreError.Network(null)) }
+
+        val diagnosis = repository.diagnosis(store)
+
+        assertThat(diagnosis.failingSince).isEqualTo(minutesFromStart(7 * 24 * 60 + 10))
+        assertThat(diagnosis.lastSuccessAt).isEqualTo(minutesFromStart(7 * 24 * 60))
+        assertThat(diagnosis.lastFailure?.at).isEqualTo(minutesFromStart(7 * 24 * 60 + 20))
+    }
+
+    @Test
+    fun `a store that has only ever answered has nothing to explain`() = runTest {
+        at(0) { repository.recordSuccess(store) }
+
+        val diagnosis = repository.diagnosis(store)
+
+        assertThat(diagnosis.failingSince).isNull()
+        assertThat(diagnosis.lastFailure).isNull()
+        // And the dialog knows there is nothing to open: a healthy store's would be an empty page.
+        assertThat(diagnosis.hasFaults).isFalse()
+    }
+
+    @Test
+    fun `not-found is not a fault of the store`() = runTest {
+        // The circuit breaker already treats it that way — it does not count towards opening — and
+        // this has to agree: "that app is not on this store" is the store answering correctly, and
+        // counting it would make a working store look broken for having been asked about something
+        // it does not have.
+        at(0) { repository.recordFailure(store, StoreError.NotFound) }
+
+        val diagnosis = repository.diagnosis(store)
+
+        assertThat(diagnosis.lastFailure).isNull()
+        assertThat(diagnosis.failingSince).isNull()
+    }
+
+    @Test
+    fun `the diagnostic log's own rows are not faults`() = runTest {
+        // With `diagnostics_log_enabled` on, every request writes a `request` row into the same
+        // table. A filter written as "anything that is not a success" would look right and start
+        // reporting those as the store's last fault the moment somebody turned that switch on.
+        at(0) { repository.recordEvent(store, kind = "request", detail = "GET / → 200") }
+
+        assertThat(repository.diagnosis(store).lastFailure).isNull()
+    }
+
+    @Test
+    fun `the kind and its selector reach the diagnosis`() = runTest {
+        at(0) {
+            repository.recordFailure(store, StoreError.ParseFailure("#content .listWidget", "abc123"))
+        }
+
+        val fault = repository.diagnosis(store).lastFailure
+        assertThat(fault?.kind).isEqualTo(com.multistore.core.common.net.FailureKind.PARSE)
+        // The selector, because "the markup changed" and "the network is down" are two different
+        // jobs and only one of them is ours.
+        assertThat(fault?.selector).isEqualTo("#content .listWidget")
+    }
+
+    private inline fun at(minutes: Int, block: () -> Unit) {
+        currentTime = minutesFromStart(minutes)
+        block()
+    }
+
+    private fun minutesFromStart(minutes: Int): Instant =
+        Instant.fromEpochMilliseconds(1_787_316_712_615L) + minutes.minutes
 }

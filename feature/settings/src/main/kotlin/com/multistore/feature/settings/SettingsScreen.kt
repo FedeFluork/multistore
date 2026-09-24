@@ -56,6 +56,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.multistore.core.common.net.StoreDiagnosis
+import com.multistore.core.ui.component.StoreDiagnosisDialog
 import com.multistore.core.data.repository.StoreEntry
 import com.multistore.core.designsystem.theme.LocalSpacing
 import com.multistore.core.designsystem.theme.MultiStoreTheme
@@ -105,6 +107,7 @@ import kotlin.time.Duration
  */
 @Composable
 fun SettingsScreen(
+    onOpenStoreChooser: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -212,7 +215,7 @@ fun SettingsScreen(
         onInstallerPreferenceChange = viewModel::setInstallerPreference,
         installers = installers,
         stores = stores,
-        onStoreEnabledChange = viewModel::setStoreEnabled,
+        onOpenStoreChooser = onOpenStoreChooser,
         reclaim = reclaim,
         onReclaimSpace = viewModel::reclaimSpace,
         storage = storage,
@@ -223,6 +226,7 @@ fun SettingsScreen(
         onDownloadHistoryLimitChange = viewModel::setDownloadHistoryLimit,
         onAutoInstallAfterDownloadChange = viewModel::setAutoInstallAfterDownload,
         onSearchTimeoutChange = viewModel::setSearchTimeout,
+        onKeepSearchHistoryChange = viewModel::setKeepSearchHistory,
         onDefaultContentKindChange = viewModel::setDefaultContentKind,
         onDefaultSortChange = viewModel::setDefaultSort,
         onMyAppsSortChange = viewModel::setMyAppsSort,
@@ -274,7 +278,14 @@ internal fun SettingsScreen(
     onInstallerPreferenceChange: (InstallerPreference) -> Unit = {},
     installers: InstallerAvailability = InstallerAvailability(),
     stores: List<StoreEntry> = emptyList(),
-    onStoreEnabledChange: (StoreId, Boolean) -> Unit = { _, _ -> },
+    /**
+     * Opens the store chooser.
+     *
+     * A destination and not a dialog, so what used to be two callbacks here — write one
+     * store, read one store's health — moved with it. This screen no longer knows how either is
+     * done, which is what makes the chooser replaceable without touching twenty other rows.
+     */
+    onOpenStoreChooser: () -> Unit = {},
     reclaim: ReclaimUiState = ReclaimUiState.Idle,
     onReclaimSpace: () -> Unit = {},
     storage: StorageUiState = StorageUiState(),
@@ -285,6 +296,7 @@ internal fun SettingsScreen(
     onDownloadHistoryLimitChange: (DownloadHistoryLimit) -> Unit = {},
     onAutoInstallAfterDownloadChange: (Boolean) -> Unit = {},
     onSearchTimeoutChange: (Duration) -> Unit = {},
+    onKeepSearchHistoryChange: (Boolean) -> Unit = {},
     onDefaultContentKindChange: (ContentKind?) -> Unit = {},
     onDefaultSortChange: (SearchSort) -> Unit = {},
     onMyAppsSortChange: (MyAppsSort) -> Unit = {},
@@ -355,7 +367,7 @@ internal fun SettingsScreen(
                     StoresSection(
                         stores = stores,
                         filter = filter,
-                        onStoreEnabledChange = onStoreEnabledChange,
+                        onOpenStoreChooser = onOpenStoreChooser,
                     )
                     ContentSection(
                         search = uiState.search,
@@ -366,6 +378,7 @@ internal fun SettingsScreen(
                         search = uiState.search,
                         filter = filter,
                         onSearchTimeoutChange = onSearchTimeoutChange,
+                        onKeepSearchHistoryChange = onKeepSearchHistoryChange,
                         onDefaultContentKindChange = onDefaultContentKindChange,
                         onDefaultSortChange = onDefaultSortChange,
                     )
@@ -1075,6 +1088,7 @@ private fun SearchSection(
     search: SearchSettings,
     filter: SettingsFilter,
     onSearchTimeoutChange: (Duration) -> Unit,
+    onKeepSearchHistoryChange: (Boolean) -> Unit,
     onDefaultContentKindChange: (ContentKind?) -> Unit,
     onDefaultSortChange: (SearchSort) -> Unit,
     modifier: Modifier = Modifier,
@@ -1084,6 +1098,7 @@ private fun SearchSection(
         SettingKey.SEARCH_TIMEOUT,
         SettingKey.DEFAULT_CONTENT_KIND,
         SettingKey.DEFAULT_SORT,
+        SettingKey.BLOCK_SEARCH_HISTORY,
     )
     var dialog by remember { mutableStateOf<SearchDialog?>(null) }
 
@@ -1107,6 +1122,16 @@ private fun SearchSection(
             rows = rows,
             value = stringResource(sortLabel(search.defaultSort)),
             onClick = { dialog = SearchDialog.SORT },
+        )
+        // Inverted, because the row says "do not keep" while the domain field says "keep": the proto
+        // field is negative so that its zero value is the prudent behaviour, and the label follows
+        // the proto rather than the domain — the switch a person flips is the one that stops it.
+        SettingsSwitchRow(
+            key = SettingKey.BLOCK_SEARCH_HISTORY,
+            rows = rows,
+            checked = !search.keepSearchHistory,
+            enabled = true,
+            onCheckedChange = { blocked: Boolean -> onKeepSearchHistoryChange(!blocked) },
         )
     }
 
@@ -1255,7 +1280,14 @@ internal fun NetworkSection(
     onBlockUserAssistedChallengeChange: (Boolean) -> Unit = {},
     onAllowWebAdsChange: (Boolean) -> Unit = {},
     stores: List<StoreEntry> = emptyList(),
-    onStoreEnabledChange: (StoreId, Boolean) -> Unit = { _, _ -> },
+    /**
+     * Opens the store chooser.
+     *
+     * A destination and not a dialog, so what used to be two callbacks here — write one
+     * store, read one store's health — moved with it. This screen no longer knows how either is
+     * done, which is what makes the chooser replaceable without touching twenty other rows.
+     */
+    onOpenStoreChooser: () -> Unit = {},
     reclaim: ReclaimUiState = ReclaimUiState.Idle,
     onReclaimSpace: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -1349,7 +1381,7 @@ private fun ChallengeStrategy.labelRes(): Int = when (this) {
 @Composable
 internal fun StoresSection(
     stores: List<StoreEntry>,
-    onStoreEnabledChange: (StoreId, Boolean) -> Unit,
+    onOpenStoreChooser: () -> Unit,
     filter: SettingsFilter = SettingsFilter.NONE,
     modifier: Modifier = Modifier,
 ) {
@@ -1358,7 +1390,6 @@ internal fun StoresSection(
     // rows, and showing it above zero stores is the same as showing an empty heading.
     val visible = stores.filter { filter.shows(it.storeId) }
     if (visible.isEmpty()) return
-    var showDialog by remember { mutableStateOf(false) }
 
     Column(modifier = modifier) {
         SectionHeader(text = stringResource(SettingsSection.STORES.titleRes))
@@ -1370,124 +1401,18 @@ internal fun StoresSection(
                 stores.count { it.enabled },
                 stores.size,
             ),
-            onClick = { showDialog = true },
+            // A destination rather than a dialog: the list outgrew the height a dialog
+            // has on a phone even at nine stores, and what it needed next — tabs, a filter, a
+            // gesture acting on a whole group — is not what a dialog is for. `StoreChooserScreen`
+            // carries all three and its own diagnosis dialog with them.
+            onClick = onOpenStoreChooser,
         )
-    }
-
-    if (showDialog) {
-        StorePickerDialog(
-            stores = stores,
-            onDismiss = { showDialog = false },
-            onSave = { enabled ->
-                showDialog = false
-                // Only what actually changed: every write touches a Room row and makes the flow
-                // that search observes re-emit. Saving without having changed anything must not
-                // cost nine rewrites.
-                stores.filter { enabled[it.storeId] != it.enabled }
-                    .forEach { onStoreEnabledChange(it.storeId, enabled.getValue(it.storeId)) }
-            },
-        )
-    }
-}
-
-/**
- * The store list in a dialog, with Save and Cancel.
- *
- * Not inline any more because they were **nine rows with nine descriptions** in the middle of a
- * screen that already has twenty: the section took up more room than all the others put together,
- * and one scrolled through it on the way somewhere else. In a dialog the list stays whole — it is
- * not hidden, it is one tap away — and the screen becomes readable again.
- *
- * Save and Cancel rather than a switch that writes immediately, because turning a store off
- * **changes what search queries**, and whoever turns three off does it in one go. With immediate
- * writes that gesture would be three Room rewrites and three re-emissions of the flow search
- * observes, each with its own recomposition — and no way to change one's mind. Here the pending
- * state lives in the dialog, Cancel throws it away, and Save writes **only what actually changed**.
- */
-@Composable
-internal fun StorePickerDialog(
-    stores: List<StoreEntry>,
-    onDismiss: () -> Unit,
-    onSave: (Map<StoreId, Boolean>) -> Unit,
-) {
-    // `remember(stores)` rather than `remember {}`: if the catalogue changes underneath — a sync
-    // that adds a store — the pending state must restart from what is there, not from a snapshot
-    // of a list that no longer exists.
-    val pending = remember(stores) {
-        mutableStateMapOf<StoreId, Boolean>().apply {
-            stores.forEach { put(it.storeId, it.enabled) }
-        }
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(SettingsSection.STORES.titleRes)) },
-        text = {
-            // Scrollable: nine stores with their descriptions do not fit the height a dialog has
-            // on a phone, and without this the last rows would be unreachable.
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                stores.forEach { store ->
-                    StoreRow(
-                        store = store,
-                        checked = pending[store.storeId] ?: store.enabled,
-                        onEnabledChange = { pending[store.storeId] = it },
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(pending.toMap()) }) {
-                Text(text = stringResource(R.string.settings_stores_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.settings_dialog_dismiss))
-            }
-        },
-    )
-}
-
-@Composable
-private fun StoreRow(
-    store: StoreEntry,
-    checked: Boolean,
-    onEnabledChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val spacing = LocalSpacing.current
-    // With no translated description the host is shown: it still says where the files come from,
-    // which is the thing that matters most in an app that installs APKs.
-    val description = storeDescriptionRes(store.storeId)?.let { stringResource(it) } ?: store.host
-
-    Column(modifier = modifier) {
-        SettingsSwitchRow(
-            label = store.displayName,
-            description = description,
-            checked = checked,
-            enabled = true,
-            onCheckedChange = onEnabledChange,
-        )
-        // The breaker state is shown **only when it is not the normal one**: an "all fine" row next
-        // to every store would be noise, and would make the one row that does matter less visible
-        // when it appears.
-        storeStateRes(store.health.state)?.let { stateRes ->
-            Text(
-                text = stringResource(stateRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(
-                    start = spacing.screenHorizontal,
-                    end = spacing.screenHorizontal,
-                    bottom = spacing.small,
-                ),
-            )
-        }
     }
 }
 
 /** `null` when the store is healthy: the extra row appears only if there is something to say. */
 @androidx.annotation.StringRes
-private fun storeStateRes(state: StoreHealthState): Int? = when (state) {
+internal fun storeStateRes(state: StoreHealthState): Int? = when (state) {
     StoreHealthState.OPEN -> R.string.settings_store_state_open
     StoreHealthState.DEGRADED -> R.string.settings_store_state_degraded
     // `HALF_OPEN` is a probe in flight, not a fault to announce: it lasts one request.

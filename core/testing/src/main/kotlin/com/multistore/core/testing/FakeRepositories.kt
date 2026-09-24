@@ -1,6 +1,7 @@
 package com.multistore.core.testing
 
 import androidx.paging.PagingData
+import com.multistore.core.common.net.StoreDiagnosis
 import com.multistore.core.common.net.StoreHealth
 import com.multistore.core.common.result.AppError
 import com.multistore.core.common.result.Outcome
@@ -8,6 +9,7 @@ import com.multistore.core.data.repository.AppDetail
 import com.multistore.core.data.repository.AppDetailRepository
 import com.multistore.core.data.repository.CrossStoreAvailability
 import com.multistore.core.data.repository.CrossStoreRepository
+import com.multistore.core.data.repository.StoreComparison
 import com.multistore.core.data.repository.DownloadRepository
 import com.multistore.core.data.repository.DownloadStatus
 import com.multistore.core.data.repository.HealthEvent
@@ -51,6 +53,7 @@ import com.multistore.core.model.NotificationSettings
 import com.multistore.core.model.SearchSettings
 import com.multistore.core.model.SecuritySettings
 import com.multistore.core.model.Sha256
+import com.multistore.core.model.UsesPermission
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.CatalogRetention
 import com.multistore.core.model.StorageSettings
@@ -200,6 +203,16 @@ class FakeCrossStoreRepository : CrossStoreRepository {
 
     private val state = MutableStateFlow(CrossStoreAvailability())
 
+    /**
+     * The comparison, held apart from [state] rather than derived from it.
+     *
+     * In production one **is** a projection of the other, and a fake that reproduced the projection
+     * would be a second implementation of the rule the tests are meant to check the screen against —
+     * so a screen reading the wrong field would stay green here and be wrong on the device. Set the
+     * two independently, and a test that needs them to agree says so by setting both.
+     */
+    private val comparison = MutableStateFlow(StoreComparison())
+
     val lookUps = mutableListOf<Pair<StoreId, StoreAppRef>>()
     val confirmed = mutableListOf<Long>()
     val rejected = mutableListOf<Long>()
@@ -208,10 +221,23 @@ class FakeCrossStoreRepository : CrossStoreRepository {
         state.value = availability
     }
 
+    fun emit(value: StoreComparison) {
+        comparison.value = value
+    }
+
     override fun observe(storeId: StoreId, ref: StoreAppRef): Flow<CrossStoreAvailability> = state
+
+    override fun compare(storeId: StoreId, ref: StoreAppRef): Flow<StoreComparison> = comparison
 
     override suspend fun lookUp(storeId: StoreId, ref: StoreAppRef) {
         lookUps += storeId to ref
+    }
+
+    /** What the comparison table asked to be read, so a test can assert that it did — or did not. */
+    val listingReads = mutableListOf<Pair<StoreId, StoreAppRef>>()
+
+    override suspend fun readListings(storeId: StoreId, ref: StoreAppRef) {
+        listingReads += storeId to ref
     }
 
     override suspend fun confirm(anchor: StoreId, anchorRef: StoreAppRef, candidateListingId: Long) {
@@ -283,6 +309,18 @@ class FakeStoreHealthRepository(entries: List<StoreEntry> = emptyList()) : Store
     override fun observeStores(): Flow<List<StoreEntry>> = stores
 
     override suspend fun health(storeId: StoreId): StoreHealth = StoreHealth(storeId)
+
+    /**
+     * Settable, because the two screens that show it have to be provable against a store in trouble.
+     *
+     * A healthy default and an override rather than a fixed value: the sentence worth photographing
+     * is "failing for two days", and a double that could only answer "everything is fine" would let
+     * a screen that never opens the dialog pass.
+     */
+    var diagnoses: Map<StoreId, StoreDiagnosis> = emptyMap()
+
+    override suspend fun diagnosis(storeId: StoreId): StoreDiagnosis =
+        diagnoses[storeId] ?: StoreDiagnosis(storeId)
 
     override suspend fun canAttempt(storeId: StoreId): Boolean = true
 
@@ -378,6 +416,16 @@ class FakeSettingsRepository(
 
     override suspend fun setMyAppsSort(sort: MyAppsSort) {
         myApps.value = myApps.value.copy(sort = sort)
+    }
+
+    /**
+     * Re-emits, like the two above.
+     *
+     * A `Unit` here would let a screen that reads the switch once pass: what a test has to be able
+     * to see is the value **changing** under whoever is observing it.
+     */
+    override suspend fun setKeepSearchHistory(keep: Boolean) {
+        search.value = search.value.copy(keepSearchHistory = keep)
     }
 
     override suspend fun setAllowUnverifiedHash(allow: Boolean) = Unit
@@ -567,6 +615,26 @@ class FakeAppDetailRepository(detail: AppDetail? = null) : AppDetailRepository {
         historyLoads++
         if (historyDelay > Duration.ZERO) delay(historyDelay)
         return historyResult
+    }
+
+    /**
+     * Recorded rather than applied, and the difference matters to what a test can prove.
+     *
+     * In production this writes one column of `app_versions` and Room re-emits, so the open listing
+     * fills in by itself. Reproducing that here would mean this double re-implementing the write —
+     * and a screen reading the wrong field would then stay green against a fake that had done the
+     * work for it. What tests need to assert is **that the call was made, with which version**; what
+     * the listing shows afterwards is the repository's own test.
+     */
+    val recordedPermissions = mutableListOf<Pair<VersionRef, List<UsesPermission>>>()
+
+    override suspend fun recordPermissions(
+        storeId: StoreId,
+        ref: StoreAppRef,
+        versionRef: VersionRef,
+        permissions: List<UsesPermission>,
+    ) {
+        recordedPermissions += versionRef to permissions
     }
 }
 

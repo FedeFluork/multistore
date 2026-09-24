@@ -24,6 +24,8 @@ import com.multistore.core.data.repository.SelfUpdateRepository
 import com.multistore.core.data.repository.SelfUpdateRepositoryImpl
 import com.multistore.core.data.repository.SearchRepository
 import com.multistore.core.data.repository.SearchRepositoryImpl
+import com.multistore.core.data.repository.SearchHistoryRepository
+import com.multistore.core.data.repository.SearchHistoryRepositoryImpl
 import com.multistore.core.data.repository.SettingsRepository
 import com.multistore.core.data.repository.SettingsRepositoryImpl
 import com.multistore.core.data.repository.StoreHealthRepository
@@ -56,6 +58,12 @@ internal abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchHistoryRepository(
+        impl: SearchHistoryRepositoryImpl,
+    ): SearchHistoryRepository
 
     @Binds
     @Singleton

@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.multistore.core.data.repository.StoreEntry
 import com.multistore.core.data.repository.StoreShortfall
+import com.multistore.core.common.net.StoreDiagnosis
+import com.multistore.core.data.repository.SearchHistoryRepository
+import com.multistore.core.data.store.PendingSearch
 import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.domain.usecase.SearchAppsUseCase
 import com.multistore.core.domain.usecase.SearchOptionsUseCase
 import com.multistore.core.model.AggregatedApp
 import com.multistore.core.model.ContentKind
 import com.multistore.core.model.SearchSort
+import com.multistore.core.model.ModifiedBuild
 import com.multistore.core.model.StoreId
 import com.multistore.store.api.SearchFilters
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,10 +21,13 @@ import javax.inject.Inject
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -98,6 +105,17 @@ data class SearchFilterState(
     val excludedStores: Set<StoreId> = emptySet(),
     /** The enabled stores, that is the ones to choose among. */
     val available: List<StoreEntry> = emptyList(),
+    /**
+     * The publisher this search is **about**, when it came from tapping a developer's name.
+     *
+     * Transient like every other filter here — it is cleared by the next typed query and by the
+     * reset — and it is not in `settings.proto` for the same reason: it belongs to one search.
+     *
+     * It changes two things. The local index filters on it exactly, and the screen declares that the
+     * other eight stores could not: they received the name as text, and among nine catalogues a
+     * namesake is not the same person.
+     */
+    val developer: String? = null,
 ) {
     /**
      * How many filters are active, for the badge on the button.
@@ -125,6 +143,7 @@ data class SearchFilterState(
         contentKind = contentKind,
         minRating = minRating,
         sort = sort,
+        developer = developer,
     )
 }
 
@@ -145,6 +164,8 @@ class SearchViewModel @Inject constructor(
     private val searchApps: SearchAppsUseCase,
     private val options: SearchOptionsUseCase,
     private val registry: StoreRegistry,
+    private val pending: PendingSearch,
+    private val searchHistory: SearchHistoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Idle())
@@ -189,6 +210,7 @@ class SearchViewModel @Inject constructor(
                 contentKind = defaults.defaultContentKind,
             )
         }
+        collectPendingSearches()
         options.enabledStores()
             // Only the list to choose among: the exclusions stay the user's. A store turned off elsewhere
             // disappears from the list and its exclusion becomes inert, which is what should happen —
@@ -247,6 +269,12 @@ class SearchViewModel @Inject constructor(
 
     fun onQueryChange(value: String) {
         _query.value = value
+        // Typing ends a publisher search. The field is the same field, and leaving the exact
+        // publisher predicate on while somebody writes an app's name would give a local index that
+        // finds nothing and a notice explaining a search nobody asked for.
+        if (_filters.value.developer != null) {
+            _filters.value = _filters.value.copy(developer = null)
+        }
         // The spinner goes up now and not in 300 ms — but only when there is nothing to keep. Results
         // already on screen stay: they belong to the previous word, and replacing them with a spinner
         // on every letter tore the `LazyColumn` down and rebuilt it once per keystroke, on the main
@@ -271,6 +299,68 @@ class SearchViewModel @Inject constructor(
     }
 
     fun retry() = runSearch(_query.value)
+
+    /**
+     * The last searches, offered back when the field is empty.
+     *
+     * Empty where the record is switched off, because the repository stops writing **and** the
+     * switch clears what was there: a control that promised to forget and left the list behind would
+     * be worse than no control.
+     */
+    val history: StateFlow<List<String>> = searchHistory.recent()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
+
+    /**
+     * Runs a remembered search again: one gesture, not two.
+     *
+     * It fills the field **and** searches, rather than only filling it. Tapping a line of history to
+     * then press the keyboard's search key would be asking for the same thing twice, and the debounce
+     * would make the first half look like nothing had happened.
+     */
+    fun searchAgain(query: String) {
+        _query.value = query
+        _filters.value = _filters.value.copy(developer = null)
+        runSearch(query)
+    }
+
+    /**
+     * Why one store did not answer, read at the moment somebody asks.
+     *
+     * It goes through the same repository call Settings uses and produces the same object, so the
+     * two screens cannot end up saying different things about one store. See `StoreDiagnosisDialog`,
+     * which is in `:core:ui` for the same reason.
+     */
+    suspend fun storeDiagnosis(storeId: StoreId): StoreDiagnosis = options.diagnosis(storeId)
+
+    fun forgetSearch(query: String) {
+        viewModelScope.launch { searchHistory.forget(query) }
+    }
+
+    fun clearSearchHistory() {
+        viewModelScope.launch { searchHistory.clear() }
+    }
+
+    /**
+     * Runs a search another screen asked for, once.
+     *
+     * Observed rather than read at construction because the request is left **before** this
+     * ViewModel exists: the listing writes it and the shell then switches tab. Taking it clears it,
+     * so returning to this tab later does not re-run a search somebody asked for once — and, worse,
+     * does not overwrite what they have typed since.
+     */
+    private fun collectPendingSearches() {
+        pending.requests
+            .filterNotNull()
+            .onEach {
+                val request = pending.take() ?: return@onEach
+                _query.value = request.query
+                _filters.value = _filters.value.copy(
+                    developer = request.query.takeIf { request.byDeveloper },
+                )
+                runSearch(request.query)
+            }
+            .launchIn(viewModelScope)
+    }
 
     fun loadMore() {
         val current = _uiState.value as? SearchUiState.Results ?: return
@@ -302,9 +392,24 @@ class SearchViewModel @Inject constructor(
     fun storeDisplayName(storeId: StoreId): String =
         registry.adapter(storeId)?.metadata?.displayName ?: storeId.wireName
 
+    /**
+     * Whether the row opened by tapping comes from a source that republishes reworked apps.
+     *
+     * It delegates to the registry rather than reading the capability here, so this screen, the
+     * listing header and the comparison table cannot end up saying three different things about one
+     * store. See `StoreRegistry.modifiedBuildOf`.
+     */
+    fun modifiedBuildOf(storeId: StoreId, declaredModified: Boolean): ModifiedBuild =
+        registry.modifiedBuildOf(storeId, declaredModified)
+
     private fun runSearch(text: String) {
         searchJob?.cancel()
         searchedQuery = text
+        // Recorded here and not in `onQueryChange`: the field changes on every keystroke, and a
+        // record written there would fill with the word being refined — `f`, `fi`, `fir` — which is
+        // the opposite of recalling anything. This is the point where a search is actually made,
+        // i.e. where the requests to other people's sites are actually paid for.
+        if (text.isNotBlank()) viewModelScope.launch { searchHistory.record(text) }
         page = 0
         if (text.isBlank()) {
             publish(SearchUiState.Idle(text))
@@ -397,5 +502,8 @@ class SearchViewModel @Inject constructor(
 
     private companion object {
         const val DEBOUNCE_MILLIS = 300L
+
+        /** How long the history flow stays warm after the screen goes away, as elsewhere. */
+        const val STOP_TIMEOUT_MILLIS = 5_000L
     }
 }

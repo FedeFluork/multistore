@@ -3,6 +3,9 @@ package com.multistore.core.data.mapper
 import com.google.common.truth.Truth.assertThat
 import com.multistore.core.database.dao.ListingWithDetails
 import com.multistore.core.model.LocalizedText
+import com.multistore.core.model.AppVersion
+import com.multistore.core.model.UsesPermission
+import com.multistore.core.model.VersionRef
 import com.multistore.core.model.Screenshot
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
@@ -68,6 +71,22 @@ class CatalogMappingTest {
         assertThat(back.summary.ratingCount).isEqualTo(listing.summary.ratingCount)
         assertThat(back.summary.downloadsLabel).isEqualTo(listing.summary.downloadsLabel)
         assertThat(back.summary.rating).isEqualTo(listing.summary.rating)
+        // The rework flag, added in 0.8.0. It is the field this test was written for: a `Boolean`
+        // that a hand-written mapper drops silently comes back `false`, which on the five stores
+        // that redistribute reworks is a plausible answer and therefore never questioned.
+        assertThat(back.summary.declaredModified).isEqualTo(listing.summary.declaredModified)
+
+        // The permission list, added in 0.8.0, in all three of its states. `null` is the one that
+        // matters: a mapper dropping the field gives `null` back for every version, so a fixture
+        // holding only the populated case would pass against exactly the bug it is meant to catch —
+        // and here `null` legitimately survives, so the empty list is what proves the line is there.
+        val byRef = back.versions.associateBy { it.ref.value }
+        assertThat(byRef.getValue("asks").permissions).containsExactly(
+            UsesPermission("android.permission.INTERNET"),
+            UsesPermission("android.permission.WRITE_EXTERNAL_STORAGE", maxSdk = 28),
+        ).inOrder()
+        assertThat(byRef.getValue("silent").permissions).isEmpty()
+        assertThat(byRef.getValue("unread").permissions).isNull()
     }
 
     /**
@@ -100,6 +119,7 @@ class CatalogMappingTest {
         assertThat(back.whatsNew.isEmpty).isTrue()
         assertThat(back.summary.ratingCount).isNull()
         assertThat(back.summary.downloadsLabel).isNull()
+        assertThat(back.summary.declaredModified).isFalse()
     }
 
     private fun fullListing() = StoreListingDetail(
@@ -112,6 +132,10 @@ class CatalogMappingTest {
             rating = 4.6f,
             ratingCount = 128_461,
             downloadsLabel = "10M+",
+            // F-Droid does not publish reworks — the value is `true` here anyway, because the
+            // point of the round trip is that the mapper carries what it is given, and a fixture
+            // that only ever holds the default would pass against a dropped line.
+            declaredModified = true,
         ),
         description = LocalizedText(mapOf("en" to "An installable catalogue of free software.")),
         whatsNew = LocalizedText(mapOf("en" to "Repository updates no longer stall.")),
@@ -133,6 +157,32 @@ class CatalogMappingTest {
         donateUrls = listOf("https://f-droid.org/donate", "https://liberapay.com/F-Droid-Data"),
         authorName = "F-Droid Limited",
         addedAt = Instant.fromEpochSeconds(1_600_000_000),
+        // Three versions and not one, because the field added in 0.8.0 has **three** states and the
+        // round trip has to carry all of them: a list, an empty list, and no list. See the version
+        // assertions above.
+        versions = listOf(
+            AppVersion(
+                versionName = "1.23.2",
+                versionCode = 1_023_052,
+                ref = VersionRef("asks"),
+                permissions = listOf(
+                    UsesPermission("android.permission.INTERNET"),
+                    UsesPermission("android.permission.WRITE_EXTERNAL_STORAGE", maxSdk = 28),
+                ),
+            ),
+            AppVersion(
+                versionName = "1.23.1",
+                versionCode = 1_023_051,
+                ref = VersionRef("silent"),
+                permissions = emptyList(),
+            ),
+            AppVersion(
+                versionName = "1.23.0",
+                versionCode = 1_023_050,
+                ref = VersionRef("unread"),
+                permissions = null,
+            ),
+        ),
     )
 
     private companion object {

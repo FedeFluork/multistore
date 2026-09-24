@@ -208,6 +208,7 @@ class InstallAppUseCase @Inject constructor(
             ref = ref,
             detail = detail,
             downloadId = downloadId,
+            versionRef = resolved.version.ref,
             expectedSha256 = resolved.resolution.expectedSha256,
             expectedSize = resolved.resolution.expectedSize,
             // The signer the store recommends: without it, the **first** installation — the only one
@@ -254,6 +255,54 @@ class InstallAppUseCase @Inject constructor(
     }
 
     /**
+     * Restarts a transfer that was stopped, **re-resolving the address first**.
+     *
+     * ### Why this is not [resume]
+     *
+     * [resume] deliberately skips resolution: it exists for a file that is already whole, where
+     * asking the store again would be a request for nothing. A paused transfer is the opposite case
+     * — its address may have gone stale while it sat there, and on apkcombo that is not a
+     * hypothetical: the R2 signature on a download URL is valid for **four hours**, so resuming a
+     * download paused overnight with the stored URL is a guaranteed 403 that would read to the user
+     * as "the store is down".
+     *
+     * ### And it is the row's version, not the one the rule would pick now
+     *
+     * `explicitVersion` is the version **that row was fetching**. Without it the rule would choose
+     * the current best, which after a few days is often a newer one — and a different `versionRef`
+     * means `enqueue` opens a **second** row rather than continuing this one, leaving the paused
+     * megabytes stranded on disk with nothing pointing at them. That is the same dead end "Delete"
+     * was extended to paused rows to avoid, recreated by the button meant to resolve it.
+     *
+     * A version the catalogue no longer lists gives `null`, and the resolution then falls back to
+     * the rule — which is the honest answer: that version is gone from the store, and continuing to
+     * ask for it would fail forever.
+     */
+    fun restart(
+        storeId: StoreId,
+        ref: StoreAppRef,
+        downloadId: Long,
+    ): Flow<InstallProgressStep> = channelFlow {
+        val status = downloads.get(downloadId)
+            ?: run {
+                send(InstallProgressStep.Failed(AppError.NotFound))
+                return@channelFlow
+            }
+        val detail = details.detail(storeId, ref)
+            ?: run {
+                send(InstallProgressStep.Failed(AppError.NotFound))
+                return@channelFlow
+            }
+        val version = detail.listing.versions.firstOrNull { it.ref == status.versionRef }
+
+        invoke(
+            storeId = storeId,
+            ref = ref,
+            explicitVersion = version,
+        ).collect { send(it) }
+    }
+
+    /**
      * Resumes from a download already queued, skipping resolution.
      *
      * It serves two cases that look different and are the same: the return from the assisted path,
@@ -291,6 +340,9 @@ class InstallAppUseCase @Inject constructor(
             ref = ref,
             detail = detail,
             downloadId = downloadId,
+            // The row's version, not the one the rule would choose now: the file on disk is the one
+            // that download fetched, and its permissions belong to it.
+            versionRef = status.versionRef,
             expectedSha256 = downloads.expectedHash(downloadId) ?: version?.sha256,
             // **Only `bytesTotal`, not `version.sizeBytes`.** The two numbers look the same and are
             // not: the first is what the download's resolution declared as exact — or what the server
@@ -323,6 +375,7 @@ class InstallAppUseCase @Inject constructor(
         ref: StoreAppRef,
         detail: AppDetail,
         downloadId: Long,
+        versionRef: VersionRef?,
         expectedSha256: Sha256?,
         expectedSize: Long?,
         expectedSignerSha256: Sha256?,
@@ -344,6 +397,7 @@ class InstallAppUseCase @Inject constructor(
                 storeId = storeId,
                 ref = ref,
                 detail = detail,
+                versionRef = versionRef,
                 downloadId = downloadId,
                 expectedSha256 = expectedSha256,
                 expectedSize = expectedSize,
@@ -362,6 +416,7 @@ class InstallAppUseCase @Inject constructor(
         ref: StoreAppRef,
         detail: AppDetail,
         downloadId: Long,
+        versionRef: VersionRef?,
         expectedSha256: Sha256?,
         expectedSize: Long?,
         expectedSignerSha256: Sha256?,
@@ -442,6 +497,20 @@ class InstallAppUseCase @Inject constructor(
             ),
         ).collect { step ->
             if (step is InstallStep.Installed) installed = true
+            // What the archive asks the system for, learned once and kept. Eight stores of nine
+            // publish nothing about permissions, so this file is the only source there will ever
+            // be — and it exists only between the verification passing and the session closing.
+            //
+            // `versionRef` can be absent (a download whose row has since gone) and the list can be
+            // `null` (an unreadable manifest): in both cases nothing is written, which is right —
+            // `null` in that column means "nobody has read this build", and writing an empty list
+            // would turn "we could not tell" into "it asks for nothing".
+            if (step is InstallStep.Verified) {
+                val permissions = step.permissions
+                if (versionRef != null && permissions != null) {
+                    details.recordPermissions(storeId, ref, versionRef, permissions)
+                }
+            }
             send(InstallProgressStep.Install(step))
         }
 

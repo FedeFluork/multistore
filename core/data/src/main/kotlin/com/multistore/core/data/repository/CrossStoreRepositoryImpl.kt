@@ -4,12 +4,15 @@ import com.multistore.core.common.coroutine.IoDispatcher
 import com.multistore.core.common.identity.AppKeys
 import com.multistore.core.common.identity.IdentityMatch
 import com.multistore.core.common.identity.IdentityMatcher
+import com.multistore.core.common.result.Outcome
 import com.multistore.core.common.text.TextNormalizer
 import com.multistore.core.data.mapper.toDiscoveredRows
 import com.multistore.core.data.mapper.toSummary
 import com.multistore.core.data.store.EnabledStores
 import com.multistore.core.data.store.SearchGroupMemory
+import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.database.dao.CatalogDao
+import com.multistore.core.database.dao.ComparableListing
 import com.multistore.core.database.dao.ListingRow
 import com.multistore.core.database.entity.IdentityOverrideEntity
 import com.multistore.core.model.AggregatedApp
@@ -19,6 +22,7 @@ import com.multistore.core.model.ResultOrigin
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingSummary
+import com.multistore.store.api.HashAvailability
 import com.multistore.store.api.SearchFilters
 import com.multistore.store.api.StoreAdapter
 import com.multistore.store.api.StoreResult
@@ -38,6 +42,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -68,6 +73,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Singleton
 internal class CrossStoreRepositoryImpl @Inject constructor(
     private val catalogDao: CatalogDao,
+    private val details: AppDetailRepository,
+    private val registry: StoreRegistry,
     private val enabledStores: EnabledStores,
     private val memory: SearchGroupMemory,
     private val health: StoreHealthRepository,
@@ -76,6 +83,16 @@ internal class CrossStoreRepositoryImpl @Inject constructor(
 ) : CrossStoreRepository {
 
     private val lookups = MutableStateFlow<Map<Key, CrossStoreLookup>>(emptyMap())
+
+    /**
+     * Which unread listings the comparison is fetching, and which refused.
+     *
+     * Keyed on `(store, ref)` and **not** on the store: apkmirror publishes one page per variant, so
+     * two rows of one comparison can be the same store. Successes are removed rather than recorded —
+     * the row's own `listingRead` becomes `true` through Room and says it better than a second copy
+     * could.
+     */
+    private val reads = MutableStateFlow<Map<Key, ListingRead>>(emptyMap())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observe(storeId: StoreId, ref: StoreAppRef): Flow<CrossStoreAvailability> =
@@ -111,6 +128,101 @@ internal class CrossStoreRepositoryImpl @Inject constructor(
             }
             .flowOn(io)
 
+    /**
+     * The comparison table, built from [observe] and two reads Room already holds.
+     *
+     * ### Why it is derived from [observe] rather than querying alongside it
+     *
+     * The set of rows **is** `availableOn`, and `availableOn` is where the 0.85 threshold and the
+     * `identity_overrides` exceptions are applied. Re-deriving them here would be a second answer to
+     * "is this the same app", and the day the two disagreed the table would invite installing from a
+     * listing the rest of the app refuses to merge.
+     *
+     * The possible matches stay out. A comparison invites picking a row and installing from it, and
+     * a row that might be a different app is precisely what this project has decided must never be
+     * offered that way.
+     *
+     * ### The anchor is a row, not a heading
+     *
+     * "Is this store behind the others" cannot be answered by a table that omits this store. It is
+     * marked rather than hidden, and it is the only row whose data does not go through
+     * `availableOn` — it comes from `observeListing`, which is also where its versions are.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun compare(storeId: StoreId, ref: StoreAppRef): Flow<StoreComparison> =
+        combine(
+            catalogDao.observeListing(storeId, ref.value),
+            observe(storeId, ref),
+            reads,
+        ) { anchorRows, availability, readStates ->
+            val anchorSummary = anchorRows?.listing?.toSummary()
+                ?: return@combine StoreComparison(
+                    otherStoresUnexplored = availability.unexploredStores,
+                )
+
+            // One query for every row rather than one per row: nine listings would otherwise be nine
+            // round trips to answer a screen that draws in one frame.
+            //
+            // Keyed on `(store, ref)` and not on the listing id, because a row cross-store matching
+            // found in the **last search's results** has no id — and that row is exactly the one
+            // this table now reads. See `comparableListings`.
+            val refs = (listOf(ref.value) + availability.availableOn.map { it.ref.value }).distinct()
+            val extras = catalogDao.comparableListings(refs).associateBy { Key(it.storeId, it.ref) }
+
+            val anchor = row(
+                summary = anchorSummary,
+                current = true,
+                extra = extras[Key(storeId, ref.value)],
+                read = readStates[Key(storeId, ref.value)] ?: ListingRead.IDLE,
+            )
+            val others = availability.availableOn.map { other ->
+                row(
+                    summary = other.listing.summary,
+                    current = false,
+                    extra = extras[Key(other.storeId, other.ref.value)],
+                    read = readStates[Key(other.storeId, other.ref.value)] ?: ListingRead.IDLE,
+                )
+            }
+
+            StoreComparison(
+                rows = listOf(anchor) + others.sortedBy { it.storeId.ordinal },
+                otherStoresUnexplored = availability.unexploredStores,
+                title = anchorSummary.title,
+            )
+        }.flowOn(io)
+
+    /**
+     * One row, from what the listing says and what the adapter declares.
+     *
+     * [extra] is `null` for a listing that only the last search has seen: it has no id, so it has no
+     * row in `store_listings` to read a size off. That is exactly the case [StoreComparisonRow
+     * .listingRead] exists to keep separate from "this store publishes no size", and it is why the
+     * `false` here is a default and not an oversight.
+     */
+    private fun row(
+        summary: StoreListingSummary,
+        current: Boolean,
+        extra: ComparableListing?,
+        read: ListingRead = ListingRead.IDLE,
+    ): StoreComparisonRow = StoreComparisonRow(
+        storeId = summary.storeId,
+        ref = summary.ref,
+        current = current,
+        versionName = summary.latestVersionName,
+        versionCode = summary.latestVersionCode,
+        lastUpdated = summary.lastUpdated,
+        sizeBytes = extra?.sizeBytes,
+        // The adapter's own declaration, and the only cell that is known even for a listing nobody
+        // has opened. It is also verified: the contract test compares it against how many hashes the
+        // real fixtures carry.
+        hashAvailability = registry.adapter(summary.storeId)?.capabilities?.providesHash
+            ?: HashAvailability.NONE,
+        packageName = summary.packageName,
+        modifiedBuild = registry.modifiedBuildOf(summary.storeId, summary.declaredModified),
+        listingRead = extra?.listingRead == true,
+        read = read,
+    )
+
     override suspend fun lookUp(storeId: StoreId, ref: StoreAppRef) {
         val key = Key(storeId, ref.value)
         if (lookups.value[key] == CrossStoreLookup.RUNNING) return
@@ -119,6 +231,47 @@ internal class CrossStoreRepositoryImpl @Inject constructor(
             withContext(io) { probeOtherStores(storeId, ref) }
         } finally {
             lookups.update { it + (key to CrossStoreLookup.DONE) }
+        }
+    }
+
+    override suspend fun readListings(storeId: StoreId, ref: StoreAppRef) {
+        // The rows are taken from the comparison itself rather than re-derived, for the reason
+        // written on `compare`: `availableOn` is where the 0.85 threshold and the overrides are
+        // applied, and a second answer to "is this the same app" is one that can disagree.
+        val comparison = compare(storeId, ref).first()
+        val targets = comparison.rows
+            .filterNot { it.listingRead }
+            .map { Key(it.storeId, it.ref.value) }
+            // A row whose read is already in flight — a second subscriber, a rotation — is not asked
+            // again. A row that already failed is not retried on its own either: the reader has the
+            // card's own button for that, and a screen that silently re-knocked on a door that just
+            // said no would be doing it once per recomposition.
+            .filter { reads.value[it] == null }
+        if (targets.isEmpty()) return
+
+        reads.update { current -> current + targets.associateWith { ListingRead.RUNNING } }
+        withContext(io) {
+            coroutineScope {
+                targets.map { key ->
+                    async {
+                        // `force = false`: a row can be unread here and still be inside its TTL —
+                        // discovered rows carry `ttl_seconds = 0` and are therefore always stale, so
+                        // in practice this fetches exactly the rows that need it, and `refresh`
+                        // remains the one place that decides what stale means.
+                        val outcome = details.refresh(key.storeId, StoreAppRef(key.ref))
+                        reads.update { current ->
+                            // Success **removes** the entry instead of writing a third state: the row
+                            // now has versions, so `listingRead` says so through Room. Two facts, one
+                            // of them derived, cannot then drift apart.
+                            if (outcome is Outcome.Success) {
+                                current - key
+                            } else {
+                                current + (key to ListingRead.FAILED)
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
         }
     }
 

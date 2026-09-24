@@ -60,4 +60,9 @@
     <string name="myapps_search_clear">Clear the search</string>
     <string name="myapps_no_matches_title">Nothing matches</string>
     <string name="myapps_no_matches_message">No installed app is called \u201c%1$s\u201d. Your apps are all still there \u2014 clear the search to see them.</string>
+
+    <!-- Shown only where the update channel differs from where the app came from: the two
+         coincide until somebody changes it on the app's page, and naming the same store
+         twice on every row would bury the one line that matters. -->
+    <string name="myapps_updates_from">Updates from %1$s</string>
 </resources>

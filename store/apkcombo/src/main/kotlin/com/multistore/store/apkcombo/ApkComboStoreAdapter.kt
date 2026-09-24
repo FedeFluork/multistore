@@ -116,6 +116,8 @@ class ApkComboStoreAdapter @Inject constructor(
         providesSignerFingerprint = false,
         // A quarter of one app's variants are XAPK: split containers, not single APKs.
         supportsSplits = true,
+        redistributesModifiedBuilds = false,
+        openSourceOnly = false,
         downloadMode = DownloadMode.DIRECT,
         networkTier = NetworkTier.OKHTTP,
         userAgent = config.userAgent,

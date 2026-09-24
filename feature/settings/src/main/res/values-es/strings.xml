@@ -54,6 +54,17 @@
     <string name="settings_stores_description">Qu\u00e9 tiendas consulta MultiStore. Desactivar una la oculta de los resultados y detiene cualquier petici\u00f3n hacia ella.</string>
     <string name="settings_stores_choose_label">Elegir las tiendas</string>
     <string name="settings_stores_active_count">%1$d activas de %2$d</string>
+    <string name="settings_stores_search_label">Buscar tiendas</string>
+    <string name="settings_stores_search_clear">Borrar la búsqueda</string>
+    <string name="settings_stores_tab_label">%1$s %2$d/%3$d</string>
+    <string name="settings_stores_search_empty_title">Ninguna tienda coincide</string>
+    <string name="settings_stores_search_empty_message">Ninguna tienda de esta pestaña tiene ese texto en su nombre o su dirección.</string>
+    <string name="settings_stores_select_all">Seleccionarlas todas</string>
+    <string name="settings_stores_deselect_all">Deseleccionarlas todas</string>
+    <string name="settings_stores_tab_all">Todas</string>
+    <string name="settings_stores_tab_open_source">Código abierto</string>
+    <string name="settings_stores_tab_original">Originales</string>
+    <string name="settings_stores_tab_modified">Modificadas</string>
     <string name="settings_stores_save">Guardar</string>
     <string name="settings_store_state_open">Temporalmente inalcanzable: MultiStore lo intentar\u00e1 de nuevo por su cuenta.</string>
     <string name="settings_store_state_degraded">Responde, pero sus p\u00e1ginas han cambiado: los resultados pueden estar incompletos.</string>
@@ -242,4 +253,10 @@
     <string name="settings_section_my_apps">Mis aplicaciones</string>
     <string name="settings_my_apps_sort_label">Orden de la lista</string>
     <string name="settings_my_apps_sort_description">C\u00f3mo se ordenan las aplicaciones que instalaste con MultiStore. Solo afecta a la lista: no cambia nada de las actualizaciones.</string>
+
+    <!-- The record of recent searches (0.8.0). Phrased as "do not keep", because the proto
+         field is negative: the zero value has to be the prudent behaviour, and here that is
+         remembering — one search costs up to nine requests to other people's sites. -->
+    <string name="settings_search_history_label">No conservar las búsquedas recientes</string>
+    <string name="settings_search_history_description">El campo de búsqueda vacío vuelve a ofrecer las últimas diez búsquedas. Al activar esta opción deja de registrarlas y olvida las que ya hay. Nunca salen del dispositivo.</string>
 </resources>

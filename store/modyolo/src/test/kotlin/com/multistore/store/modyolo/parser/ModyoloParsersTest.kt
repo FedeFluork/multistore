@@ -149,6 +149,24 @@ class ModyoloParsersTest {
         }
 
         @Test
+        @DisplayName("the rework flag follows the MOD notes, present or absent")
+        fun readsTheModDeclaration() {
+            // Both halves in one test, because separately either would pass with the flag wired to
+            // a constant. `mod_info` reads "Mega Menu, Unlocked" on this fixture and is the empty
+            // string on the single-download one — modyolo's own declaration, not a word read off a
+            // title.
+            val declared = detailParser
+                .parse(Fixtures.text(Fixtures.DETAIL), StoreAppRef(Fixtures.APP_REF))
+                .expect()
+            assertThat(declared.summary.declaredModified).isTrue()
+
+            val undeclared = detailParser
+                .parse(Fixtures.text(Fixtures.DETAIL_SINGLE), StoreAppRef(Fixtures.APP_REF))
+                .expect()
+            assertThat(undeclared.summary.declaredModified).isFalse()
+        }
+
+        @Test
         @DisplayName("a link that is not Google Play produces no package")
         fun aNonPlayLinkYieldsNoPackage() {
             // Visual novels distributed via Patreon have an `original_download_url` pointing at

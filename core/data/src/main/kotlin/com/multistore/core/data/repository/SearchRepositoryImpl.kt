@@ -427,16 +427,24 @@ internal class SearchRepositoryImpl @Inject constructor(
         val offset = page * SearchRepository.PAGE_SIZE
         val kind = filters.contentKind
         val minRating = filters.minRating
+        val developer = filters.developer?.let(TextNormalizer::normalizeTitle)
+        // Searching by publisher **replaces** the title match rather than adding to it. Keeping both
+        // would return that publisher's apps whose name happens to contain the publisher's name —
+        // "Mozilla Firefox" but not "Focus" — which is a coincidence, not an answer. The empty
+        // string leaves `LIKE '%%'` matching every row, so the predicate that remains is the
+        // publisher's.
+        val titleQuery = if (developer != null) "" else query
         val rows = catalogDao.search(
             storeId = storeId,
-            query = query,
+            query = titleQuery,
             limit = SearchRepository.PAGE_SIZE,
             offset = offset,
             kind = kind,
             minRating = minRating,
             orderByName = filters.sort == SearchSort.NAME,
+            developer = developer,
         )
-        val total = catalogDao.searchCount(storeId, query, kind, minRating)
+        val total = catalogDao.searchCount(storeId, titleQuery, kind, minRating, developer)
         return StoreOutcome(
             items = rows.map { it.toSummary() },
             origin = ResultOrigin.LOCAL_INDEX,

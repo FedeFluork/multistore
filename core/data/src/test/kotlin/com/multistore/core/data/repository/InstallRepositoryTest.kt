@@ -15,6 +15,7 @@ import com.multistore.core.installer.session.InstallSessionReconciler
 import com.multistore.core.installer.verify.ApkArchiveInfo
 import com.multistore.core.installer.verify.ApkArchiveReader
 import com.multistore.core.installer.verify.ApkReadResult
+import com.multistore.core.installer.verify.ApkPermissionsReader
 import com.multistore.core.installer.verify.PreInstallVerifier
 import com.multistore.core.model.DeviceProfile
 import com.multistore.core.model.InstallerKind
@@ -140,6 +141,10 @@ class InstallRepositoryTest {
         settings = settings,
         sessions = InstallSessionReconciler(context, UnconfinedTestDispatcher()),
         containers = ZipContainerReader(),
+        // Answers "not known" to everything: these tests are about the pipeline's decisions, and the
+        // permission list decides none of them. That it changes nothing here is the point — a reader
+        // that could refuse an installation would not belong on this step at all.
+        permissionsReader = ApkPermissionsReader { null },
         extractor = ContainerExtractor(),
         device = DeviceProfile(sdkInt = 34, supportedAbis = listOf("arm64-v8a"), densityDpi = 420),
     )

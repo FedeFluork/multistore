@@ -29,6 +29,9 @@ import com.multistore.store.api.StoreError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import com.multistore.core.common.net.StoreDiagnosis
+import com.multistore.core.data.repository.SearchHistoryRepository
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -244,6 +247,34 @@ class SettingsViewModelTest {
         override suspend fun purgeStale() = StalePurged(listings = 0, stagedFiles = 0, freedBytes = 0)
     }
 
+    @Test
+    fun `switching the record off also forgets what is there`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.setKeepSearchHistory(false)
+        advanceUntilIdle()
+
+        assertThat(settings.search.value.keepSearchHistory).isFalse()
+        // The half the entry promises out loud. A switch that saved the preference and left the list
+        // behind would be a control that says it forgets and does not.
+        assertThat(searchHistory.cleared).isEqualTo(1)
+    }
+
+    @Test
+    fun `switching it back on keeps what is there, which is nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.setKeepSearchHistory(true)
+        advanceUntilIdle()
+
+        assertThat(settings.search.value.keepSearchHistory).isTrue()
+        // And it does **not** clear: turning the record back on is not a destructive act, and a
+        // symmetric implementation would have made it one.
+        assertThat(searchHistory.cleared).isEqualTo(0)
+    }
+
+    private val searchHistory = RecordingSearchHistory()
+
     private fun viewModel(maintenance: MaintenanceRepository = NoMaintenance()) = SettingsViewModel(
         settingsRepository = settings,
         maintenance = maintenance,
@@ -251,10 +282,34 @@ class SettingsViewModelTest {
         installs = installs,
         remoteConfigRepository = remoteConfig,
         diagnostics = NoDiagnostics(),
+        searchHistory = searchHistory,
     )
 
     private class NoDiagnostics : DiagnosticsRepository {
         override suspend fun report(): String = "test report"
+    }
+
+    /**
+     * Records whether the switch cleared what was there.
+     *
+     * That second half is what the entry promises — "forgets the ones already there" — and it lives
+     * in the ViewModel rather than in the settings repository, because clearing is another
+     * repository's job. A double that only answered would let a version that saves the preference
+     * and keeps the record pass.
+     */
+    private class RecordingSearchHistory : SearchHistoryRepository {
+        var cleared = 0
+            private set
+
+        override fun recent(): Flow<List<String>> = flowOf(emptyList())
+
+        override suspend fun record(query: String) = Unit
+
+        override suspend fun forget(query: String) = Unit
+
+        override suspend fun clear() {
+            cleared++
+        }
     }
 
     private companion object {
@@ -274,6 +329,8 @@ class SettingsViewModelTest {
         override fun observeAll(): Flow<List<StoreHealth>> = flowOf(emptyList())
         override fun observeStores(): Flow<List<StoreEntry>> = flowOf(emptyList())
         override suspend fun health(storeId: StoreId) = StoreHealth(storeId)
+        override suspend fun diagnosis(storeId: StoreId): StoreDiagnosis = StoreDiagnosis(storeId)
+
         override suspend fun canAttempt(storeId: StoreId): Boolean = true
         override suspend fun recordSuccess(storeId: StoreId) = Unit
         override suspend fun recordFailure(storeId: StoreId, error: StoreError) = Unit

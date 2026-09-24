@@ -36,6 +36,7 @@ enum class SettingKey(val protoField: String) {
     SEARCH_TIMEOUT("search_timeout_seconds"),
     DEFAULT_SORT("default_sort"),
     DEFAULT_CONTENT_KIND("default_content_kind"),
+    BLOCK_SEARCH_HISTORY("block_search_history"),
     MY_APPS_SORT("my_apps_sort"),
     MUTE_DOWNLOAD_NOTIFICATIONS("mute_download_notifications"),
     MUTE_INSTALL_NOTIFICATIONS("mute_install_notifications"),
@@ -305,6 +306,12 @@ val SETTINGS_REGISTRY: List<SettingsEntry> = listOf(
         section = SettingsSection.SEARCH,
         labelRes = R.string.settings_search_sort_label,
         descriptionRes = R.string.settings_search_sort_description,
+    ),
+    SettingsEntry(
+        key = SettingKey.BLOCK_SEARCH_HISTORY,
+        section = SettingsSection.SEARCH,
+        labelRes = R.string.settings_search_history_label,
+        descriptionRes = R.string.settings_search_history_description,
     ),
     SettingsEntry(
         key = SettingKey.MY_APPS_SORT,

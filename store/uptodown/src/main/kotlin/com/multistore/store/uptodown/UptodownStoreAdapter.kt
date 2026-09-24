@@ -127,6 +127,8 @@ class UptodownStoreAdapter @Inject constructor(
         // put in `signerSha256`, and the type would prevent it anyway.
         providesSignerFingerprint = false,
         supportsSplits = true,
+        redistributesModifiedBuilds = false,
+        openSourceOnly = false,
         downloadMode = DownloadMode.USER_ASSISTED_ONLY,
         // The **pages** are fetched with OkHttp with no obstacle at all: the Turnstile is only on
         // the file. Declaring `WEBVIEW` here would force search and listing through a browser

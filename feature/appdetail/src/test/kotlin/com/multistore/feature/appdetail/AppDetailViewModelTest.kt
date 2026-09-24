@@ -11,6 +11,7 @@ import com.multistore.core.data.repository.StoreAvailability
 import com.multistore.core.data.repository.AppDetail
 import com.multistore.core.data.repository.DownloadStatus
 import com.multistore.core.data.repository.InstallStep
+import com.multistore.core.data.store.PendingSearch
 import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.domain.usecase.GetAppDetailUseCase
 import com.multistore.core.domain.usecase.GetCrossStoreAvailabilityUseCase
@@ -26,11 +27,14 @@ import com.multistore.core.model.AppVersion
 import com.multistore.core.model.ArtifactType
 import com.multistore.core.model.DownloadState
 import com.multistore.core.model.Sha256
+import com.multistore.core.data.repository.InstalledUpdateChannel
+import kotlinx.coroutines.test.advanceUntilIdle
 import com.multistore.core.model.StoreAppRef
 import com.multistore.core.model.StoreId
 import com.multistore.core.model.StoreListingDetail
 import com.multistore.core.model.StoreListingSummary
 import com.multistore.core.model.VersionRef
+import com.multistore.core.testing.FakeInstalledAppsRepository
 import com.multistore.core.testing.FakeSettingsRepository
 import com.multistore.core.testing.FakeAppDetailRepository
 import com.multistore.core.testing.FakeDownloadRepository
@@ -109,13 +113,24 @@ class AppDetailViewModelTest {
     private var adapter: FakeStoreAdapter = ResolvingAdapter()
     private val crossStore = FakeCrossStoreRepository()
 
+    /**
+     * Where the channel switch writes.
+     *
+     * A field rather than an inline argument, because what a test needs to prove about that gesture
+     * is **what it recorded** — one column, on one package — and not that the call returned.
+     */
+    private val installedApps = FakeInstalledAppsRepository()
+
+    /** Where a developer search is left for the search screen to pick up. */
+    private val pending = PendingSearch()
+
     private fun viewModel(): AppDetailViewModel {
         val registry = StoreRegistry(setOf(adapter))
         return AppDetailViewModel(
             savedStateHandle = SavedStateHandle(
                 mapOf("storeId" to StoreId.FDROID.wireName, "ref" to REF.value),
             ),
-            getDetail = GetAppDetailUseCase(details, index),
+            getDetail = GetAppDetailUseCase(details, index, installedApps),
             crossStore = GetCrossStoreAvailabilityUseCase(crossStore),
             installApp = InstallAppUseCase(
                 resolve = ResolveDownloadUseCase(registry, details, FakeSettingsRepository()),
@@ -127,6 +142,7 @@ class AppDetailViewModelTest {
             ),
             uninstallApp = UninstallAppUseCase(installs),
             registry = registry,
+            pending = pending,
         )
     }
 
@@ -617,7 +633,115 @@ class AppDetailViewModelTest {
         error = null,
     )
 
-    private fun anAppDetail(installedVersionCode: Long? = null) = AppDetail(
+    // --- Changing where the updates come from ----------------------------------------------------
+
+    @Test
+    fun `the switch is offered from another store's listing, and not from the channel itself`() =
+        runTest(dispatcher) {
+            // From the listing that **is** the channel there is nothing to offer: a button moving
+            // the channel to where it already is would do nothing, on the page most likely to be
+            // open. It is `null` rather than disabled — a greyed-out control has to be understood
+            // before it can be ignored.
+            details.details.value = anAppDetail(installedVersionCode = 11, channelStore = StoreId.FDROID)
+            assertThat(viewModel().subscribedState().channelSwitch).isNull()
+
+            details.details.value = anAppDetail(
+                installedVersionCode = 11,
+                channelStore = StoreId.APKMIRROR,
+                channelRef = StoreAppRef("another-listing"),
+            )
+            val switch = viewModel().subscribedState().channelSwitch
+            assertThat(switch).isNotNull()
+            assertThat(switch!!.packageName).isEqualTo(PACKAGE)
+            // The sentence names the store being moved **away** from: a card naming this one twice
+            // would read as though nothing were changing.
+            assertThat(switch.currentStoreName).isNotEmpty()
+
+            // And the same store with a **different** listing is still an offer: apkmirror has one
+            // page per variant, so two of its listings are two channels.
+            details.details.value = anAppDetail(
+                installedVersionCode = 11,
+                channelStore = StoreId.FDROID,
+                channelRef = StoreAppRef("another-listing"),
+            )
+            assertThat(viewModel().subscribedState().channelSwitch).isNotNull()
+        }
+
+    @Test
+    fun `an app MultiStore did not install has no channel to move`() = runTest(dispatcher) {
+        // No row in `installed_apps` means no `update_channel_listing_id` to write into. The app may
+        // well be on the device — this listing knows it is — and that is exactly the case the offer
+        // must not appear in, because there would be nothing to record the choice on.
+        details.details.value = anAppDetail(installedVersionCode = 11, channelStore = null)
+
+        assertThat(viewModel().subscribedState().channelSwitch).isNull()
+    }
+
+    @Test
+    fun `a different signer is warned about, and an absent one is not claimed`() = runTest(dispatcher) {
+        // The warning is a **comparison** and it needs both halves. Four stores of nine publish no
+        // signer at all, so claiming a conflict wherever one is missing would put the warning over
+        // most of the catalogue — while the pre-install pipeline goes on comparing them for real and
+        // goes on refusing, so nothing is being waved through.
+        details.details.value = anAppDetail(
+            installedVersionCode = 11,
+            channelStore = StoreId.APKMIRROR,
+            listingSigner = SIGNER_A,
+            installedSigner = SIGNER_B,
+        )
+        assertThat(viewModel().subscribedState().channelSwitch?.signerConflict).isTrue()
+
+        details.details.value = anAppDetail(
+            installedVersionCode = 11,
+            channelStore = StoreId.APKMIRROR,
+            listingSigner = null,
+            installedSigner = SIGNER_B,
+        )
+        assertThat(viewModel().subscribedState().channelSwitch?.signerConflict).isFalse()
+
+        details.details.value = anAppDetail(
+            installedVersionCode = 11,
+            channelStore = StoreId.APKMIRROR,
+            listingSigner = SIGNER_A,
+            installedSigner = SIGNER_A,
+        )
+        assertThat(viewModel().subscribedState().channelSwitch?.signerConflict).isFalse()
+    }
+
+    @Test
+    fun `switching writes the channel, and writes nothing else`() = runTest(dispatcher) {
+        details.details.value =
+            anAppDetail(installedVersionCode = 11, channelStore = StoreId.APKMIRROR)
+        val viewModel = viewModel()
+        viewModel.subscribedState()
+
+        viewModel.switchUpdateChannel()
+
+        // The package, the store of **this** listing and this listing's ref: those three are the row
+        // being written.
+        assertThat(installedApps.channels).containsExactly(Triple(PACKAGE, StoreId.FDROID, REF))
+        // And nothing else moved: no download was queued and no installation planned. Where an APK
+        // came from is a fact, not a preference, and this gesture does not rewrite it.
+        assertThat(downloads.active.value).isEmpty()
+        assertThat(installs.plans).isEmpty()
+    }
+
+    private fun anAppDetail(
+        installedVersionCode: Long? = null,
+        /** The store the app updates from now; `null` = MultiStore never installed it. */
+        channelStore: StoreId? = null,
+        /**
+         * The channel's listing, defaulting to **this** one.
+         *
+         * A parameter and not "the same as this listing when the store matches", because same store
+         * with a different ref is a real configuration and not a degenerate one: apkmirror publishes
+         * one page per variant, so two listings of the same store are two channels, and the offer
+         * has to appear between them.
+         */
+        channelRef: StoreAppRef = REF,
+        listingSigner: Sha256? = null,
+        installedSigner: Sha256? = null,
+    ) = AppDetail(
         listing = StoreListingDetail(
             summary = StoreListingSummary(
                 storeId = StoreId.FDROID,
@@ -626,17 +750,25 @@ class AppDetailViewModelTest {
                 packageName = PACKAGE,
             ),
             versions = listOf(VERSION),
+            preferredSignerSha256 = listingSigner,
         ),
         installed = installedVersionCode?.let {
             com.multistore.core.model.InstalledPackage(
                 packageName = PACKAGE,
                 versionName = "1.0",
                 versionCode = it,
-                signerSha256 = null,
+                signerSha256 = installedSigner,
             )
         },
         selection = VersionSelection.Outcome.Offer(VERSION, isUpdate = installedVersionCode != null),
         stale = false,
+        updateChannel = channelStore?.let {
+            InstalledUpdateChannel(
+                storeId = it,
+                ref = channelRef,
+                installedSignerSha256 = installedSigner,
+            )
+        },
     )
 
     private companion object {
@@ -644,6 +776,8 @@ class AppDetailViewModelTest {
         const val SIZE = 7_000_000L
         const val DOWNLOAD_ID = 1L
         val REF = StoreAppRef(PACKAGE)
+        val SIGNER_A: Sha256 = requireNotNull(Sha256.parseOrNull("aa".repeat(32)))
+        val SIGNER_B: Sha256 = requireNotNull(Sha256.parseOrNull("bb".repeat(32)))
         val VERSION = AppVersion(
             versionName = "1.2.3",
             versionCode = 12,

@@ -143,6 +143,7 @@ internal fun Settings.toSearch(): SearchSettings = SearchSettings(
     storeTimeout = searchTimeoutSeconds.toStoreTimeout(),
     defaultSort = defaultSort.toDomain(),
     defaultContentKind = defaultContentKind.toDomain(),
+    keepSearchHistory = !blockSearchHistory,
 )
 
 internal fun Settings.toMyApps(): MyAppsSettings = MyAppsSettings(

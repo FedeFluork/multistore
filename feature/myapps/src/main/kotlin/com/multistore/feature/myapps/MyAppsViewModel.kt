@@ -43,6 +43,18 @@ import kotlinx.coroutines.launch
 data class InstalledAppItem(
     val app: InstalledApp,
     val storeName: String?,
+    /**
+     * Where the **next** update will come from, when that is not where the app came from.
+     *
+     * `null` in the ordinary case, which is the two coinciding — and that is the point: a row saying
+     * both every time would print the same store's name twice on almost every line. The name appears
+     * exactly when the two have been made to differ, i.e. when somebody chose it.
+     *
+     * It stays `null` too when the channel points at a listing a sync has deleted. `installed_apps`
+     * keeps the id and the `LEFT JOIN` yields nothing, and no foreign key prevents that on purpose:
+     * a package withdrawn from a store is no reason to forget the user has it installed.
+     */
+    val updateChannelName: String?,
     val update: UpdateState = UpdateState.UpToDate,
 ) {
     /** `true` if the listing it came from is known: without it there is no detail page to open. */
@@ -239,6 +251,12 @@ class MyAppsViewModel @Inject constructor(
                         InstalledAppItem(
                             app = update.app,
                             storeName = update.app.sourceStoreId
+                                ?.let { registry.adapter(it)?.metadata?.displayName },
+                            // Only when it differs from the provenance: the two columns coincide
+                            // until somebody changes channel, and naming the same store twice on
+                            // every row would bury the one line where it matters.
+                            updateChannelName = update.app.updateChannelStoreId
+                                ?.takeIf { it != update.app.sourceStoreId }
                                 ?.let { registry.adapter(it)?.metadata?.displayName },
                             update = update.toUiState(),
                         )

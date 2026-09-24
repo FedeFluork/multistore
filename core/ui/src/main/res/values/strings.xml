@@ -64,4 +64,46 @@
     <string name="myapps_sort_updatable">Updatable first</string>
     <string name="myapps_sort_recent">Recently installed</string>
     <string name="myapps_sort_store">Store it came from</string>
+
+    <!-- The rework badge: five stores of nine redistribute APKs somebody other than the
+         developer has changed. The two labels are the two declarations that exist; the dialog says
+         what the pre-install check can and cannot prove about such a file. -->
+    <string name="modified_build_declared_label">Modified build</string>
+    <string name="modified_build_possible_label">May be modified</string>
+    <string name="modified_build_badge_action">What this means</string>
+    <string name="modified_build_dialog_title">About this build</string>
+    <string name="modified_build_dialog_declared">%1$s says this file is a rework: somebody other than the developer changed the app and republished it.</string>
+    <string name="modified_build_dialog_possible">%1$s redistributes reworked apps, and does not say whether this one is. It may be the developer’s build, or somebody else’s.</string>
+    <string name="modified_build_dialog_verified">What the check before installing can prove: that the file is a valid, signed archive, that the package name matches the one this listing declares, and — where the store publishes a hash — that the bytes are the ones it announced.</string>
+    <string name="modified_build_dialog_unverified">What it cannot prove: that the app has not been altered by whoever republished it. A rework has no original developer signature to compare against, so there is nothing to check it against.</string>
+    <string name="modified_build_dialog_dismiss">Got it</string>
+
+    <!-- A store's health, in a sentence (0.8.0). It lives here because two screens ask the
+         same question — Settings and the search's shortfall notice — and a `:feature:*`
+         never depends on another, so this is the only place they can share the wording. -->
+    <string name="store_diagnosis_state_ok">This store is answering normally.</string>
+    <string name="store_diagnosis_state_open">This store is paused after repeated failures. It will be tried again by itself.</string>
+    <string name="store_diagnosis_state_half_open">This store is about to be tried again: the next request is a probe.</string>
+    <string name="store_diagnosis_state_degraded">This store answers, but its pages are not being read as expected.</string>
+    <string name="store_diagnosis_failing_for">It has been failing for %1$s.</string>
+    <string name="store_diagnosis_last_success">It last answered %1$s ago.</string>
+    <string name="store_diagnosis_never_answered">It has never answered on this device.</string>
+    <string name="store_diagnosis_fault_transient">Last fault: no connection, a timeout, or an error from the site. These usually clear by themselves.</string>
+    <string name="store_diagnosis_fault_rate_limited">Last fault: the store asked to be queried less often. This clears by itself, and waiting is the only thing that helps.</string>
+    <string name="store_diagnosis_fault_blocked">Last fault: the store refused the request. This does not clear by waiting, and insisting makes it worse.</string>
+    <string name="store_diagnosis_fault_parse">Last fault: the page was not in the expected shape. This is the app’s side, not the store’s — waiting will not fix it.</string>
+    <string name="store_diagnosis_parse_selectors">Parts that could not be read: %1$s</string>
+    <string name="store_diagnosis_dismiss">Close</string>
+    <plurals name="store_diagnosis_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="store_diagnosis_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="store_diagnosis_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
 </resources>

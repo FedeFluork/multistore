@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.multistore.core.model.LocalizedText
 import com.multistore.core.model.Sha256
 import com.multistore.core.model.StoreId
+import com.multistore.core.model.UsesPermission
 import kotlin.time.Instant
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -46,6 +47,28 @@ object Converters {
 
     @TypeConverter
     fun stringToSha256(value: String?): Sha256? = Sha256.parseOrNull(value)
+
+    /**
+     * The `<uses-permission>` lines of one build.
+     *
+     * JSON and not a joined string, because a permission is a **pair** — name and
+     * `android:maxSdkVersion` — and packing two fields into `name:max` would make the column
+     * unparseable the day a name legitimately contains the separator. It costs a serializer and
+     * removes a class of bug entirely.
+     *
+     * `null` in, `null` out: the column's nullability carries "nobody has read this build's
+     * manifest", which is a different answer from "this build asks for nothing". A converter that
+     * turned `null` into `[]` would erase that distinction on the way to disk, where nothing could
+     * recover it.
+     */
+    @TypeConverter
+    fun permissionsToJson(value: List<UsesPermission>?): String? =
+        value?.let { json.encodeToString(ListSerializer(UsesPermission.serializer()), it) }
+
+    @TypeConverter
+    fun jsonToPermissions(value: String?): List<UsesPermission>? = value?.let {
+        runCatching { json.decodeFromString(ListSerializer(UsesPermission.serializer()), it) }.getOrNull()
+    }
 
     @TypeConverter
     fun stringListToJson(value: List<String>?): String? =

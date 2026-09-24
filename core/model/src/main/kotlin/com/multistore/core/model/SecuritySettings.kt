@@ -118,6 +118,19 @@ data class SearchSettings(
      * Conflating them would give a filter reading "show only apps whose kind is unknown".
      */
     val defaultContentKind: ContentKind? = null,
+    /**
+     * `true` — the default — remembers the last searches so they can be recalled.
+     *
+     * The domain field is positive while the proto one is `block_search_history`, which is the
+     * usual translation: proto3's zero value has to be the prudent behaviour, and here that is
+     * remembering. One search costs up to nine requests to other people's sites, and retyping it
+     * because there was no way to recall it pays that twice — a switch nobody finds would make the
+     * courteous behaviour the exception.
+     *
+     * Turning it off does not merely stop writing: it **clears** what is there. A switch that left
+     * the record behind would be one that promises to forget and does not.
+     */
+    val keepSearchHistory: Boolean = true,
 ) {
     companion object {
         /**

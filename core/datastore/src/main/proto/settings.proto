@@ -341,6 +341,20 @@ message Settings {
   // silently ignored.
   MyAppsSort my_apps_sort = 38;
 
+  // Stop remembering what has been searched for. The zero value **keeps** them.
+  //
+  // WHY NEGATIVE, WHEN `diagnostics_log_enabled` IS POSITIVE. The rule is the same one — the zero
+  // value must be the prudent behaviour — and the two land on opposite names because the two
+  // records are not comparable. The diagnostic log holds the address of **every** request, search
+  // terms included, and exists in order to be **exported** and sent to somebody: its prudent state
+  // is off. This is at most a handful of strings that never leave the device, that the person who
+  // typed them is looking at, and that they can delete one by one or all at once.
+  //
+  // And what "off" would cost here is not privacy but requests to other people's sites: one search
+  // is up to nine of them, and retyping it because there was no way to recall it pays that twice.
+  // A switch nobody finds would make the courteous behaviour the exception.
+  bool block_search_history = 39;
+
   // --- Storage ---------------------------------------------------------------
   // How many megabytes of icons and screenshots to keep on disk.
   //

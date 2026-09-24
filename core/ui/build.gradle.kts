@@ -32,4 +32,8 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
+    // Compose's tree assertions, for the one state of the rework badge a golden cannot photograph:
+    // `ModifiedBuild.NONE` draws **nothing**, and an empty slot in a picture looks exactly like a
+    // badge that failed to lay out. The other two states are held by the golden.
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

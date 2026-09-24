@@ -68,6 +68,17 @@ internal class LocalSettings(
     override suspend fun setAllowPreviewChannels(allow: Boolean) {
         versions.value = versions.value.copy(allowPreviewChannels = allow)
     }
+
+    /**
+     * The second real setter, for the same kind of reason.
+     *
+     * `SearchHistoryRepositoryImpl` re-reads this on **every** write rather than capturing it at
+     * construction, and the only way to show that is to change it between two writes and see the
+     * second behave differently.
+     */
+    override suspend fun setKeepSearchHistory(keep: Boolean) {
+        search.value = search.value.copy(keepSearchHistory = keep)
+    }
     override suspend fun setMyAppsSort(sort: MyAppsSort) = Unit
     override suspend fun setThemeMode(themeMode: ThemeMode) = Unit
     override suspend fun setDynamicColor(enabled: Boolean) = Unit

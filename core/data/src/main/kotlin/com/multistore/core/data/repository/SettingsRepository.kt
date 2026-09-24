@@ -144,6 +144,15 @@ interface SettingsRepository {
 
     suspend fun setDefaultContentKind(kind: ContentKind?)
 
+    /**
+     * Keeps recent searches, or stops **and forgets what is there**.
+     *
+     * Switching it off clears the record rather than only ceasing to add to it. A control that
+     * promised to forget and left the list behind would be worse than none — and it is why this is
+     * not a plain setter on the settings repository alone: see `SettingsViewModel`.
+     */
+    suspend fun setKeepSearchHistory(keep: Boolean)
+
     suspend fun setMyAppsSort(sort: MyAppsSort)
 
     suspend fun setMuteDownloadNotifications(mute: Boolean)

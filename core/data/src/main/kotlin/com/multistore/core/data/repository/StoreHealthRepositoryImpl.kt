@@ -2,6 +2,10 @@ package com.multistore.core.data.repository
 
 import com.multistore.core.common.coroutine.IoDispatcher
 import com.multistore.core.common.net.CircuitBreakerPolicy
+import com.multistore.core.common.net.FailureKind
+import com.multistore.core.common.net.StoreDiagnosis
+import com.multistore.core.common.net.StoreFault
+import kotlin.time.Instant
 import com.multistore.core.common.net.StoreHealth
 import com.multistore.core.data.mapper.parseSelector
 import com.multistore.core.data.mapper.toFailureKind
@@ -9,6 +13,7 @@ import com.multistore.core.data.store.StoreRegistry
 import com.multistore.core.database.dao.StoreDao
 import com.multistore.core.database.entity.HealthEventEntity
 import com.multistore.core.database.entity.StoreEntity
+import com.multistore.core.model.StoreCategory
 import com.multistore.core.model.StoreId
 import com.multistore.store.api.StoreError
 import javax.inject.Inject
@@ -63,6 +68,13 @@ internal class StoreHealthRepositoryImpl @Inject constructor(
                     displayName = adapter.metadata.displayName,
                     host = adapter.metadata.host,
                     enabled = row?.enabled ?: true,
+                    // Composed **here** and not in the screen that groups by it: the two
+                    // declarations live on the adapter, which a `:feature:*` cannot see, and a
+                    // second place computing the same `when` would be a second place to diverge.
+                    category = StoreCategory.of(
+                        openSourceOnly = adapter.capabilities.openSourceOnly,
+                        redistributesModifiedBuilds = adapter.capabilities.redistributesModifiedBuilds,
+                    ),
                     health = row?.toHealth() ?: StoreHealth(adapter.id),
                 )
             }
@@ -70,6 +82,43 @@ internal class StoreHealthRepositoryImpl @Inject constructor(
 
     override suspend fun health(storeId: StoreId): StoreHealth = withContext(io) {
         storeDao.get(storeId)?.toHealth() ?: StoreHealth(storeId)
+    }
+
+    override suspend fun diagnosis(storeId: StoreId): StoreDiagnosis = withContext(io) {
+        val health = storeDao.get(storeId)?.toHealth() ?: StoreHealth(storeId)
+        // The kinds come from the enum rather than being spelled into the SQL, so a kind added later
+        // is included without anybody having to remember two places. `NOT_FOUND` is left out on
+        // purpose and for the reason the circuit breaker leaves it out: "that app is not on this
+        // store" is the store answering correctly, and counting it would make a working store look
+        // broken for having been asked about something it does not have.
+        val kinds = FailureKind.entries.filter { it != FailureKind.NOT_FOUND }.map { it.name }
+        val last = storeDao.lastFailure(storeId, kinds)
+        StoreDiagnosis(
+            storeId = storeId,
+            state = health.state,
+            lastSuccessAt = health.lastSuccessAt,
+            lastFailure = last?.let { event ->
+                StoreFault(
+                    // A kind this build does not know — a row written by a later version — is not a
+                    // reason to show nothing: it falls back to the vaguest of the five, which is
+                    // also the only one that promises nothing about what to do.
+                    kind = FailureKind.entries.firstOrNull { it.name == event.kind }
+                        ?: FailureKind.TRANSIENT,
+                    at = event.at,
+                    selector = event.selector,
+                )
+            },
+            // Anchored on the **last success**, so this is the length of the current run rather than
+            // the age of the oldest row still in the table. `EPOCH` where there has never been a
+            // success: then every recorded fault belongs to the run, which is the truth.
+            failingSince = storeDao.failingSince(
+                storeId = storeId,
+                kinds = kinds,
+                since = health.lastSuccessAt ?: Instant.fromEpochMilliseconds(0),
+            ),
+            openUntil = health.openUntil,
+            parseFailureSelectors = health.parseFailureSelectors,
+        )
     }
 
     override suspend fun canAttempt(storeId: StoreId): Boolean = withContext(io) {

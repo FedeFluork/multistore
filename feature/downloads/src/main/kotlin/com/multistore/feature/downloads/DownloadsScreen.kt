@@ -82,6 +82,15 @@ import com.multistore.core.ui.Sharing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadsScreen(
+    /**
+     * The way to the app's page, for the one thing this screen cannot finish.
+     *
+     * It is this screen's first navigation callback, and it exists for a narrow case rather than as
+     * a general link: restarting a paused transfer can run into a download that needs a real human
+     * tap — uptodown and pdalife — or into a signature conflict, and neither can be answered under a
+     * one-line row. Everything else here is done in place.
+     */
+    onOpenListing: (StoreId, StoreAppRef) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
@@ -112,6 +121,8 @@ fun DownloadsScreen(
         onInstall = viewModel::install,
         onCancel = viewModel::cancel,
         onDelete = viewModel::requestDelete,
+        onResume = viewModel::restart,
+        onOpenListing = { item -> onOpenListing(item.storeId, item.ref) },
         onClearHistory = viewModel::requestClearHistory,
         onConfirm = viewModel::confirm,
         onDismissConfirmation = viewModel::dismissConfirmation,
@@ -180,6 +191,8 @@ internal fun DownloadsScreen(
     onInstall: (DownloadItem) -> Unit,
     onCancel: (DownloadItem) -> Unit,
     onDelete: (DownloadItem) -> Unit,
+    onResume: (DownloadItem) -> Unit,
+    onOpenListing: (DownloadItem) -> Unit,
     onClearHistory: () -> Unit,
     onConfirm: () -> Unit,
     onDismissConfirmation: () -> Unit,
@@ -247,6 +260,8 @@ internal fun DownloadsScreen(
                     onInstall = onInstall,
                     onCancel = onCancel,
                     onDelete = onDelete,
+                    onResume = onResume,
+                    onOpenListing = onOpenListing,
                     onShare = onShare,
                     onOpen = onOpen,
                     canOpen = canOpen,
@@ -257,6 +272,8 @@ internal fun DownloadsScreen(
                     onInstall = onInstall,
                     onCancel = onCancel,
                     onDelete = onDelete,
+                    onResume = onResume,
+                    onOpenListing = onOpenListing,
                     onShare = onShare,
                     onOpen = onOpen,
                     canOpen = canOpen,
@@ -267,6 +284,8 @@ internal fun DownloadsScreen(
                     onInstall = onInstall,
                     onCancel = onCancel,
                     onDelete = onDelete,
+                    onResume = onResume,
+                    onOpenListing = onOpenListing,
                     onShare = onShare,
                     onOpen = onOpen,
                     canOpen = canOpen,
@@ -307,6 +326,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
     onInstall: (DownloadItem) -> Unit,
     onCancel: (DownloadItem) -> Unit,
     onDelete: (DownloadItem) -> Unit,
+    onResume: (DownloadItem) -> Unit,
+    onOpenListing: (DownloadItem) -> Unit,
     onShare: (DownloadItem) -> Unit,
     onOpen: (DownloadItem) -> Unit,
     canOpen: (DownloadItem) -> Boolean,
@@ -319,6 +340,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
             onInstall = onInstall,
             onCancel = onCancel,
             onDelete = onDelete,
+            onResume = onResume,
+            onOpenListing = onOpenListing,
             onShare = onShare,
             onOpen = onOpen,
             canOpen = canOpen,
@@ -379,6 +402,8 @@ private fun DownloadRow(
     onInstall: (DownloadItem) -> Unit,
     onCancel: (DownloadItem) -> Unit,
     onDelete: (DownloadItem) -> Unit,
+    onResume: (DownloadItem) -> Unit,
+    onOpenListing: (DownloadItem) -> Unit,
     onShare: (DownloadItem) -> Unit,
     onOpen: (DownloadItem) -> Unit,
     canOpen: (DownloadItem) -> Boolean,
@@ -438,7 +463,12 @@ private fun DownloadRow(
         // with no launcher activity is ordinary — input methods, wallpapers, device administrators —
         // and a greyed-out "Open" would make people wonder what they did wrong.
         val openable = canOpen(item)
-        if (item.cancellable || item.deletable || openable) {
+        // "Go to the app's page", and it appears for one reason only: the restart ran into
+        // something this screen cannot finish — a download needing a human tap, or a signature
+        // conflict. It is not a general link to the listing, because a row that has nothing to say
+        // does not need one.
+        val needsListing = item.install == RowInstallState.NeedsListing
+        if (item.cancellable || item.deletable || item.resumable || openable || needsListing) {
             // Disabled while this screen is installing the row: the gestures act on the very file the
             // installer is reading, and a session that loses its APK halfway fails with a message
             // about the archive rather than about what the user just pressed.
@@ -457,6 +487,19 @@ private fun DownloadRow(
                 if (item.deletable) {
                     OutlinedButton(onClick = { onDelete(item) }, enabled = idle) {
                         Text(text = stringResource(R.string.downloads_delete))
+                    }
+                }
+                if (needsListing) {
+                    Button(onClick = { onOpenListing(item) }) {
+                        Text(text = stringResource(R.string.downloads_open_listing))
+                    }
+                }
+                // Filled, and beside a hollow Delete: on a paused row the two are the only choices,
+                // and only one of them keeps the megabytes that have already been paid for. It is
+                // the same asymmetry as Install-against-Delete one group up.
+                if (item.resumable && !needsListing) {
+                    Button(onClick = { onResume(item) }, enabled = idle) {
+                        Text(text = stringResource(R.string.downloads_resume))
                     }
                 }
                 // Only on a whole file. A partial one would hand somebody bytes that verify against
@@ -500,6 +543,7 @@ private fun DownloadRow(
 private fun statusLine(item: DownloadItem): String = when (val install = item.install) {
     RowInstallState.Working -> stringResource(R.string.downloads_status_installing)
     RowInstallState.Rejected -> stringResource(R.string.downloads_status_rejected)
+    RowInstallState.NeedsListing -> stringResource(R.string.downloads_status_needs_listing)
     is RowInstallState.Failed -> appErrorMessage(install.error)
     RowInstallState.Idle -> idleStatusLine(item)
 }
@@ -577,6 +621,8 @@ private fun DownloadsScreenPreview() {
             onInstall = {},
             onCancel = {},
             onDelete = {},
+            onResume = {},
+            onOpenListing = {},
             onClearHistory = {},
             onConfirm = {},
             onDismissConfirmation = {},
@@ -649,6 +695,30 @@ internal val PREVIEW_STATE = DownloadsUiState.Ready(
             installedAt = null,
             createdAt = Instant.fromEpochSeconds(1_779_995_000),
             error = null,
+        ),
+        // The paused row that **cannot** be restarted from here: uptodown resolves its file behind a
+        // Turnstile, so the restart came back asking for a page rather than failing. It sits beside
+        // the one above on purpose — the two are the same state of the transfer with two different
+        // answers, and only having them together shows that "Resume" is replaced rather than joined
+        // by "Go to the app".
+        DownloadItem(
+            id = 6,
+            storeId = StoreId.UPTODOWN,
+            ref = StoreAppRef("telegram"),
+            title = "Telegram",
+            iconUrl = null,
+            storeName = "Uptodown",
+            state = DownloadState.PAUSED,
+            bytesDownloaded = 3_100_000,
+            bytesTotal = 79_300_000,
+            fraction = 0.04f,
+            file = STAGED_FILE,
+            packageName = "org.telegram.messenger.web",
+            sha256 = null,
+            installedAt = null,
+            createdAt = Instant.fromEpochSeconds(1_779_990_000),
+            error = null,
+            install = RowInstallState.NeedsListing,
         ),
     ),
     readyToInstall = listOf(

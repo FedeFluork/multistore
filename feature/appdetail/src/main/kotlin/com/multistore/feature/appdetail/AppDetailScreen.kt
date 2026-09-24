@@ -6,6 +6,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.shape.RoundedCornerShape
 import android.provider.Settings
 import android.text.format.DateUtils
 import android.text.format.Formatter
@@ -22,6 +25,9 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -76,6 +82,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -103,7 +110,10 @@ import com.multistore.core.model.StoreListingSummary
 import com.multistore.core.model.ThemeMode
 import com.multistore.core.model.VersionRef
 import com.multistore.core.data.repository.VersionOffer
+import com.multistore.core.ui.PermissionCatalog
+import com.multistore.core.ui.PermissionEntry
 import com.multistore.core.ui.component.AppIcon
+import com.multistore.core.ui.component.ModifiedBuildBadge
 import com.multistore.core.ui.component.EmptyState
 import com.multistore.core.ui.component.ScreenshotGallery
 import com.multistore.core.ui.component.MultiStoreDetailTopAppBar
@@ -136,6 +146,15 @@ fun AppDetailScreen(
     onBack: () -> Unit,
     onUserAssistedDownload: (UserAssistedRequest) -> Unit,
     onOpenListing: (StoreId, StoreAppRef) -> Unit,
+    onCompareStores: (StoreId, StoreAppRef) -> Unit,
+    /**
+     * Switches to the Search tab, for a search the listing has just requested.
+     *
+     * It takes no arguments, and that is the shape of the hand-off: the **what** is left in
+     * `PendingSearch` by the ViewModel, because the Search destination is a tab and a tab with an
+     * argument is a tab with two back-stack entries. All the shell has to do is go there.
+     */
+    onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AppDetailViewModel = hiltViewModel(),
 ) {
@@ -251,6 +270,15 @@ fun AppDetailScreen(
         onUserAssistedDownload = onUserAssistedDownload,
         storeDisplayName = viewModel::storeDisplayName,
         onOpenListing = onOpenListing,
+        // The listing being compared is this screen's own, and only the ViewModel holds it: the
+        // route's arguments are parsed there, and a screen re-deriving them from the loaded state
+        // would lose the comparison in exactly the frames where the state is not `Ready`.
+        onCompareStores = { viewModel.storeId?.let { id -> onCompareStores(id, viewModel.ref) } },
+        onSwitchUpdateChannel = viewModel::switchUpdateChannel,
+        onSearchDeveloper = { developer ->
+            viewModel.searchDeveloper(developer)
+            onOpenSearch()
+        },
         onLookUpOtherStores = viewModel::lookUpOtherStores,
         onConfirmMatch = viewModel::confirmMatch,
         onRejectMatch = viewModel::rejectMatch,
@@ -327,6 +355,9 @@ internal fun AppDetailScreen(
     onUserAssistedDownload: (UserAssistedRequest) -> Unit,
     storeDisplayName: (StoreId) -> String,
     onOpenListing: (StoreId, StoreAppRef) -> Unit,
+    onCompareStores: () -> Unit,
+    onSwitchUpdateChannel: () -> Unit,
+    onSearchDeveloper: (String) -> Unit,
     onLookUpOtherStores: () -> Unit,
     onConfirmMatch: (Long) -> Unit,
     onRejectMatch: (Long) -> Unit,
@@ -404,6 +435,9 @@ internal fun AppDetailScreen(
                     onUserAssistedDownload = onUserAssistedDownload,
                     storeDisplayName = storeDisplayName,
                     onOpenListing = onOpenListing,
+                    onCompareStores = onCompareStores,
+                    onSwitchUpdateChannel = onSwitchUpdateChannel,
+                    onSearchDeveloper = onSearchDeveloper,
                     onLookUpOtherStores = onLookUpOtherStores,
                     onConfirmMatch = onConfirmMatch,
                     onRejectMatch = onRejectMatch,
@@ -435,6 +469,9 @@ private fun ReadyContent(
     onUserAssistedDownload: (UserAssistedRequest) -> Unit,
     storeDisplayName: (StoreId) -> String,
     onOpenListing: (StoreId, StoreAppRef) -> Unit,
+    onCompareStores: () -> Unit,
+    onSwitchUpdateChannel: () -> Unit,
+    onSearchDeveloper: (String) -> Unit,
     onLookUpOtherStores: () -> Unit,
     onConfirmMatch: (Long) -> Unit,
     onRejectMatch: (Long) -> Unit,
@@ -454,6 +491,7 @@ private fun ReadyContent(
             state = state,
             preferredLanguageTags = preferredLanguageTags,
             storeDisplayName = storeDisplayName,
+            onSearchDeveloper = onSearchDeveloper,
         )
 
         if (!canInstallPackages) {
@@ -482,11 +520,13 @@ private fun ReadyContent(
         )
 
         VerificationCard(outcome = state.verification)
+        UpdateChannelCard(switch = state.channelSwitch, onSwitch = onSwitchUpdateChannel)
 
         CrossStoreSection(
             state = state,
             storeDisplayName = storeDisplayName,
             onOpenListing = onOpenListing,
+            onCompareStores = onCompareStores,
             onLookUpOtherStores = onLookUpOtherStores,
         )
         PossibleMatchesSection(
@@ -508,6 +548,7 @@ private fun ReadyContent(
         Description(state = state, preferredLanguageTags = preferredLanguageTags)
         WhatsNew(state = state, preferredLanguageTags = preferredLanguageTags)
         VersionFacts(state = state)
+        Permissions(state = state)
         Links(state = state, canOpen = canOpenLink, onOpen = onOpenLink)
         VersionHistorySection(
             state = state,
@@ -533,6 +574,7 @@ private fun Header(
     state: AppDetailUiState.Ready,
     preferredLanguageTags: List<String>,
     storeDisplayName: (StoreId) -> String,
+    onSearchDeveloper: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalSpacing.current
@@ -548,10 +590,20 @@ private fun Header(
         AppIcon(iconUrl = summary.iconUrl, size = HEADER_ICON_SIZE)
         Column(modifier = Modifier.padding(start = spacing.large)) {
             summary.developer?.let { developer ->
+                // Tappable, and coloured as a link rather than as body text: "who made this has made
+                // others" is a natural place to go, and until 0.8.0 the name was inert text on every
+                // one of the nine stores that publish it.
+                //
+                // The label goes on the semantics rather than being read off the text, because a
+                // screen reader announcing a publisher's name gives no hint that it leads anywhere.
+                val label = stringResource(R.string.appdetail_developer_search, developer)
                 Text(
                     text = developer,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { onSearchDeveloper(developer) }
+                        .semantics { onClick(label = label, action = null) },
                 )
             }
             Text(
@@ -568,6 +620,16 @@ private fun Header(
                 )
             }
             HeaderFacts(state = state, modifier = Modifier.padding(top = spacing.small))
+            // Below the facts and above "newer elsewhere", which is where the reader is already
+            // weighing this store against the others: it is the same decision, and the badge is
+            // one of its terms. It draws nothing at all for the four stores that redistribute only
+            // developer builds — a "not modified" chip would be a claim whose only evidence is
+            // somebody else's silence.
+            ModifiedBuildBadge(
+                state = state.modifiedBuild,
+                storeDisplayName = state.storeName,
+                modifier = Modifier.padding(top = spacing.small),
+            )
             NewerElsewhereNote(state = state, storeDisplayName = storeDisplayName)
             summary.summary.resolve(preferredLanguageTags)?.let { text ->
                 Text(
@@ -1188,6 +1250,7 @@ private fun CrossStoreSection(
     state: AppDetailUiState.Ready,
     storeDisplayName: (StoreId) -> String,
     onOpenListing: (StoreId, StoreAppRef) -> Unit,
+    onCompareStores: () -> Unit,
     onLookUpOtherStores: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1200,13 +1263,10 @@ private fun CrossStoreSection(
         return
     }
 
-    Column(
-        modifier = modifier.padding(
-            start = spacing.screenHorizontal,
-            end = spacing.screenHorizontal,
-            bottom = spacing.large,
-        ),
-    ) {
+    // No horizontal padding on the column: the strip below has to be able to scroll **under** the
+    // screen margin, or the last card would stop short of the edge and look like the end of the
+    // list when it is not. Everything that is not the strip carries the margin itself.
+    Column(modifier = modifier.padding(bottom = spacing.large)) {
         Text(
             text = if (others.isEmpty()) {
                 stringResource(R.string.appdetail_stores_title)
@@ -1222,21 +1282,57 @@ private fun CrossStoreSection(
             },
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = spacing.screenHorizontal),
         )
 
-        others.forEach { entry ->
-            StoreRow(
-                storeName = storeDisplayName(entry.storeId),
-                title = entry.listing.summary.title,
-                onClick = { onOpenListing(entry.storeId, entry.ref) },
+        if (others.isNotEmpty()) {
+            // One row that scrolls rather than a stack, and each card only as wide as its own text.
+            // Nine stores stacked pushed everything below them — the two buttons included — off the
+            // bottom of a page that is already long; and a full-width card per store spent a whole
+            // line on two short words.
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = spacing.screenHorizontal),
+                horizontalArrangement = Arrangement.spacedBy(spacing.small),
                 modifier = Modifier.padding(top = spacing.small),
+            ) {
+                // `(store, ref)` and not the store alone: apkmirror publishes **one page per
+                // variant**, so the same store can legitimately appear twice here, and two rows
+                // sharing a key is the crash already written up under "a domain key is not a list
+                // key".
+                items(
+                    items = others,
+                    key = { "${it.storeId.wireName}/${it.ref.value}" },
+                ) { entry ->
+                    StoreCard(
+                        storeName = storeDisplayName(entry.storeId),
+                        title = entry.listing.summary.title,
+                        onClick = { onOpenListing(entry.storeId, entry.ref) },
+                    )
+                }
+            }
+        }
+
+        if (others.isEmpty() && availability.canLookUp) {
+            Text(
+                text = stringResource(R.string.appdetail_stores_none),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(
+                    start = spacing.screenHorizontal,
+                    end = spacing.screenHorizontal,
+                    top = spacing.extraSmall,
+                ),
             )
         }
 
-        when {
-            availability.lookup == CrossStoreLookup.RUNNING -> Row(
+        if (availability.lookup == CrossStoreLookup.RUNNING) {
+            Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = spacing.small),
+                modifier = Modifier.padding(
+                    start = spacing.screenHorizontal,
+                    end = spacing.screenHorizontal,
+                    top = spacing.small,
+                ),
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(spacing.large))
                 Text(
@@ -1246,23 +1342,51 @@ private fun CrossStoreSection(
                     modifier = Modifier.padding(start = spacing.small),
                 )
             }
-
-            availability.canLookUp -> Column {
-                if (others.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.appdetail_stores_none),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = spacing.extraSmall),
-                    )
-                }
-                // Outlined rather than filled: it is a gesture that costs **network requests to eight
-                // third-party sites**, and this screen's fill belongs to installation.
-                OutlinedButton(
-                    onClick = onLookUpOtherStores,
-                    modifier = Modifier.padding(top = spacing.small),
+        } else {
+            // The two gestures side by side, each taking half the width through `weight` rather than
+            // its own text width: two outlined buttons of different lengths on one line read as one
+            // control and one afterthought, and these are not ranked. Where only one of them applies
+            // it takes the whole line, which is the same code path.
+            //
+            // Both are outlined and neither is filled: this screen's fill belongs to installation.
+            val canCompare = others.isNotEmpty()
+            if (canCompare || availability.canLookUp) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                    modifier = Modifier.padding(
+                        start = spacing.screenHorizontal,
+                        end = spacing.screenHorizontal,
+                        top = spacing.small,
+                    ),
                 ) {
-                    Text(text = stringResource(R.string.appdetail_stores_lookup_action))
+                    if (canCompare) {
+                        OutlinedButton(
+                            onClick = onCompareStores,
+                            contentPadding = PaddingValues(horizontal = spacing.small),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.appdetail_stores_compare_action),
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    if (availability.canLookUp) {
+                        OutlinedButton(
+                            onClick = onLookUpOtherStores,
+                            contentPadding = PaddingValues(horizontal = spacing.small),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.appdetail_stores_lookup_action),
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1347,6 +1471,57 @@ private fun PossibleMatchesSection(
 
 /** A row reading "store name — the title that store gives it". */
 @Composable
+private fun StoreCard(storeName: String, title: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val spacing = LocalSpacing.current
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier,
+    ) {
+        // No `fillMaxWidth` and no fixed width: inside a `LazyRow` the card is measured by its
+        // content, which is what makes "AN1 / Telegram" occupy two words' worth of the strip
+        // instead of a whole line.
+        //
+        // `widthIn(max=)` is the one bound, and it is the store's doing rather than ours: titles
+        // like "Telegram Premium Unlocked Mod APK" would otherwise make a single card wider than
+        // the screen, and a card that cannot be seen whole cannot be read at a glance.
+        Column(
+            modifier = Modifier
+                .widthIn(max = STORE_CARD_MAX_WIDTH)
+                .padding(spacing.large),
+        ) {
+            Text(
+                text = storeName,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                // The title as **that** store writes it, not the one being looked at: it is the only
+                // way for the user to recognise what they are about to open, and on whoever
+                // redistributes modified builds the difference is the whole point.
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * The same two lines, full width and stacked.
+ *
+ * It is **not** [StoreCard] with a different modifier, and the difference is the surface each lives
+ * on. A card in the strip is one of several the eye sweeps across, so it is as wide as its words; a
+ * possible match is a question with two buttons underneath it, and a narrow card above a full-width
+ * Confirm/Reject pair would read as though the buttons belonged to the section rather than to that
+ * candidate.
+ */
+@Composable
 private fun StoreRow(
     storeName: String,
     title: String,
@@ -1367,9 +1542,6 @@ private fun StoreRow(
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                // The title as **that** store writes it, not the one being looked at: it is the only
-                // way for the user to recognise what they are about to open, and on whoever
-                // redistributes modified builds the difference is the whole point.
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -1379,6 +1551,15 @@ private fun StoreRow(
         }
     }
 }
+
+/**
+ * How wide one store card may get before its title is cut.
+ *
+ * Not a fraction of the screen: the strip has to show that there **is** something after the card
+ * being read, and a card allowed to fill the width would hide the next one entirely — which is the
+ * single thing a horizontal strip must never do.
+ */
+private val STORE_CARD_MAX_WIDTH = 240.dp
 
 @Composable
 private fun SignerConflictCard(onUninstall: () -> Unit, modifier: Modifier = Modifier) {
@@ -1493,6 +1674,71 @@ private fun ColumnScope.CardActions(content: @Composable RowScope.() -> Unit) {
             .padding(top = spacing.medium),
         content = content,
     )
+}
+
+/**
+ * "This app updates from somewhere else — make it here."
+ *
+ * ### The column existed for five milestones and no screen wrote it
+ *
+ * `installed_apps.update_channel_listing_id` has been distinct from `source_ref` since M3, and
+ * `CLAUDE.md` has said since then that the user may change channel and must be warned about the
+ * signature. The model kept the two apart, the periodic check read the right one — and the gesture
+ * that makes them differ did not exist. This is it.
+ *
+ * ### Warning-coloured or neutral, and the difference is a fact and not a mood
+ *
+ * With a signature conflict the switch leads to an update Android will **refuse**, and the only way
+ * through costs the app's data. That is worth a warning container and a sentence saying so. Without
+ * one it is an ordinary preference — nothing is downloaded, nothing is installed, and provenance is
+ * untouched — so the card informs and offers, in the neutral colour every other informing card here
+ * uses.
+ *
+ * The button stays enabled either way: with the warning read, going ahead is the user's decision,
+ * and this project does not disable a control it has just explained.
+ */
+@Composable
+private fun UpdateChannelCard(
+    switch: ChannelSwitch?,
+    onSwitch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (switch == null) return
+    val spacing = LocalSpacing.current
+    Column(modifier = modifier.padding(horizontal = spacing.screenHorizontal)) {
+        EmphasisCard(emphasis = if (switch.signerConflict) Emphasis.WARNING else Emphasis.NEUTRAL) {
+            Text(
+                text = stringResource(R.string.appdetail_channel_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.appdetail_channel_message, switch.currentStoreName),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (switch.signerConflict) {
+                Text(
+                    text = stringResource(R.string.appdetail_channel_signer_warning),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            // Filled and to the right, like every other card whose button is the way out of what the
+            // card describes. Its colours follow the container rather than the base theme: a
+            // `primary` rectangle inside a tertiary card argues with the surface instead of sitting
+            // on it.
+            Button(
+                onClick = onSwitch,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.onSurface,
+                    contentColor = MaterialTheme.colorScheme.surface,
+                ),
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(top = spacing.small),
+            ) {
+                Text(text = stringResource(R.string.appdetail_channel_action))
+            }
+        }
+    }
 }
 
 /**
@@ -2366,6 +2612,151 @@ private fun byteProgress(done: Long, total: Long?): String? {
 private fun String.asDisplayableHtml(): String = replace("\n", "<br>")
 
 /** The version the displayed facts refer to, when the rule picked one. */
+/**
+ * What the version about to be installed asks the operating system for.
+ *
+ * ### Why this section exists at all
+ *
+ * The archive is already opened with `apksig` to read package, version, `minSdk` and signers. The
+ * permissions sit in the same manifest and nothing read them: until 0.8.0 neither
+ * `requestedPermissions` nor `uses-permission` appeared anywhere in the repository. Meanwhile the
+ * modern system dialog stopped listing them, so there was no moment at all — before or during an
+ * installation — at which a person could find out what an app was about to be granted.
+ *
+ * ### Three states, and the third is the one that must not be silent
+ *
+ * A list, an **empty** list, and no list. The second says "this build asks for nothing", which is
+ * ordinary on F-Droid and is a real answer. The third says nobody has read this build's manifest,
+ * and it is the ordinary state for the eight stores that publish nothing: on those the answer only
+ * exists inside the file, so it appears after the version has been downloaded once, and is kept.
+ * Drawing the third as the second would put the most reassuring sentence in the app on every listing
+ * of eight stores out of nine, produced entirely by ignorance.
+ *
+ * ### The sensitive ones first, and the ordering is the grouping
+ *
+ * "Sensitive" is `PROTECTION_DANGEROUS`, i.e. the platform's own class — the permissions Android
+ * itself gates behind a runtime prompt. A taxonomy of our own would be this project inventing one
+ * where a verified one exists. See `PermissionCatalog`.
+ */
+@Composable
+private fun Permissions(state: AppDetailUiState.Ready, modifier: Modifier = Modifier) {
+    val spacing = LocalSpacing.current
+    val context = LocalContext.current
+    // The version the button would install, not the newest the store names: on F-Droid the two
+    // differ on 14 packages of 4,257, and listing another build's permissions beside an Install
+    // button is a statement about a file nobody is about to receive.
+    val version = state.detail.selection.versionOrNull() ?: return
+    val declared = version.permissions
+
+    var expanded by rememberSaveable(version.ref.value) { mutableStateOf(false) }
+    val entries = remember(declared, context) {
+        declared?.let { PermissionCatalog.describe(context, it, Build.VERSION.SDK_INT) }
+    }
+
+    Column(
+        modifier = modifier.padding(
+            start = spacing.screenHorizontal,
+            end = spacing.screenHorizontal,
+            bottom = spacing.large,
+        ),
+    ) {
+        Text(
+            text = stringResource(R.string.appdetail_permissions_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        when {
+            entries == null -> Text(
+                text = stringResource(R.string.appdetail_permissions_unknown),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = spacing.extraSmall),
+            )
+
+            entries.isEmpty() -> Text(
+                text = stringResource(R.string.appdetail_permissions_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = spacing.extraSmall),
+            )
+
+            else -> {
+                // Collapsed by default and cut at a fixed number: a browser asks for a dozen, a
+                // game for thirty, and thirty rows between the description and the author's links
+                // would push the rest of the page out of reach of anybody who did not come for
+                // this. The sensitive ones sort first, so what is worth seeing is what survives the
+                // cut.
+                val shown = if (expanded) entries else entries.take(COLLAPSED_PERMISSIONS)
+                shown.forEach { entry -> PermissionRow(entry = entry) }
+                if (entries.size > COLLAPSED_PERMISSIONS) {
+                    TextButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.padding(top = spacing.extraSmall),
+                    ) {
+                        Text(
+                            text = if (expanded) {
+                                stringResource(R.string.appdetail_permissions_collapse)
+                            } else {
+                                stringResource(R.string.appdetail_permissions_expand, entries.size)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One permission: what Android calls it, and whether Android considers it sensitive.
+ *
+ * The description below the name is the platform's own too, and it is the half that makes the row
+ * useful — "READ_CONTACTS" names a thing, "read your contacts" says what happens. It is absent for
+ * permissions this device does not know, which is exactly the case where the identifier itself is
+ * the most informative thing available.
+ */
+@Composable
+private fun PermissionRow(entry: PermissionEntry, modifier: Modifier = Modifier) {
+    val spacing = LocalSpacing.current
+    Column(modifier = modifier.padding(top = spacing.small)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = entry.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (entry.dangerous) {
+                Surface(
+                    shape = RoundedCornerShape(percent = 50),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(start = spacing.small),
+                ) {
+                    Text(
+                        text = stringResource(R.string.appdetail_permissions_sensitive),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(
+                            horizontal = spacing.small,
+                            vertical = spacing.extraSmall / 2,
+                        ),
+                    )
+                }
+            }
+        }
+        entry.description?.let { description ->
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** How many rows the section shows before asking. Enough to see the sensitive ones on any app. */
+private const val COLLAPSED_PERMISSIONS = 6
+
 private fun VersionSelection.Outcome.versionOrNull(): AppVersion? = when (this) {
     is VersionSelection.Outcome.Offer -> version
     is VersionSelection.Outcome.UpToDate -> version
@@ -2494,6 +2885,9 @@ private fun AppDetailPreviewContent() {
         onUserAssistedDownload = {},
         storeDisplayName = { it.wireName },
         onOpenListing = { _, _ -> },
+        onCompareStores = {},
+        onSwitchUpdateChannel = {},
+        onSearchDeveloper = {},
         onLookUpOtherStores = {},
         onConfirmMatch = {},
         onRejectMatch = {},

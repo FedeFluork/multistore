@@ -25,6 +25,20 @@ data class StoreListingSummary(
     val ratingCount: Int? = null,
     val downloadsLabel: String? = null,
     val lastUpdated: Instant? = null,
+    /**
+     * `true` when the store marks **this** listing as a modified build, in its own markup.
+     *
+     * A one-way field: an adapter sets it, never clears it. `false` means "this store did not say
+     * so here", which on a store that redistributes reworks is not the same as "this build is
+     * clean" — [ModifiedBuild.of] turns the pair of declarations into the three states, and the
+     * distinction is written there.
+     *
+     * It lives on the summary rather than on [StoreListingDetail] because the three stores that
+     * declare it do not all declare it in the same place: an1 marks the **search row**, modyolo and
+     * pdalife the **detail**. One field on the summary — which the detail embeds — covers both
+     * without asking the screen which one it is looking at.
+     */
+    val declaredModified: Boolean = false,
 )
 
 /**

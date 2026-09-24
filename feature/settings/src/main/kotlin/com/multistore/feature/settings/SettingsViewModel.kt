@@ -12,6 +12,8 @@ import com.multistore.core.data.repository.DiagnosticsRepository
 import com.multistore.core.data.repository.InstallRepository
 import com.multistore.core.data.repository.MaintenanceRepository
 import com.multistore.core.data.repository.RemoteConfigRepository
+import com.multistore.core.common.net.StoreDiagnosis
+import com.multistore.core.data.repository.SearchHistoryRepository
 import com.multistore.core.data.repository.SettingsRepository
 import com.multistore.core.data.repository.StoreEntry
 import com.multistore.core.data.repository.StoreHealthRepository
@@ -128,6 +130,7 @@ class SettingsViewModel @Inject constructor(
     private val installs: InstallRepository,
     private val remoteConfigRepository: RemoteConfigRepository,
     private val diagnostics: DiagnosticsRepository,
+    private val searchHistory: SearchHistoryRepository,
 ) : ViewModel() {
 
     /**
@@ -509,6 +512,27 @@ class SettingsViewModel @Inject constructor(
         update { settingsRepository.setSearchTimeout(timeout) }
 
     fun setDefaultSort(sort: SearchSort) = update { settingsRepository.setDefaultSort(sort) }
+
+    /**
+     * Why one store is not answering, read at the moment somebody asks.
+     *
+     * `suspend` and not a flow: it is one store, opened from a tap, and nine warm queries to answer
+     * a question nobody has asked would be nine queries for nothing.
+     */
+    suspend fun storeDiagnosis(storeId: StoreId): StoreDiagnosis = storeHealth.diagnosis(storeId)
+
+    /**
+     * Stops keeping searches, **and forgets the ones already kept**.
+     *
+     * Two writes and one gesture, and the second is the point: a switch that promised to forget and
+     * left the record behind would be a control that lies. It is here rather than inside the
+     * settings repository because clearing is another repository's job, and a settings write that
+     * reached into the catalogue would be the wrong module doing it.
+     */
+    fun setKeepSearchHistory(keep: Boolean) = update {
+        settingsRepository.setKeepSearchHistory(keep)
+        if (!keep) searchHistory.clear()
+    }
 
     fun setMyAppsSort(sort: MyAppsSort) = update { settingsRepository.setMyAppsSort(sort) }
 

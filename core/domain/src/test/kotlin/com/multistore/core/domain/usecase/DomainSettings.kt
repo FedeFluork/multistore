@@ -60,6 +60,7 @@ internal class DomainSettings(
 
     override suspend fun setAllowPreviewChannels(allow: Boolean) = Unit
     override suspend fun setMyAppsSort(sort: MyAppsSort) = Unit
+    override suspend fun setKeepSearchHistory(keep: Boolean) = Unit
     override suspend fun setThemeMode(themeMode: ThemeMode) = Unit
     override suspend fun setDynamicColor(enabled: Boolean) = Unit
     override suspend fun setLanguageTag(tag: String) = Unit
