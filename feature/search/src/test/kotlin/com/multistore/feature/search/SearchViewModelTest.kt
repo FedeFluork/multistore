@@ -343,7 +343,7 @@ class SearchViewModelTest {
 
     @Test
     fun `the store name is declared by the adapter, not by strings xml`() {
-        // "F-Droid" is spelled the same in all five languages: it is a trademark, not an interface label.
+        // "F-Droid" is spelled the same in all six languages: it is a trademark, not an interface label.
         // The fallback to the wireName is for a store this build has not wired.
         assertThat(viewModel().storeDisplayName(StoreId.FDROID)).isEqualTo("F-Droid")
         assertThat(viewModel().storeDisplayName(StoreId.AN1)).isEqualTo("an1")

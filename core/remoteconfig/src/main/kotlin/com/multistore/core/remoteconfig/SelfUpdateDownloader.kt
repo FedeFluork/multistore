@@ -25,7 +25,7 @@ import okhttp3.Request
  * and `StoreId` is a closed enum of nine values precisely so that none can be invented.
  *
  * Adding a fake tenth would have meant a value `StoreCatalogTest` demands has a module, a description
- * and five translations; making them nullable would have meant three nullable columns in
+ * and six translations; making them nullable would have meant three nullable columns in
  * `downloads`, a migration, and every reader of that table forced to handle a case only this path
  * produces.
  *

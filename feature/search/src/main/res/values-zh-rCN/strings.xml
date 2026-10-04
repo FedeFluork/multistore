@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="search_title">搜索</string>
+    <string name="search_field_label">搜索应用</string>
+    <string name="search_field_clear">清除查询</string>
+    <string name="search_idle_title">同时搜索所有商店</string>
+    <string name="search_idle_message">一次查询，汇总所有已连接商店的结果并进行并排比较。</string>
+    <string name="search_no_results_title">没有“%1$s”的搜索结果</string>
+    <string name="search_no_results_message">尝试使用不同的术语，或检查拼写。</string>
+    <string name="search_load_more">加载更多</string>
+    <string name="search_notice_dismiss">隐藏此通知</string>
+    <string name="search_shortfall_title">部分商店未响应</string>
+    <string name="search_shortfall_entry">%1$s — %2$s</string>
+    <string name="search_shortfall_paused">屡次失败后暂停。我们甚至没有尝试。</string>
+    <string name="search_shortfall_partial">部分结果。</string>
+    <string name="search_shortfall_unknown">没有响应。</string>
+    <string name="search_shortfall_retry">再次搜索</string>
+    <string name="search_bootstrap_notice">部分结果：目录仍在下载中，因此该商店只能回答少数匹配项。</string>
+    <string name="search_progress_stores">已有 %1$d / %2$d 家商店响应</string>
+    <string name="search_progress_still_arriving">已有 %1$d / %2$d 家商店响应。列表仍在更新，结果可能变化。</string>
+    <plurals name="search_available_on_stores">
+        <item quantity="one">在 %1$d 家商店提供</item>
+        <item quantity="other">在 %1$d 家商店提供</item>
+    </plurals>
+    <plurals name="search_shortfall_paused_retry">
+        <item quantity="one">屡次失败后暂停。大约 %1$d 分钟后重试。</item>
+        <item quantity="other">屡次失败后暂停。大约 %1$d 分钟后重试。</item>
+    </plurals>
+    <string name="search_filters_open">筛选</string>
+    <string name="search_filters_title">筛选</string>
+    <string name="search_filters_reset">重置</string>
+    <string name="search_filters_close">完成</string>
+    <string name="search_filters_kind_label">类型</string>
+    <string name="search_filters_kind_all">全部</string>
+    <string name="search_filters_kind_apps">应用</string>
+    <string name="search_filters_kind_games">游戏</string>
+    <string name="search_filters_rating_label">最低评分</string>
+    <string name="search_filters_rating_any">不限</string>
+    <string name="search_filters_rating_value">%1$s 及以上</string>
+    <string name="search_filters_sort_label">排序方式</string>
+    <string name="search_filters_sort_relevance">相关性</string>
+    <string name="search_filters_sort_name">名称</string>
+    <string name="search_filters_sort_rating">评分</string>
+    <string name="search_filters_stores_label">商店</string>
+    <string name="search_filters_stores_hint">仅用于此搜索。要永久关闭商店，请使用“设置”。</string>
+    <string name="search_filtered_out_title">有些商店无法回答这个问题</string>
+    <string name="search_filter_name_content_kind">类型（应用或游戏）</string>
+    <string name="search_filter_name_min_rating">评级</string>
+    <string name="search_filter_name_category">一个类别</string>
+    <string name="search_rating">★%1$s</string>
+    <plurals name="search_filters_active">
+        <item quantity="one">%1$d 个筛选条件</item>
+        <item quantity="other">%1$d 个筛选条件</item>
+    </plurals>
+    <plurals name="search_filtered_out_entry">
+        <item quantity="one">%1$s 没有在结果中发布 %2$s，因此未向它查询。</item>
+        <item quantity="other">%1$s 没有在结果中发布 %2$s，因此未向它们查询。</item>
+    </plurals>
+    <string name="search_rating_count">\u2605 %1$s (%2$s)</string>
+    <string name="search_downloads">%1$s 次下载</string>
+    <string name="search_developer_notice">%1$s 开发的应用。只有本地索引商店支持按开发者搜索；其他商店把名称当作普通文本处理，因此可能出现同名开发者的结果。</string>
+    <string name="search_recent_title">最近搜索</string>
+    <string name="search_recent_forget_one">忘记“%1$s”</string>
+    <string name="search_recent_clear">忘记全部</string>
+    <string name="search_shortfall_explain">为什么 %1$s 没有响应</string>
+</resources>
+

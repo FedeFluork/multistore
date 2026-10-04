@@ -9,12 +9,12 @@ import org.w3c.dom.Element
 
 /**
  * Guardrail #2, rule 1: **no hardcoded strings, in any language** — and its operational consequence,
- * that every key exists *simultaneously* in all 5 languages.
+ * that every key exists *simultaneously* in all 6 languages.
  *
  * The test scans every `res` folder in the repository and compares `values/` (English, the default and
- * the fallback) with `values-it`, `values-fr`, `values-es`, `values-de`. It fails if:
+ * the fallback) with `values-it`, `values-fr`, `values-es`, `values-de`, `values-zh-rCN`. It fails if:
  *
- *  - a key present in `values/` is missing from one of the 4 translations;
+ *  - a key present in `values/` is missing from one of the 5 translations;
  *  - a translation contains a key that does not exist in `values/` (an orphan key: nearly always the
  *    leftover of a rename);
  *  - a `translatable="false"` string appears in a translation;
@@ -25,15 +25,21 @@ import org.w3c.dom.Element
  * Why a test and not just the lint: AGP's `MissingTranslation` looks at one module at a time and can be
  * disabled per resource; this looks at the whole repository and has no exemptions.
  */
-@DisplayName("Translation parity across the 5 supported languages")
+@DisplayName("Translation parity across the 6 supported languages")
 class TranslationParityTest {
 
     private companion object {
         /** `values/` is English: the compile-time default and the runtime fallback. */
         const val BASE_QUALIFIER = "values"
 
-        /** The 4 mandatory translations. English is the base, not a translation. */
-        val REQUIRED_QUALIFIERS = listOf("values-it", "values-fr", "values-es", "values-de")
+        /** The 5 mandatory translations. English is the base, not a translation. */
+        val REQUIRED_QUALIFIERS = listOf(
+            "values-it",
+            "values-fr",
+            "values-es",
+            "values-de",
+            "values-zh-rCN",
+        )
 
         /**
          * Quantity forms CLDR requires for each language.
@@ -47,6 +53,7 @@ class TranslationParityTest {
             "values-fr" to setOf("one", "many", "other"),
             "values-es" to setOf("one", "many", "other"),
             "values-de" to setOf("one", "other"),
+            "values-zh-rCN" to setOf("other"),
         )
 
         /** `%s`, `%1$s`, `%d`, `%1$.2f`… — the placeholders must match between languages. */
@@ -96,7 +103,7 @@ class TranslationParityTest {
                 val files = translationFiles.getValue(qualifier)
                 if (files.isEmpty()) {
                     problems += "${RepoLayout.relative(resDir)}: $qualifier/ is missing entirely. " +
-                        "A key is added to all 5 languages in the same commit."
+                        "A key is added to all 6 languages in the same commit."
                     continue
                 }
                 val translation = readResources(files, problems, RepoLayout.relative(resDir), qualifier)
@@ -115,8 +122,8 @@ class TranslationParityTest {
             buildString {
                 appendLine()
                 appendLine("Translation parity violated (rule 1).")
-                appendLine("A key must be added to ALL 5 languages in the same commit:")
-                appendLine("  values/ (en) · values-it/ · values-fr/ · values-es/ · values-de/")
+                appendLine("A key must be added to ALL 6 languages in the same commit:")
+                appendLine("  values/ (en) · values-it/ · values-fr/ · values-es/ · values-de/ · values-zh-rCN/")
                 appendLine()
                 problems.sorted().forEach { appendLine("  - $it") }
                 appendLine()

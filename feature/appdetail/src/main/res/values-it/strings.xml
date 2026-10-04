@@ -128,7 +128,7 @@
     <!-- Condividere e aprire: i due capi del percorso che finiva fuori dall\u2019app. -->
     <string name="appdetail_action_share">Condividi</string>
     <string name="appdetail_action_open">Apri</string>
-    <string name="appdetail_share_listing_text">%1$s su %2$s\n%3$s</string>
+    <string name="appdetail_share_listing_text">%1$s su %2$s%3$s</string>
 
     <!-- Dati dell\u2019intestazione che sei store su nove non pubblicano. -->
     <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>

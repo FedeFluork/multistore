@@ -26,7 +26,7 @@ import org.junit.Test
  *
  * The sizes are the ones **measured on the device** and not round numbers: that is the case where the
  * golden earns its keep — four values of different orders of magnitude, one of them two digits of
- * megabytes, that must line up in a column without wrapping in five languages.
+ * megabytes, that must line up in a column without wrapping in six languages.
  *
  * `captureRoboImage` photographs the composition root, which the device crops to its own height: on a
  * Pixel 7 the section does not fit even **once**, and the first recording produced an image cut in

@@ -24,8 +24,8 @@ import com.multistore.core.ui.R
  * optically against the top-level screens, where the title really is in the centre.
  *
  * The arrow is `AutoMirrored`: in a right-to-left language "back" points the other way, and today's
- * five languages are all LTR but the sixth might not be. The TalkBack description lives here and not
- * in the features: it would be the same sentence repeated across three modules in five languages, i.e.
+ * six languages are all LTR but the seventh might not be. The TalkBack description lives here and not
+ * in the features: it would be the same sentence repeated across three modules in six languages, i.e.
  * fifteen chances to diverge.
  */
 @OptIn(ExperimentalMaterial3Api::class)

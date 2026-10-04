@@ -42,7 +42,7 @@ data class HealthEvent(
  * and [host] come from the **adapter**, which is the only one that knows them; [enabled] and
  * [health] come from **Room**, because they are state and have to survive a restart.
  *
- * [displayName] is not translated text and rightly so: "APKMirror" is written the same in all five
+ * [displayName] is not translated text and rightly so: "APKMirror" is written the same in all six
  * languages. What is translated is the store's **description**, which lives in `:feature:settings`'s
  * `strings.xml` with one key per [storeId].
  */

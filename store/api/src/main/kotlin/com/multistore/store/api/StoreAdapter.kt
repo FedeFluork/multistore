@@ -86,7 +86,7 @@ interface StoreAdapter {
 /**
  * A store's identity.
  *
- * [displayName] is the brand, not interface text: "F-Droid" is written the same in all five
+ * [displayName] is the brand, not interface text: "F-Droid" is written the same in all six
  * languages. The store's **description**, which does get translated, lives in `:feature:settings`'
  * `strings.xml`.
  */

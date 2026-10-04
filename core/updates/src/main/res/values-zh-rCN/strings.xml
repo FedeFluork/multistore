@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="update_notification_channel_name">更新</string>
+    <string name="update_notification_channel_description">通过 MultiStore 安装的应用有新版本时通知你。</string>
+    <plurals name="update_notification_title">
+        <item quantity="one">有 %1$d 个更新可用</item>
+        <item quantity="other">有 %1$d 个更新可用</item>
+    </plurals>
+    <string name="install_notification_channel_name">安装</string>
+    <string name="install_notification_channel_description">通知你 MultiStore 自动获取的更新何时可以安装，以及安装结果。</string>
+    <plurals name="install_ready_title">
+        <item quantity="one">%1$d 个应用已准备安装</item>
+        <item quantity="other">%1$d 个应用已准备安装</item>
+    </plurals>
+    <plurals name="install_result_title">
+        <item quantity="one">%1$d 个应用已更新</item>
+        <item quantity="other">%1$d 个应用已更新</item>
+    </plurals>
+    <plurals name="install_result_failed_title">
+        <item quantity="one">%1$d 个应用更新失败</item>
+        <item quantity="other">%1$d 个应用更新失败</item>
+    </plurals>
+    <string name="store_alert_channel_name">无法访问的商店</string>
+    <string name="store_alert_channel_description">MultiStore 更新应用时，商店没有响应就会通知你。</string>
+    <plurals name="store_alert_title">
+        <item quantity="one">有 %1$d 个商店未响应</item>
+        <item quantity="other">有 %1$d 个商店未响应</item>
+    </plurals>
+</resources>
+

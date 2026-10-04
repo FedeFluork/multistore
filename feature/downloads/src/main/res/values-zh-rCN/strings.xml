@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="downloads_title">下载</string>
+    <string name="downloads_empty_title">暂无下载</string>
+    <string name="downloads_empty_message">你下载的应用会显示在这里：正在下载、等待安装以及已经处理完毕的应用。</string>
+    <string name="downloads_section_ready">准备安装</string>
+    <string name="downloads_section_active">进行中</string>
+    <string name="downloads_section_history">历史记录</string>
+    <string name="downloads_install">安装</string>
+    <string name="downloads_cancel">取消</string>
+    <string name="downloads_delete">删除</string>
+    <string name="downloads_history_clear">清空历史记录</string>
+    <string name="downloads_history_clear_action">清空</string>
+    <string name="downloads_history_clear_confirm_title">清空历史记录？</string>
+    <string name="downloads_history_clear_confirm_message">这会删除已经处理完毕的下载记录。正在传输和等待安装的文件会保留。</string>
+    <string name="downloads_delete_confirm_title">删除下载的文件？</string>
+    <string name="downloads_delete_confirm_message">%1$s 已下载的文件会从设备中删除，以后安装时需要重新下载。</string>
+    <string name="downloads_confirm_cancel">取消</string>
+    <string name="downloads_status_installing">正在安装…</string>
+    <string name="downloads_status_rejected">此文件未通过验证。打开应用页面查看失败原因。</string>
+    <string name="downloads_status_ready">来自 %1$s · 准备安装</string>
+    <string name="downloads_status_ready_sized">来自 %1$s · %2$s · 准备安装</string>
+    <string name="downloads_status_progress">%1$s，共 %2$s</string>
+    <string name="downloads_status_progress_unknown">已下载 %1$s</string>
+    <string name="downloads_status_queued">等待开始</string>
+    <string name="downloads_status_paused">已暂停 · 已下载的内容会保留</string>
+    <string name="downloads_status_verifying">正在检查文件…</string>
+    <string name="downloads_status_failed">下载失败。</string>
+    <string name="downloads_status_installed">来自 %1$s · 已安装</string>
+    <string name="downloads_status_removed">来自 %1$s · 文件已删除</string>
+    <string name="downloads_share">分享文件</string>
+    <string name="downloads_open">打开</string>
+    <string name="downloads_share_text">%1$s，使用 MultiStore 从 %2$s 下载。</string>
+    <string name="downloads_share_hash">下载时已验证 SHA-256：%1$s</string>
+    <string name="downloads_resume">继续</string>
+    <string name="downloads_open_listing">前往应用页面</string>
+    <string name="downloads_status_needs_listing">必须在应用页面完成：商店要求你点击操作，或签名与已安装的应用不匹配。</string>
+</resources>
+

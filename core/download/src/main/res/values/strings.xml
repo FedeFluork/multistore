@@ -5,7 +5,7 @@
   It is this module's only text, and it exists because a foreground service *must* show something:
   the system does not allow keeping one alive silently.
 
-  Written together with the other 4 languages: TranslationParityTest fails the build if a key is
+  Written together with the other 5 languages: TranslationParityTest fails the build if a key is
   missing from one of them.
 -->
 <resources>

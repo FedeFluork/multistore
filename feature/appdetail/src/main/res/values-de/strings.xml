@@ -126,7 +126,7 @@
     <!-- Teilen und \u00f6ffnen: die beiden Enden des Ablaufs, der bisher au\u00dferhalb der App endete. -->
     <string name="appdetail_action_share">Teilen</string>
     <string name="appdetail_action_open">\u00d6ffnen</string>
-    <string name="appdetail_share_listing_text">%1$s bei %2$s\n%3$s</string>
+    <string name="appdetail_share_listing_text">%1$s bei %2$s%3$s</string>
 
     <!-- Kopfzeilen-Angaben, die sechs von neun Stores nicht ver\u00f6ffentlichen. -->
     <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>

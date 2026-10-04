@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="home_title">首页</string>
+    <string name="home_refresh_action">刷新目录</string>
+    <string name="home_first_sync_title">此设备还没有目录</string>
+    <string name="home_first_sync_message">MultiStore 支持离线搜索。先下载一次商店目录，之后无需等待网络即可搜索。</string>
+    <string name="home_first_sync_action">下载目录</string>
+    <string name="home_syncing_title">正在下载目录</string>
+    <string name="home_syncing_progress">%1$d / %2$d 条</string>
+    <string name="home_syncing_processed">已处理 %1$d 条</string>
+    <string name="home_sync_failed_title">目录无法更新</string>
+    <string name="home_sync_retry">重试</string>
+    <string name="home_sync_dismiss">关闭</string>
+    <string name="home_recently_updated_title">最近更新</string>
+    <plurals name="home_catalogue_size">
+        <item quantity="one">目录中有 %1$d 个应用</item>
+        <item quantity="other">目录中有 %1$d 个应用</item>
+    </plurals>
+    <string name="home_catalogue_empty_title">目录为空</string>
+    <string name="home_catalogue_empty_message">同步完成，但商店没有发布任何我们可以展示的内容。</string>
+    <string name="home_no_indexed_store_title">没有离线目录</string>
+    <string name="home_no_indexed_store_message">连接的商店都没有发布完整索引，因此没有可下载的内容。</string>
+    <string name="home_metered_title">使用移动数据？</string>
+    <string name="home_metered_message">该目录的下载量很大，并且此连接是按流量计费的。此选择仅适用于本次下载。</string>
+    <string name="home_metered_confirm">立即下载</string>
+    <string name="home_metered_dismiss">暂时不要</string>
+    <string name="home_categories_title">浏览目录</string>
+    <string name="home_categories_all">全部应用</string>
+    <string name="home_updates_version_change">%1$s → %2$s</string>
+    <string name="home_popular_title">最热门</string>
+    <string name="home_new_title">最新内容</string>
+    <string name="home_self_update_title">MultiStore 新版本</string>
+    <string name="home_self_update_versions">%1$s→%2$s</string>
+    <string name="home_self_update_action">更新 MultiStore</string>
+    <string name="home_self_update_downloading">正在下载更新...</string>
+    <string name="home_self_update_installing">正在安装。MultiStore 将关闭。</string>
+    <string name="home_self_update_dismiss">关闭</string>
+</resources>
+

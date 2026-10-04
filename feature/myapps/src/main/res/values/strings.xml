@@ -2,7 +2,7 @@
 <!--
   The My apps screen.
 
-  Written together with the other 4 languages: a key may never be added to one language alone,
+  Written together with the other 5 languages: a key may never be added to one language alone,
   and TranslationParityTest fails the build if that happens.
 
   A store's name is NOT here: "F-Droid" is a proper name and the adapter declares it. What is here

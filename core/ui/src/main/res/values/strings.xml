@@ -3,7 +3,7 @@
   Text shared by several features: the error vocabulary and the labels of an app's list row.
 
   It lives here rather than in a feature because the same sentence must say the same thing in
-  search, on the Home and on the detail page. Written together with the other 4 languages:
+  search, on the Home and on the detail page. Written together with the other 5 languages:
   TranslationParityTest fails the build if a key is missing from one of them.
 -->
 <resources>

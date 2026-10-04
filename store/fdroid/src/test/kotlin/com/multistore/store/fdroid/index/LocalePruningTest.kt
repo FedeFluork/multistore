@@ -16,13 +16,13 @@ class LocalePruningTest {
     private fun obj(text: String) = json.parseToJsonElement(text) as JsonObject
 
     @Test
-    @DisplayName("keeps the app's 5 languages and their regional variants, discards the rest")
+    @DisplayName("keeps the app's 6 languages and their regional variants, discards the rest")
     fun keepsDisplayableLanguages() {
         val pruned = LocalePruning.pruneLocaleMap(
             obj("""{"en-US":"a","it":"b","de-DE":"c","ja":"d","zh-CN":"e","fr-FR":"f"}"""),
         )
 
-        assertThat(pruned.keys).containsExactly("en-US", "it", "de-DE", "fr-FR")
+        assertThat(pruned.keys).containsExactly("en-US", "it", "de-DE", "zh-CN", "fr-FR")
     }
 
     @Test
@@ -143,8 +143,9 @@ class LocalePruningTest {
     @Test
     @DisplayName("the set of kept languages derives from the app's languages")
     fun keptLanguagesFollowTheAppLanguages() {
-        // If one day the app gains a sixth language, this is the line that makes the sync start
+        // If one day the app gains a seventh language, this is the line that makes the sync start
         // keeping it without anyone having to remember.
-        assertThat(LocalizedText.DISPLAYABLE_TAGS).containsExactly("en", "it", "fr", "es", "de")
+        assertThat(LocalizedText.DISPLAYABLE_TAGS)
+            .containsExactly("en", "it", "fr", "es", "de", "zh-CN", "zh")
     }
 }

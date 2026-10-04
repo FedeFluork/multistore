@@ -24,7 +24,7 @@ To look at one: `gzcat detail.html.gz | less`.
 2. **There is a language subdomain.** `www.uptodown.com` serves **Spanish** (`<html lang="es">`,
    "Descargar telegram"); `en.uptodown.com` serves English and the listings become
    `{slug}.en.uptodown.com`. Using `www` would fill the database with Spanish descriptions for
-   every user, in all five of the app's languages.
+   every user, in all six of the app's languages.
 3. **Pagination does not exist.** `?page=2` returns **the same 36 apps** as the first page, in a
    different order — compared on the set of hrefs, not by eye. The order changes on every request:
    it is randomised server-side among equally scored results.

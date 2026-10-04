@@ -15,7 +15,7 @@ import com.multistore.core.ui.R
  * until two screens disagreed about what the list was sorted by.
  *
  * An exhaustive `when` with no `else`: a fifth criterion must not compile until somebody has decided
- * what to call it in all five languages.
+ * what to call it in all six languages.
  */
 @Composable
 fun myAppsSortLabel(sort: MyAppsSort): String = stringResource(

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="myapps_title">我的应用</string>
+    <string name="myapps_empty_state_title">还没有通过 MultiStore 安装应用</string>
+    <string name="myapps_empty_state_message">从这里安装的应用会与来源商店一起列出，因此更新会继续来自同一来源。</string>
+    <plurals name="myapps_installed_count">
+        <item quantity="one">通过 MultiStore 安装了 %1$d 个应用</item>
+        <item quantity="other">通过 MultiStore 安装了 %1$d 个应用</item>
+    </plurals>
+    <string name="myapps_version">版本 %1$s</string>
+    <string name="myapps_installed_from">来自 %1$s</string>
+    <string name="myapps_uninstall_app">卸载 %1$s</string>
+    <string name="myapps_action_uninstall">卸载</string>
+    <string name="myapps_uninstall_confirm_title">卸载%1$s？</string>
+    <string name="myapps_uninstall_confirm_message">应用及其数据会从设备中删除，但应用本身仍可在商店中获取。</string>
+    <string name="myapps_uninstall_confirm_action">卸载</string>
+    <string name="myapps_uninstall_dismiss">取消</string>
+    <string name="myapps_uninstalling">等待系统确认……</string>
+    <string name="myapps_uninstall_failed_title">无法卸载</string>
+    <string name="myapps_uninstall_failed_dismiss">确定</string>
+    <string name="myapps_action_check">检查更新</string>
+    <string name="myapps_checking">正在检查更新…</string>
+    <string name="myapps_check_dismiss">确定</string>
+    <string name="myapps_update_available">可用更新：%1$s</string>
+    <string name="myapps_update_paused">更新已暂停</string>
+    <string name="myapps_update_paused_with_pending">更新已暂停 - 新版本已发布</string>
+    <string name="myapps_update_pinned">已锁定版本号 %1$d · 已发布 %2$s</string>
+    <string name="myapps_update_undeterminable">此商店未发布版本号：无法检测更新</string>
+    <string name="myapps_update_no_channel">更新来源未知</string>
+    <string name="myapps_more_actions">%1$s 的更多操作</string>
+    <string name="myapps_action_pause_updates">暂停更新</string>
+    <string name="myapps_action_resume_updates">恢复更新</string>
+    <string name="myapps_action_pin">锁定%1$s</string>
+    <string name="myapps_action_unpin">解除版本锁定</string>
+    <plurals name="myapps_check_incomplete">
+        <item quantity="one">有 %1$d 家商店未响应</item>
+        <item quantity="other">有 %1$d 家商店未响应</item>
+    </plurals>
+    <string name="myapps_action_sort">调整排序</string>
+    <string name="myapps_sort_dialog_title">列表顺序</string>
+    <string name="myapps_sort_dialog_close">关闭</string>
+    <string name="myapps_search_label">搜索我的应用</string>
+    <string name="myapps_search_clear">清除搜索</string>
+    <string name="myapps_no_matches_title">没有匹配项</string>
+    <string name="myapps_no_matches_message">没有名为“%1$s”的已安装应用。你的应用都还在，清除搜索即可查看。</string>
+    <string name="myapps_updates_from">来自 %1$s 的更新</string>
+</resources>
+

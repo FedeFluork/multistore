@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="error_network">没有网络连接，请检查网络后重试。</string>
+    <string name="error_rate_limited">商店要求降低请求频率，请稍后重试。</string>
+    <string name="error_blocked">商店拒绝了请求。</string>
+    <string name="error_parse">商店返回了无法识别的格式。</string>
+    <string name="error_not_found">在此商店中找不到。</string>
+    <string name="error_integrity">完整性校验失败，文件已丢弃。</string>
+    <string name="error_storage">空间不足，或无法写入文件。</string>
+    <string name="error_install_failed">系统拒绝了安装。</string>
+    <string name="error_cancelled">已取消。</string>
+    <string name="error_user_assistance_disabled">此下载需要在商店页面上点击操作，而这条路径已在“设置”中关闭。</string>
+    <string name="error_unexpected">出了点问题。</string>
+    <string name="action_back">返回</string>
+    <string name="install_failed_unknown">系统拒绝安装，并没有说明原因。</string>
+    <string name="install_failed_blocked">设备策略、安全应用或 %1$s 软件中的功能拒绝了安装。请不要在 Android 系统设置中查找。</string>
+    <string name="install_failed_blocked_generic">设备策略、安全应用或制造商软件中的功能拒绝了安装。</string>
+    <string name="install_failed_invalid">该文件不是有效的 APK。通常是下载中断，请重新下载。</string>
+    <string name="install_failed_conflict">它与已安装的副本冲突：签名不同或版本更旧。先卸载已安装的应用即可解决，但会丢失应用数据。</string>
+    <string name="install_failed_storage">设备上空间不足。</string>
+    <string name="install_failed_incompatible">该应用无法在此设备上运行：它需要更新版本的 Android，或设备不具备所需的处理器架构。</string>
+    <string name="install_failed_timeout">系统等待时间过长，通常重试即可成功。</string>
+    <string name="downloads_overlay_title_one">正在下载 %1$s</string>
+    <string name="downloads_overlay_unknown_app">一个应用</string>
+    <string name="downloads_overlay_dismiss">隐藏下载面板</string>
+    <string name="downloads_overlay_expand">打开下载页面</string>
+    <plurals name="downloads_overlay_title_many">
+        <item quantity="one">正在下载 %1$d 个应用</item>
+        <item quantity="other">正在下载 %1$d 个应用</item>
+    </plurals>
+    <plurals name="downloads_overlay_ready">
+        <item quantity="one">%1$d 个应用已准备安装</item>
+        <item quantity="other">%1$d 个应用已准备安装</item>
+    </plurals>
+    <string name="gallery_screenshot_position">第 %1$d 张截图，共 %2$d 张</string>
+    <string name="gallery_close">关闭截图</string>
+    <string name="gallery_position">%1$d / %2$d</string>
+    <string name="update_all_action">全部更新</string>
+    <string name="update_all_applying">正在更新第 %1$d 个，共 %2$d 个</string>
+    <string name="update_all_finished">已更新 %1$d 个，%2$d 个未完成</string>
+    <string name="update_all_dismiss">确定</string>
+    <plurals name="update_all_title">
+        <item quantity="one">有 %1$d 个更新可用</item>
+        <item quantity="other">有 %1$d 个更新可用</item>
+    </plurals>
+    <string name="myapps_sort_name">名称</string>
+    <string name="myapps_sort_updatable">可更新优先</string>
+    <string name="myapps_sort_recent">最近安装</string>
+    <string name="myapps_sort_store">来源商店</string>
+    <string name="modified_build_declared_label">修改版构建</string>
+    <string name="modified_build_possible_label">可能是修改版</string>
+    <string name="modified_build_badge_action">这意味着什么</string>
+    <string name="modified_build_dialog_title">关于这个构建</string>
+    <string name="modified_build_dialog_declared">%1$s 表示此文件经过改版：开发者以外的人修改了应用并重新发布。</string>
+    <string name="modified_build_dialog_possible">%1$s 会重新分发改版应用，但没有说明这个应用是否属于改版。它可能是开发者构建的版本，也可能是其他人构建的版本。</string>
+    <string name="modified_build_dialog_verified">安装前的检查可以证明：文件是有效且已签名的安装包，包名与此条目声明的一致；如果商店发布了哈希值，还能证明文件字节与其公布的一致。</string>
+    <string name="modified_build_dialog_unverified">它无法证明重新发布者没有修改应用。改版没有原开发者签名可供比较，因此没有依据可以核对。</string>
+    <string name="modified_build_dialog_dismiss">知道了</string>
+    <string name="store_diagnosis_state_ok">此商店响应正常。</string>
+    <string name="store_diagnosis_state_open">此商店因反复失败而暂停，之后会自动重试。</string>
+    <string name="store_diagnosis_state_half_open">此商店即将重试，下一个请求会进行探测。</string>
+    <string name="store_diagnosis_state_degraded">此商店有响应，但页面未按预期读取。</string>
+    <string name="store_diagnosis_failing_for">已连续失败 %1$s。</string>
+    <string name="store_diagnosis_last_success">上次响应是在 %1$s 前。</string>
+    <string name="store_diagnosis_never_answered">此设备上从未收到过它的响应。</string>
+    <string name="store_diagnosis_fault_transient">上次故障：无网络连接、超时或站点错误。这些问题通常会自行恢复。</string>
+    <string name="store_diagnosis_fault_rate_limited">上次故障：商店要求降低查询频率。等待是唯一有效的办法，通常会自行恢复。</string>
+    <string name="store_diagnosis_fault_blocked">上次故障：商店拒绝了请求。等待无法解决问题，继续请求反而会更糟。</string>
+    <string name="store_diagnosis_fault_parse">上次故障：页面格式不符合预期。这是应用的问题，不是商店的问题，等待无法修复。</string>
+    <string name="store_diagnosis_parse_selectors">无法读取的部分：%1$s</string>
+    <string name="store_diagnosis_dismiss">关闭</string>
+    <plurals name="store_diagnosis_days">
+        <item quantity="one">%1$d 天</item>
+        <item quantity="other">%1$d 天</item>
+    </plurals>
+    <plurals name="store_diagnosis_hours">
+        <item quantity="one">%1$d 小时</item>
+        <item quantity="other">%1$d 小时</item>
+    </plurals>
+    <plurals name="store_diagnosis_minutes">
+        <item quantity="one">%1$d 分钟</item>
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+</resources>
+

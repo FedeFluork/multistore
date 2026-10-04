@@ -29,7 +29,7 @@ data class PermissionEntry(
  *
  * `PermissionInfo.loadLabel` returns the same wording the system's own permission dialogs use, in
  * the device's language, for every permission this Android version knows. A table of our own would
- * be several hundred strings in five languages, would disagree with what the system says when it
+ * be several hundred strings in six languages, would disagree with what the system says when it
  * asks the same question a minute later, and would go stale with every Android release. It is not a
  * shortcut around rule 1: rule 1 is about **our** interface text, and these are the names of other
  * people's API surface, authored and translated by the platform.

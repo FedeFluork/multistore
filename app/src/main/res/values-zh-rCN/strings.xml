@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="nav_home">首页</string>
+    <string name="nav_search">搜索</string>
+    <string name="nav_myapps">我的应用</string>
+    <string name="nav_downloads">下载</string>
+    <string name="nav_downloads_badge">正在下载</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_bar_content_description">主导航</string>
+</resources>
+

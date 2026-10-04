@@ -128,7 +128,7 @@
     <!-- Compartir y abrir: los dos extremos del recorrido que terminaba fuera de la aplicaci\u00f3n. -->
     <string name="appdetail_action_share">Compartir</string>
     <string name="appdetail_action_open">Abrir</string>
-    <string name="appdetail_share_listing_text">%1$s en %2$s\n%3$s</string>
+    <string name="appdetail_share_listing_text">%1$s en %2$s%3$s</string>
 
     <!-- Datos de la cabecera que seis tiendas de nueve no publican. -->
     <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>

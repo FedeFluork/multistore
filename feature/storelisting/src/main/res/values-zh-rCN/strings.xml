@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="storelisting_all_categories">全部</string>
+    <string name="storelisting_load_more">加载更多</string>
+    <string name="storelisting_empty_title">此分类暂无内容</string>
+    <string name="storelisting_empty_message">下载的目录中没有此分类的应用。试试其他分类，或从首页重新同步。</string>
+    <string name="storelisting_choose_category">选择分类</string>
+    <plurals name="storelisting_category_app_count">
+        <item quantity="one">%1$d 个应用</item>
+        <item quantity="other">%1$d 个应用</item>
+    </plurals>
+</resources>
+

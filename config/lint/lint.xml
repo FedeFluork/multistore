@@ -10,7 +10,7 @@
     <issue id="HardcodedText" severity="error" />
     <issue id="MultiStoreComposeHardcodedText" severity="error" />
 
-    <!-- Parity across the 5 languages: TranslationParityTest is the strong check,
+    <!-- Parity across the 6 languages: TranslationParityTest is the strong check,
          these issues are the safety net inside the IDE. -->
     <issue id="MissingTranslation" severity="error" />
     <issue id="ExtraTranslation" severity="error" />

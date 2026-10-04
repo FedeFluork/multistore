@@ -27,7 +27,7 @@ import org.junit.Test
  * The row shows the current criterion, and with `NAME` — the zero value — the golden would be right
  * for the one case where nobody has chosen anything. Photographing a criterion somebody picked is
  * what shows the row is reading the setting rather than printing a constant, and "Updatable first"
- * is also the longest of the four in most of the five languages, i.e. the one that would wrap.
+ * is also the longest of the four in most of the six languages, i.e. the one that would wrap.
  */
 class MyAppsSectionScreenshotTest : ScreenshotTest() {
 

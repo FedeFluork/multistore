@@ -90,7 +90,7 @@ class SettingsCoverageTest {
                     uncovered.forEach { appendLine("  - $it") }
                     appendLine()
                     appendLine("  Add a SettingsEntry to SETTINGS_REGISTRY, with label and")
-                    appendLine("  description translated into all 5 languages. If the field is not")
+                    appendLine("  description translated into all 6 languages. If the field is not")
                     appendLine("  really user-configurable, it does not belong in settings.proto.")
                     appendLine()
                 }

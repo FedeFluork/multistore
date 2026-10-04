@@ -139,7 +139,7 @@ class SettingsSearchTest {
     @Test
     fun `diacritics do not count`() {
         // Whoever searches on a keyboard without accents must find the same: that is the normal case
-        // in Italian, French and Spanish, three of the five supported languages.
+        // in Italian, French and Spanish, three of the six supported languages.
         assertThat(SettingsSearch.matches(SettingsSearch.terms("cafe"), "café")).isTrue()
         assertThat(SettingsSearch.matches(SettingsSearch.terms("CAFÉ"), "cafe")).isTrue()
         assertThat(SettingsSearch.matches(SettingsSearch.terms("uber"), "über")).isTrue()

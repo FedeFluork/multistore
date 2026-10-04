@@ -2,7 +2,7 @@
 <!--
   The assisted-download screen.
 
-  Written together with the other 4 languages: a key may never be added to one language alone,
+  Written together with the other 5 languages: a key may never be added to one language alone,
   and TranslationParityTest fails the build if that happens.
 -->
 <resources>

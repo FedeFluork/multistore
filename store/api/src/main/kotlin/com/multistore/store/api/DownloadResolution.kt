@@ -59,7 +59,7 @@ sealed interface DownloadResolution {
  * What the user has to do on the page.
  *
  * An enum and not a string because `:store:api` is pure Kotlin and has no access to
- * `strings.xml`: the translation into the 5 languages lives in `:feature:webviewdownload`, which
+ * `strings.xml`: the translation into the 6 languages lives in `:feature:webviewdownload`, which
  * maps each value onto a key. A text here would be a hardcoded string in a single language.
  */
 enum class DownloadHint {

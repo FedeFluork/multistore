@@ -1751,7 +1751,7 @@ private fun UpdateChannelCard(
  * is **4 out of 9**, the UI has to say "not contradicted", not "verified".
  *
  * There is also a promise to keep: the description of the "Install without checksum verification"
- * setting — already translated into five languages and already on screen — says that in that case
+ * setting — already translated into six languages and already on screen — says that in that case
  * "the verification card says hash not verified". This is that card.
  *
  * The signer fingerprint is shown shortened: in full it is 64 hex characters nobody reads, and the
@@ -2300,7 +2300,7 @@ internal fun WhatsNew(
  *
  * The label switches between "read more" and "show less" instead of an icon rotating, because it is
  * the only control on the page whose two states are both a legitimate resting place — and a chevron
- * would have to be labelled for a screen reader anyway, in words, in five languages.
+ * would have to be labelled for a screen reader anyway, in words, in six languages.
  */
 @Composable
 private fun ExpandableText(text: String, modifier: Modifier = Modifier) {

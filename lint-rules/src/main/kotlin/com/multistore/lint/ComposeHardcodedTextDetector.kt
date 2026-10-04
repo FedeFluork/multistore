@@ -24,7 +24,7 @@ import org.jetbrains.uast.UPolyadicExpression
  *
  * Reports a string literal passed to a *user-visible* parameter of a `@Composable` function —
  * `Text("Search")`, `contentDescription = "icon"`, `label = "Name"` — that should instead be
- * `stringResource(R.string.…)` and live in all 5 languages.
+ * `stringResource(R.string.…)` and live in all 6 languages.
  *
  * Why a custom check is needed: AGP's `HardcodedText` inspects `android:text` in layout XML.
  * MultiStore has no XML layouts. Without this detector rule 1 would not be automatically verifiable,
@@ -64,7 +64,7 @@ class ComposeHardcodedTextDetector : Detector(), SourceCodeScanner {
                     location = context.getLocation(argument),
                     message = "Hardcoded text `\"$literal\"` passed to `$parameterName` of " +
                         "`${method.name}`. Use `stringResource(R.string.…)` and add the key to " +
-                        "all 5 languages (values, values-it, values-fr, values-es, values-de).",
+                        "all 6 languages (values, values-it, values-fr, values-es, values-de, values-zh-rCN).",
                 )
             }
         }
@@ -140,13 +140,13 @@ class ComposeHardcodedTextDetector : Detector(), SourceCodeScanner {
             id = "MultiStoreComposeHardcodedText",
             briefDescription = "Stringa hardcoded in un composable",
             explanation = """
-                MultiStore e' localizzato in 5 lingue e la parita' fra i `strings.xml` e'
+                MultiStore e' localizzato in 6 lingue e la parita' fra i `strings.xml` e'
                 verificata da `TranslationParityTest`. Una stringa scritta direttamente nel
                 codice Kotlin sfugge a entrambi i meccanismi: non e' traducibile, e non
                 risulta mancante da nessuna parte.
 
                 Sposta il testo in `res/values/strings.xml` e aggiungilo *contemporaneamente*
-                alle 5 lingue supportate, poi usa `stringResource(R.string.chiave)`.
+                alle 6 lingue supportate, poi usa `stringResource(R.string.chiave)`.
 
                 Il nome della chiave segue `<feature>_<contesto>_<significato>`, per example
                 `search_filters_title`.

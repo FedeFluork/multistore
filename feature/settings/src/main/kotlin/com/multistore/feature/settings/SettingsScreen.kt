@@ -1356,7 +1356,7 @@ internal fun NetworkSection(
  *
  * The `when` is exhaustive and has no `else` for the same reason as [storeDescriptionRes]: if a
  * fourth strategy ever arrived, this function would not compile until somebody decided what to
- * call it in five languages — instead of showing an empty row.
+ * call it in six languages — instead of showing an empty row.
  */
 @StringRes
 private fun ChallengeStrategy.labelRes(): Int = when (this) {
@@ -1373,7 +1373,7 @@ private fun ChallengeStrategy.labelRes(): Int = when (this) {
  * above nothing would make it look as if the app knew of none.
  *
  * The store name does not go through `strings.xml`, and that is the one deliberate exception to the
- * no-hardcoded-strings rule: "APKMirror" is a trademark and is spelled the same in all five
+ * no-hardcoded-strings rule: "APKMirror" is a trademark and is spelled the same in all six
  * languages. What is translated is the description, which [storeDescriptionRes] resolves per
  * [StoreId] — and the `MultiStoreComposeHardcodedText` lint does not complain because that name
  * arrives as a value, not as a literal.
@@ -1792,7 +1792,7 @@ private fun megabytesLabel(bytes: Long): String =
  * The label of a retention choice.
  *
  * An exhaustive `when` with no `else`, as for [storeDescriptionRes]: a fifth choice would not
- * compile until somebody decided what to call it in five languages.
+ * compile until somebody decided what to call it in six languages.
  */
 /**
  * A history ceiling's label.

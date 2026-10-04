@@ -100,7 +100,7 @@ available with it, the interface says so.
 off by default, lives locally, and is exported by you as a plain-text file you can read before
 sending it anywhere.
 
-**Five languages, light and dark.** English, Italian, French, Spanish and German, all complete or
+**Six languages, light and dark.** English, Italian, French, Spanish, German and Simplified Chinese, all complete or
 the build fails. Every screen has a screenshot baseline in both themes, and each one is run through
 the Accessibility Test Framework.
 
@@ -155,7 +155,7 @@ Full checks:
 ## Tests and guardrails
 
 A set of executable guardrails enforces the rules the project will not bend on: no hardcoded strings
-in any language, translation parity across all five, every settings field reachable from the UI *and*
+in any language, translation parity across all six, every settings field reachable from the UI *and*
 actually drawn, both themes captured for every screen, no backup escape for private folders, and the
 module dependency rules. They run offline in seconds.
 

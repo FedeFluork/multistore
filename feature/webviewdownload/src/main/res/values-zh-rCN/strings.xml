@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="webviewdownload_hint_tap_download">点击页面上的下载按钮。MultiStore 会从那里接收文件，并在安装前进行检查。</string>
+    <string name="webviewdownload_hint_solve_captcha">此商店要求进行真人验证。请在页面上完成验证，之后下载会自动继续。</string>
+    <string name="webviewdownload_hint_wait_countdown">页面会倒计时，结束后才会释放文件。请等待倒计时结束，再点击下载链接。</string>
+    <string name="webviewdownload_hint_choose_mirror">选择页面提供的一个镜像。</string>
+    <string name="webviewdownload_hint_accept_terms">接受页面要求的条款，然后开始下载。</string>
+    <string name="webviewdownload_current_host">当前页面：%1$s</string>
+    <string name="webviewdownload_error_dismiss">关闭</string>
+    <string name="webviewdownload_hint_dismiss">隐藏这些说明</string>
+</resources>
+

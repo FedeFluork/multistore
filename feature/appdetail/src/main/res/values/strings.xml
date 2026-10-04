@@ -6,7 +6,7 @@
   hash does not match" and "the signature differs from the installed one" decides what the user can
   do next, and reducing them to "verification failed" would remove the only useful information.
 
-  Written together with the other 4 languages: TranslationParityTest fails the build if a key is
+  Written together with the other 5 languages: TranslationParityTest fails the build if a key is
   missing from one of them.
 -->
 <resources>
@@ -141,7 +141,7 @@
     <!-- Sharing and opening: the two ends of the flow that used to finish outside the app. -->
     <string name="appdetail_action_share">Share</string>
     <string name="appdetail_action_open">Open</string>
-    <string name="appdetail_share_listing_text">%1$s on %2$s\n%3$s</string>
+    <string name="appdetail_share_listing_text">%1$s on %2$s%3$s</string>
 
     <!-- Header facts that six stores out of nine do not publish. -->
     <string name="appdetail_meta_rating_count">\u2605 %1$.1f (%2$s)</string>

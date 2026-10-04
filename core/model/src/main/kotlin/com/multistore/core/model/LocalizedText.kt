@@ -75,13 +75,15 @@ value class LocalizedText(val byTag: Map<String, String>) {
         val EMPTY: LocalizedText = LocalizedText(emptyMap())
 
         /**
-         * The languages worth keeping: the 5 of the interface.
+         * The languages worth keeping: the 6 of the interface.
          *
          * Derived from [SupportedLanguage] rather than being a separate list, so adding a
          * language to the app automatically extends what sync keeps. Regional variants
          * (`en-US`, `de-DE`) pass through the language-subtag comparison.
          */
-        val DISPLAYABLE_TAGS: Set<String> = SupportedLanguage.entries.map { it.tag }.toSet()
+        val DISPLAYABLE_TAGS: Set<String> = SupportedLanguage.entries
+            .flatMap { language -> listOf(language.tag, language.tag.substringBefore('-')) }
+            .toSet()
 
         fun of(single: String?): LocalizedText =
             if (single.isNullOrEmpty()) EMPTY else LocalizedText(mapOf(SupportedLanguage.FALLBACK.tag to single))

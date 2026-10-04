@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.first
  *
  * It is not an exception to the no-hardcoded-strings rule: that one concerns strings **visible in the
  * interface**, and here the interface — the button's label, the description, the outcome message —
- * is translated into all five languages like everything else. The file's content is instead a
+ * is translated into all six languages like everything else. The file's content is instead a
  * technical artefact meant to be pasted into a report, and its keys are field names (`versionCode`,
  * `minSdk`, `resolverTier`), not prose. Translating them would make comparing two reports five times
  * harder, and would force the reader to guess which field `Firmatario previsto` was.

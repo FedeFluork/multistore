@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
  * Duplicating it in the DataStore would have given two divergeable values, with search reading one and
  * Settings the other.
  *
- * What point 6 really protected — **no store without its five translations** — is protected by this
+ * What point 6 really protected — **no store without its six translations** — is protected by this
  * guardrail, and more tightly: a proto field would have guaranteed an entry existed, not that the
  * entry talked about the right store.
  *
@@ -25,11 +25,11 @@ import org.junit.jupiter.api.Test
  * reason to come and update. The day a store module stops being empty, this test starts asking for its
  * description on its own.
  */
-@DisplayName("Stores: every implemented adapter has a name, a description in 5 languages and a documented row")
+@DisplayName("Stores: every implemented adapter has a name, a description in 6 languages and a documented row")
 class StoreCatalogTest {
 
     @Test
-    fun `every implemented store has a description in all five languages`() {
+    fun `every implemented store has a description in all six languages`() {
         val stores = implementedStores()
         assertTrue(stores.isNotEmpty()) {
             "No `:store:<name>` module with sources found: the detection is broken, not the " +
@@ -198,7 +198,14 @@ class StoreCatalogTest {
         /** `FDROID("f-droid"),` */
         val STORE_ID_ENTRY = Regex("""^\s{4}([A-Z][A-Z0-9_]*)\("([a-z0-9-]+)"\),""", RegexOption.MULTILINE)
 
-        /** The five languages required by rule 1. */
-        val LANGUAGE_QUALIFIERS = listOf("values", "values-it", "values-fr", "values-es", "values-de")
+        /** The six languages required by rule 1. */
+        val LANGUAGE_QUALIFIERS = listOf(
+            "values",
+            "values-it",
+            "values-fr",
+            "values-es",
+            "values-de",
+            "values-zh-rCN",
+        )
     }
 }

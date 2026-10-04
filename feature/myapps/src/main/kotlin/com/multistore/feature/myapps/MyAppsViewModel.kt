@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
  * A "My apps" row: what is in the database plus the store's name.
  *
  * The store name is declared by the adapter and not by `strings.xml`: "F-Droid" and "APKMirror" are
- * proper names, not interface text, and translating them would be wrong in all five languages. It stays
+ * proper names, not interface text, and translating them would be wrong in all six languages. It stays
  * `null` for a row pointing at a store this build has not wired — that does not happen today, it will
  * if an adapter is ever removed leaving the installations in place, and it is better than a row that
  * disappears.

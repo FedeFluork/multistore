@@ -576,7 +576,7 @@ class AppDetailViewModel @Inject constructor(
     /**
      * The name a store presents itself under. The adapter declares it: it is not interface text.
      *
-     * "APKMirror" is spelled the same in all five languages — it is a trademark, and the store name is
+     * "APKMirror" is spelled the same in all six languages — it is a trademark, and the store name is
      * the one thing that is not translated.
      */
     fun storeDisplayName(storeId: StoreId): String =

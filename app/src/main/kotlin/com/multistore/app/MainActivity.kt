@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
     private fun syncLocale(appearance: AppearanceSettings) {
         val current = AppCompatDelegate.getApplicationLocales()
         // The LocaleManager can return a tag with a region ("it-IT"): we normalise it to the
-        // language, which is the unit the app reasons in. A tag outside the 5 supported ones is
+        // language, which is the unit the app reasons in. A tag outside the 6 supported ones is
         // equivalent to "follow the system".
         val systemTag = current.toLanguageTags()
             .substringBefore(',')

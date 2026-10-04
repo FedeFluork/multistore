@@ -31,7 +31,7 @@ import com.multistore.core.model.ThemeMode
  * detail screen then contradicts is worse than no number.
  *
  * [supporting] is the slot the aggregated search writes "available on 3 stores" into. A slot and not
- * a string: that text is plural, translated into five languages and names the stores, i.e. it is made
+ * a string: that text is plural, translated into six languages and names the stores, i.e. it is made
  * of resources that live in the feature — and `:core:ui` must not own its users' strings.
  *
  * [preferredLanguageTags] comes from the caller instead of being read here from the `Configuration`:

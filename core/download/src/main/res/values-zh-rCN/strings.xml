@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translation. Keep this file in parity with values/ and the other locales. -->
+<resources>
+    <string name="download_notification_channel_name">下载</string>
+    <string name="download_notification_channel_description">正在下载的应用进度。</string>
+    <string name="download_notification_title">正在下载 %1$s</string>
+    <string name="download_notification_title_unknown">正在下载应用</string>
+    <string name="download_notification_cancel">取消</string>
+</resources>
+

@@ -11,7 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
  *
  * The count justifying this pruning: the index carries about 30 translations per description, over
  * 4,233 descriptions. They are the biggest contributor to the 57 MB, and none of the translations we
- * discard can appear on screen, because the interface exists in five languages.
+ * discard can appear on screen, because the interface exists in six languages.
  *
  * The pruning happens **before** saving the payload, so it touches the merge patches too: a patch
  * updating the Japanese description is simply ignored, which is the right thing given that

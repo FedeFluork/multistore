@@ -100,10 +100,10 @@ enum class SettingsSection(@param:StringRes val titleRes: Int) {
  * Duplicating it in the DataStore would mean two values that can diverge, with the search reading one
  * and Settings the other.
  *
- * What that checklist point really asked for — that no store arrives without its five translations —
+ * What that checklist point really asked for — that no store arrives without its six translations —
  * stays guaranteed, and by a guardrail tighter than a proto field: `StoreCatalogTest` derives the list
  * of stores **from the modules that have sources** and demands each has a description here, in all
- * five languages.
+ * six languages.
  *
  * ### Why the `when` is exhaustive instead of having an `else`
  *

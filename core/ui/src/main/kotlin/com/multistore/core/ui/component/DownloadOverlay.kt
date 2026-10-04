@@ -81,8 +81,8 @@ data class DownloadProgress(
  * grow upwards into a fuller list. It never did — the destination is the Downloads screen, a
  * different surface — so the icon was announcing a movement that does not happen. A **forward**
  * arrow says the thing that is true: pressing it takes you somewhere. `AutoMirrored` because a
- * "forward" arrow points the other way in a right-to-left layout; the five supported languages are
- * all left-to-right, so it costs nothing today and is right the day a sixth is added.
+ * "forward" arrow points the other way in a right-to-left layout; the six supported languages are
+ * all left-to-right, so it costs nothing today and is right the day a seventh is added.
  *
  * The second was an X. On a card that has a progress bar on it, an X is the universal "stop this",
  * and the one thing it must not be taken for here is cancelling the download — which is the most

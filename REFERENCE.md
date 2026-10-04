@@ -35,8 +35,8 @@ is said instead of guessed.
 
 ### 1. No hardcoded strings, in any language
 
-Every user-visible string lives in `strings.xml` and is added to **all five languages at once**:
-`values/` (en, the default), `values-it/`, `values-fr/`, `values-es/`, `values-de/`.
+Every user-visible string lives in `strings.xml` and is added to **all six languages at once**:
+`values/` (en, the default), `values-it/`, `values-fr/`, `values-es/`, `values-de/`, `values-zh-rCN/`.
 
 There is no "add it in English and translate later". `TranslationParityTest` fails the build if a key
 is missing from one language or if a language carries an orphan key. AGP's `HardcodedText` lint only
@@ -59,7 +59,7 @@ Adding one is four things, not three:
 
 1. a field in `core/datastore/src/main/proto/settings.proto`;
 2. an entry in the Settings registry;
-3. the five translations of label and description;
+3. the six translations of label and description;
 4. **a row that names the key**, actually drawn on screen.
 
 The registry is not a parallel list — it is the source. The rows take a `SettingKey` and read their
@@ -209,7 +209,7 @@ Each module inspects only itself, so the check is configuration-cache compatible
    has 38 sidebar rows with the same markup as results; on apkcombo it needs a token that is not a
    substring of any title.
 5. Register the adapter with `@IntoSet` in `:app`'s Hilt module.
-6. **Add the store description in all five languages** (`storeDescriptionRes` in `:feature:settings`).
+6. **Add the store description in all six languages** (`storeDescriptionRes` in `:feature:settings`).
    Not the name: that is a trademark and is not translated. Enabling does **not** go into
    `settings.proto` — it lives in Room, the `enabled` column of the `stores` table, which is what
    `SearchRepository` reads. A second copy in the DataStore would be a value that diverges. The
@@ -603,7 +603,7 @@ Four things not to change:
 - **"sensitive" is the platform's judgement, not a table of ours.** `PROTECTION_DANGEROUS` is exactly
   the class Android itself gates behind a prompt, and the labels come from `PermissionInfo.loadLabel`,
   translated by the system into the device's language. A table of our own would be several hundred
-  strings in five languages contradicting what the system says a minute later.
+  strings in six languages contradicting what the system says a minute later.
 
 **And that one line hid two defects at once, of which lint saw only the first.**
 `PermissionInfo.getProtection()` exists **from API 28** with `minSdk` 26 — the `longVersionCode`
@@ -1743,7 +1743,7 @@ They are the executable form of the three rules. They all run offline in seconds
 | `ScreenshotCoverageTest` | a screen with a screenshot in only one theme, or with no golden | `./gradlew :guardrails:test` |
 | the ATF check inside `ScreenshotTest.capture` | a touch target too small, or an interactive element with no screen-reader label — on **every** screen and in **both** themes | runs with each `:feature:*` and `:core:ui` test |
 | `BackupExclusionTest` | a private folder under `filesDir` ending up in a cloud backup — derived from the sources, not a hand-written list | `./gradlew :guardrails:test` |
-| `StoreCatalogTest` | a store with a real adapter but no description in the 5 languages, no registry entry, no row in the table above, **or not receiving its configuration through the remote override** — the list is derived from the modules that have sources | `./gradlew :guardrails:test` |
+| `StoreCatalogTest` | a store with a real adapter but no description in the 6 languages, no registry entry, no row in the table above, **or not receiving its configuration through the remote override** — the list is derived from the modules that have sources | `./gradlew :guardrails:test` |
 | `checkDependencyRules` | a module dependency violating the architecture | `./gradlew checkDependencyRules` |
 
 Recording goldens after adding or changing a screen: `./gradlew recordRoborazziDebug`. Comparing them:
